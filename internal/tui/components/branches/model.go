@@ -1,6 +1,7 @@
 package branches
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -45,10 +46,67 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) loadBranches() tea.Msg {
-	// TODO: Implement actual loading from GitHub
-	// For now, return empty list
+	// If no repo specified, return empty
+	if m.repo == "" {
+		return branchesLoadedMsg{
+			branches: []github.BranchWithComparison{},
+			err:      fmt.Errorf("no repository specified"),
+		}
+	}
+
+	// Parse repo (owner/name format)
+	parts := strings.Split(m.repo, "/")
+	if len(parts) != 2 {
+		return branchesLoadedMsg{
+			branches: []github.BranchWithComparison{},
+			err:      fmt.Errorf("invalid repo format, expected owner/repo"),
+		}
+	}
+	owner, repo := parts[0], parts[1]
+
+	// Create GitHub client
+	ctx := context.Background()
+	client, err := github.NewClient(ctx)
+	if err != nil {
+		return branchesLoadedMsg{
+			branches: []github.BranchWithComparison{},
+			err:      fmt.Errorf("failed to create GitHub client: %w", err),
+		}
+	}
+
+	// Load branches from GitHub
+	branches, err := client.ListBranches(owner, repo)
+	if err != nil {
+		return branchesLoadedMsg{
+			branches: []github.BranchWithComparison{},
+			err:      fmt.Errorf("failed to load branches: %w", err),
+		}
+	}
+
+	// Use default base branch if not specified
+	baseBranch := m.baseBranch
+	if baseBranch == "" {
+		baseBranch = "main"
+	}
+
+	// Build comparison info for each branch
+	branchesWithComparison := make([]github.BranchWithComparison, 0, len(branches))
+	for _, branch := range branches {
+		// Skip comparison for base branch
+		if branch.Name != baseBranch {
+			ahead, behind, _ := client.CompareBranches(owner, repo, baseBranch, branch.Name)
+			branch.Ahead = ahead
+			branch.Behind = behind
+		}
+
+		branchesWithComparison = append(branchesWithComparison, github.BranchWithComparison{
+			Branch:     branch,
+			ComparedTo: baseBranch,
+		})
+	}
+
 	return branchesLoadedMsg{
-		branches: []github.BranchWithComparison{},
+		branches: branchesWithComparison,
 		err:      nil,
 	}
 }

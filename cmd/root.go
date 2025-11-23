@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/KyleKing/gh-sweep/internal/tui"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 )
 
@@ -28,13 +30,16 @@ It provides interactive tools for:
 
 Use 'gh-sweep <command> --help' for more information about a command.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// Launch full TUI if no subcommand specified
-		fmt.Println("gh-sweep TUI - Coming soon!")
-		fmt.Println("\nAvailable commands:")
-		fmt.Println("  gh-sweep branches    - Interactive branch management")
-		fmt.Println("  gh-sweep protection  - Branch protection rules")
-		fmt.Println("  gh-sweep comments    - Unresolved PR comments")
-		fmt.Println("\nUse 'gh-sweep <command> --help' for more information")
+		repo, _ := cmd.Flags().GetString("repo")
+
+		// Launch full interactive TUI
+		m := tui.NewMainModel(repo)
+		p := tea.NewProgram(m, tea.WithAltScreen())
+
+		if _, err := p.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error running TUI: %v\n", err)
+			os.Exit(1)
+		}
 	},
 }
 
@@ -47,4 +52,5 @@ func Execute() {
 
 func init() {
 	rootCmd.Version = fmt.Sprintf("%s (commit: %s, built: %s)", version, commit, date)
+	rootCmd.Flags().String("repo", "", "Repository (owner/repo)")
 }
