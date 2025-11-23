@@ -3,8 +3,13 @@ package tui
 import (
 	"github.com/KyleKing/gh-sweep/internal/tui/components/analytics"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/branches"
+	"github.com/KyleKing/gh-sweep/internal/tui/components/collaborators"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/comments"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/protection"
+	"github.com/KyleKing/gh-sweep/internal/tui/components/releases"
+	"github.com/KyleKing/gh-sweep/internal/tui/components/secrets"
+	"github.com/KyleKing/gh-sweep/internal/tui/components/settings"
+	"github.com/KyleKing/gh-sweep/internal/tui/components/webhooks"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -18,6 +23,11 @@ const (
 	ViewProtection
 	ViewComments
 	ViewAnalytics
+	ViewSettings
+	ViewWebhooks
+	ViewCollaborators
+	ViewSecrets
+	ViewReleases
 )
 
 // MainModel represents the main TUI application state with navigation
@@ -28,15 +38,21 @@ type MainModel struct {
 	mode   ViewMode
 
 	// Sub-models for each view
-	branchesModel   branches.Model
-	protectionModel protection.Model
-	commentsModel   comments.Model
-	analyticsModel  analytics.Model
+	branchesModel      branches.Model
+	protectionModel    protection.Model
+	commentsModel      comments.Model
+	analyticsModel     analytics.Model
+	settingsModel      settings.Model
+	webhooksModel      webhooks.Model
+	collaboratorsModel collaborators.Model
+	secretsModel       secrets.Model
+	releasesModel      releases.Model
 
 	// Configuration
 	repo     string
 	repos    []string
 	baseline string
+	org      string
 }
 
 // NewMainModel creates a new main TUI model
@@ -71,6 +87,16 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.commentsModel = newModel.(comments.Model)
 		newModel, _ = m.analyticsModel.Update(msg)
 		m.analyticsModel = newModel.(analytics.Model)
+		newModel, _ = m.settingsModel.Update(msg)
+		m.settingsModel = newModel.(settings.Model)
+		newModel, _ = m.webhooksModel.Update(msg)
+		m.webhooksModel = newModel.(webhooks.Model)
+		newModel, _ = m.collaboratorsModel.Update(msg)
+		m.collaboratorsModel = newModel.(collaborators.Model)
+		newModel, _ = m.secretsModel.Update(msg)
+		m.secretsModel = newModel.(secrets.Model)
+		newModel, _ = m.releasesModel.Update(msg)
+		m.releasesModel = newModel.(releases.Model)
 
 		return m, nil
 
@@ -108,6 +134,41 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.analyticsModel = analytics.NewModel(m.repo)
 					return m, m.analyticsModel.Init()
 				}
+
+			case "5":
+				m.mode = ViewSettings
+				if len(m.repos) > 0 {
+					m.settingsModel = settings.NewModel(m.repos, m.baseline)
+					return m, m.settingsModel.Init()
+				}
+
+			case "6":
+				m.mode = ViewWebhooks
+				if len(m.repos) > 0 {
+					m.webhooksModel = webhooks.NewModel(m.repos)
+					return m, m.webhooksModel.Init()
+				}
+
+			case "7":
+				m.mode = ViewCollaborators
+				if len(m.repos) > 0 {
+					m.collaboratorsModel = collaborators.NewModel(m.repos)
+					return m, m.collaboratorsModel.Init()
+				}
+
+			case "8":
+				m.mode = ViewSecrets
+				if m.org != "" && len(m.repos) > 0 {
+					m.secretsModel = secrets.NewModel(m.org, m.repos)
+					return m, m.secretsModel.Init()
+				}
+
+			case "9":
+				m.mode = ViewReleases
+				if len(m.repos) > 0 {
+					m.releasesModel = releases.NewModel(m.repos)
+					return m, m.releasesModel.Init()
+				}
 			}
 		} else {
 			// Handle back navigation
@@ -138,6 +199,31 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				var newModel tea.Model
 				newModel, cmd = m.analyticsModel.Update(msg)
 				m.analyticsModel = newModel.(analytics.Model)
+
+			case ViewSettings:
+				var newModel tea.Model
+				newModel, cmd = m.settingsModel.Update(msg)
+				m.settingsModel = newModel.(settings.Model)
+
+			case ViewWebhooks:
+				var newModel tea.Model
+				newModel, cmd = m.webhooksModel.Update(msg)
+				m.webhooksModel = newModel.(webhooks.Model)
+
+			case ViewCollaborators:
+				var newModel tea.Model
+				newModel, cmd = m.collaboratorsModel.Update(msg)
+				m.collaboratorsModel = newModel.(collaborators.Model)
+
+			case ViewSecrets:
+				var newModel tea.Model
+				newModel, cmd = m.secretsModel.Update(msg)
+				m.secretsModel = newModel.(secrets.Model)
+
+			case ViewReleases:
+				var newModel tea.Model
+				newModel, cmd = m.releasesModel.Update(msg)
+				m.releasesModel = newModel.(releases.Model)
 			}
 
 			return m, cmd
@@ -163,6 +249,16 @@ func (m MainModel) View() string {
 		return m.commentsModel.View()
 	case ViewAnalytics:
 		return m.analyticsModel.View()
+	case ViewSettings:
+		return m.settingsModel.View()
+	case ViewWebhooks:
+		return m.webhooksModel.View()
+	case ViewCollaborators:
+		return m.collaboratorsModel.View()
+	case ViewSecrets:
+		return m.secretsModel.View()
+	case ViewReleases:
+		return m.releasesModel.View()
 	default:
 		return m.renderHome()
 	}
@@ -174,6 +270,11 @@ func (m MainModel) renderHome() string {
 		Foreground(lipgloss.Color("#00FFFF")).
 		Padding(1, 0)
 
+	sectionStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#FFFF00")).
+		Padding(0, 0)
+
 	menuItemStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#FFFFFF")).
 		Padding(0, 2)
@@ -184,24 +285,38 @@ func (m MainModel) renderHome() string {
 	content := titleStyle.Render("🧹 gh-sweep") + "\n"
 	content += titleStyle.Render("GitHub Repository Management TUI") + "\n\n"
 
+	// Phase 1: Core Management
+	content += sectionStyle.Render("Phase 1: Core Management") + "\n"
 	content += menuItemStyle.Render("[1] 🌳 Branch Management")
 	content += " - Interactive branch operations\n"
-
 	content += menuItemStyle.Render("[2] 🛡️  Branch Protection")
 	content += " - Compare and sync protection rules\n"
-
 	content += menuItemStyle.Render("[3] 💬 PR Comments")
 	content += " - Review unresolved comments\n"
-
 	content += menuItemStyle.Render("[4] 📊 Analytics")
 	content += " - CI/CD and repository statistics\n\n"
 
-	if m.repo == "" {
-		content += helpStyle.Render("💡 Configure a repository with --repo flag\n")
-		content += helpStyle.Render("   or set repositories in .gh-sweep.yaml\n\n")
+	// Phase 2: Analytics & Settings
+	content += sectionStyle.Render("Phase 2: Analytics & Settings") + "\n"
+	content += menuItemStyle.Render("[5] ⚙️  Settings Comparison")
+	content += " - Cross-repo settings diff\n"
+	content += menuItemStyle.Render("[6] 🔔 Webhooks")
+	content += " - Webhook health monitoring\n\n"
+
+	// Phase 3: Access & Releases
+	content += sectionStyle.Render("Phase 3: Access & Releases") + "\n"
+	content += menuItemStyle.Render("[7] 👥 Collaborators")
+	content += " - Manage repository access\n"
+	content += menuItemStyle.Render("[8] 🔐 Secrets Audit")
+	content += " - Review secrets usage (read-only)\n"
+	content += menuItemStyle.Render("[9] 📦 Releases")
+	content += " - Release version overview\n\n"
+
+	if m.repo == "" && len(m.repos) == 0 {
+		content += helpStyle.Render("💡 Configure with --repo flag or .gh-sweep.yaml\n\n")
 	}
 
-	content += helpStyle.Render("Press 1-4 to select a view | q to quit")
+	content += helpStyle.Render("Press 1-9 to select a view | q to quit")
 
 	return content
 }
