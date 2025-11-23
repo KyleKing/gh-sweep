@@ -1,0 +1,229 @@
+package cache
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+)
+
+func TestNewManager(t *testing.T) {
+	tmpDir := t.TempDir()
+	cachePath := filepath.Join(tmpDir, "test.db")
+
+	mgr, err := NewManager(cachePath, 1*time.Hour)
+	if err != nil {
+		t.Fatalf("Failed to create cache manager: %v", err)
+	}
+	defer mgr.Close()
+
+	// Verify database file was created
+	if _, err := os.Stat(cachePath); os.IsNotExist(err) {
+		t.Error("Cache database was not created")
+	}
+}
+
+func TestSetAndGet(t *testing.T) {
+	tmpDir := t.TempDir()
+	cachePath := filepath.Join(tmpDir, "test.db")
+
+	mgr, err := NewManager(cachePath, 1*time.Hour)
+	if err != nil {
+		t.Fatalf("Failed to create cache manager: %v", err)
+	}
+	defer mgr.Close()
+
+	// Test data
+	type testData struct {
+		Name  string
+		Value int
+	}
+
+	original := testData{Name: "test", Value: 42}
+
+	// Set cache
+	if err := mgr.Set("test-key", original); err != nil {
+		t.Fatalf("Failed to set cache: %v", err)
+	}
+
+	// Get cache
+	var retrieved testData
+	found, err := mgr.Get("test-key", &retrieved)
+	if err != nil {
+		t.Fatalf("Failed to get from cache: %v", err)
+	}
+
+	if !found {
+		t.Fatal("Expected to find cached value")
+	}
+
+	if retrieved.Name != original.Name || retrieved.Value != original.Value {
+		t.Errorf("Retrieved data doesn't match. Got %+v, want %+v", retrieved, original)
+	}
+}
+
+func TestGetNonExistent(t *testing.T) {
+	tmpDir := t.TempDir()
+	cachePath := filepath.Join(tmpDir, "test.db")
+
+	mgr, err := NewManager(cachePath, 1*time.Hour)
+	if err != nil {
+		t.Fatalf("Failed to create cache manager: %v", err)
+	}
+	defer mgr.Close()
+
+	var data string
+	found, err := mgr.Get("nonexistent", &data)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if found {
+		t.Error("Expected not to find nonexistent key")
+	}
+}
+
+func TestExpiration(t *testing.T) {
+	tmpDir := t.TempDir()
+	cachePath := filepath.Join(tmpDir, "test.db")
+
+	// Create manager with 1 second TTL
+	mgr, err := NewManager(cachePath, 1*time.Second)
+	if err != nil {
+		t.Fatalf("Failed to create cache manager: %v", err)
+	}
+	defer mgr.Close()
+
+	// Set cache
+	if err := mgr.Set("test-key", "test-value"); err != nil {
+		t.Fatalf("Failed to set cache: %v", err)
+	}
+
+	// Should be found immediately
+	var value1 string
+	found, err := mgr.Get("test-key", &value1)
+	if err != nil {
+		t.Fatalf("Failed to get from cache: %v", err)
+	}
+	if !found {
+		t.Fatal("Expected to find cached value")
+	}
+
+	// Wait for expiration
+	time.Sleep(2 * time.Second)
+
+	// Should not be found after expiration
+	var value2 string
+	found, err = mgr.Get("test-key", &value2)
+	if err != nil {
+		t.Fatalf("Failed to get from cache: %v", err)
+	}
+	if found {
+		t.Error("Expected cache to be expired")
+	}
+}
+
+func TestDelete(t *testing.T) {
+	tmpDir := t.TempDir()
+	cachePath := filepath.Join(tmpDir, "test.db")
+
+	mgr, err := NewManager(cachePath, 1*time.Hour)
+	if err != nil {
+		t.Fatalf("Failed to create cache manager: %v", err)
+	}
+	defer mgr.Close()
+
+	// Set cache
+	if err := mgr.Set("test-key", "test-value"); err != nil {
+		t.Fatalf("Failed to set cache: %v", err)
+	}
+
+	// Delete
+	if err := mgr.Delete("test-key"); err != nil {
+		t.Fatalf("Failed to delete from cache: %v", err)
+	}
+
+	// Should not be found
+	var value string
+	found, err := mgr.Get("test-key", &value)
+	if err != nil {
+		t.Fatalf("Failed to get from cache: %v", err)
+	}
+	if found {
+		t.Error("Expected key to be deleted")
+	}
+}
+
+func TestClear(t *testing.T) {
+	tmpDir := t.TempDir()
+	cachePath := filepath.Join(tmpDir, "test.db")
+
+	mgr, err := NewManager(cachePath, 1*time.Hour)
+	if err != nil {
+		t.Fatalf("Failed to create cache manager: %v", err)
+	}
+	defer mgr.Close()
+
+	// Set multiple values
+	mgr.Set("key1", "value1")
+	mgr.Set("key2", "value2")
+	mgr.Set("key3", "value3")
+
+	// Clear all
+	if err := mgr.Clear(); err != nil {
+		t.Fatalf("Failed to clear cache: %v", err)
+	}
+
+	// Verify all are gone
+	var value string
+	found, _ := mgr.Get("key1", &value)
+	if found {
+		t.Error("Expected all entries to be cleared")
+	}
+}
+
+func TestStats(t *testing.T) {
+	tmpDir := t.TempDir()
+	cachePath := filepath.Join(tmpDir, "test.db")
+
+	mgr, err := NewManager(cachePath, 1*time.Second)
+	if err != nil {
+		t.Fatalf("Failed to create cache manager: %v", err)
+	}
+	defer mgr.Close()
+
+	// Set some values
+	mgr.Set("key1", "value1")
+	mgr.Set("key2", "value2")
+
+	// Get stats
+	total, expired, err := mgr.Stats()
+	if err != nil {
+		t.Fatalf("Failed to get stats: %v", err)
+	}
+
+	if total != 2 {
+		t.Errorf("Expected 2 total entries, got %d", total)
+	}
+
+	if expired != 0 {
+		t.Errorf("Expected 0 expired entries, got %d", expired)
+	}
+
+	// Wait for expiration
+	time.Sleep(2 * time.Second)
+
+	// Get stats again
+	total, expired, err = mgr.Stats()
+	if err != nil {
+		t.Fatalf("Failed to get stats: %v", err)
+	}
+
+	if total != 2 {
+		t.Errorf("Expected 2 total entries, got %d", total)
+	}
+
+	if expired != 2 {
+		t.Errorf("Expected 2 expired entries, got %d", expired)
+	}
+}

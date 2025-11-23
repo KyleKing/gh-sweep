@@ -1,0 +1,155 @@
+package cache
+
+import (
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"time"
+
+	_ "modernc.org/sqlite"
+)
+
+// Manager handles caching operations using SQLite
+type Manager struct {
+	db  *sql.DB
+	ttl time.Duration
+}
+
+// NewManager creates a new cache manager
+func NewManager(cachePath string, ttl time.Duration) (*Manager, error) {
+	// Create cache directory if it doesn't exist
+	if err := os.MkdirAll(filepath.Dir(cachePath), 0755); err != nil {
+		return nil, fmt.Errorf("failed to create cache directory: %w", err)
+	}
+
+	// Open database
+	db, err := sql.Open("sqlite", cachePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open cache database: %w", err)
+	}
+
+	// Create table if not exists
+	createTableSQL := `
+	CREATE TABLE IF NOT EXISTS cache (
+		key TEXT PRIMARY KEY,
+		value TEXT NOT NULL,
+		expires_at INTEGER NOT NULL
+	);
+	CREATE INDEX IF NOT EXISTS idx_expires_at ON cache(expires_at);
+	`
+
+	if _, err := db.Exec(createTableSQL); err != nil {
+		return nil, fmt.Errorf("failed to create cache table: %w", err)
+	}
+
+	return &Manager{
+		db:  db,
+		ttl: ttl,
+	}, nil
+}
+
+// Close closes the cache database
+func (m *Manager) Close() error {
+	return m.db.Close()
+}
+
+// Get retrieves a value from the cache
+func (m *Manager) Get(key string, dest interface{}) (bool, error) {
+	var value string
+	var expiresAt int64
+
+	err := m.db.QueryRow("SELECT value, expires_at FROM cache WHERE key = ?", key).Scan(&value, &expiresAt)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("failed to get from cache: %w", err)
+	}
+
+	// Check if expired
+	if time.Now().Unix() > expiresAt {
+		// Delete expired entry
+		m.Delete(key)
+		return false, nil
+	}
+
+	// Unmarshal JSON
+	if err := json.Unmarshal([]byte(value), dest); err != nil {
+		return false, fmt.Errorf("failed to unmarshal cached value: %w", err)
+	}
+
+	return true, nil
+}
+
+// Set stores a value in the cache
+func (m *Manager) Set(key string, value interface{}) error {
+	// Marshal to JSON
+	data, err := json.Marshal(value)
+	if err != nil {
+		return fmt.Errorf("failed to marshal value: %w", err)
+	}
+
+	expiresAt := time.Now().Add(m.ttl).Unix()
+
+	// Insert or replace
+	_, err = m.db.Exec(
+		"INSERT OR REPLACE INTO cache (key, value, expires_at) VALUES (?, ?, ?)",
+		key, string(data), expiresAt,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to set cache: %w", err)
+	}
+
+	return nil
+}
+
+// Delete removes a value from the cache
+func (m *Manager) Delete(key string) error {
+	_, err := m.db.Exec("DELETE FROM cache WHERE key = ?", key)
+	if err != nil {
+		return fmt.Errorf("failed to delete from cache: %w", err)
+	}
+
+	return nil
+}
+
+// Clear removes all entries from the cache
+func (m *Manager) Clear() error {
+	_, err := m.db.Exec("DELETE FROM cache")
+	if err != nil {
+		return fmt.Errorf("failed to clear cache: %w", err)
+	}
+
+	return nil
+}
+
+// CleanExpired removes all expired entries
+func (m *Manager) CleanExpired() error {
+	now := time.Now().Unix()
+	_, err := m.db.Exec("DELETE FROM cache WHERE expires_at < ?", now)
+	if err != nil {
+		return fmt.Errorf("failed to clean expired cache: %w", err)
+	}
+
+	return nil
+}
+
+// Stats returns cache statistics
+func (m *Manager) Stats() (total int, expired int, err error) {
+	// Get total count
+	err = m.db.QueryRow("SELECT COUNT(*) FROM cache").Scan(&total)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to get total count: %w", err)
+	}
+
+	// Get expired count
+	now := time.Now().Unix()
+	err = m.db.QueryRow("SELECT COUNT(*) FROM cache WHERE expires_at < ?", now).Scan(&expired)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to get expired count: %w", err)
+	}
+
+	return total, expired, nil
+}
