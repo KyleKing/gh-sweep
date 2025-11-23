@@ -1,6 +1,9 @@
 package github
 
-import "fmt"
+import (
+	"fmt"
+	"regexp"
+)
 
 // Secret represents a GitHub Actions secret
 type Secret struct {
@@ -96,4 +99,89 @@ func DetectUnusedSecrets(secrets []Secret, workflowRefs map[string][]string) []S
 	}
 
 	return usages
+}
+
+// ScanWorkflowForSecrets extracts secret references from workflow YAML
+// Pure function: parses YAML content for secrets.* references
+func ScanWorkflowForSecrets(workflowContent string) []string {
+	// Match ${{ secrets.SECRET_NAME }} pattern (with optional spaces)
+	pattern := regexp.MustCompile(`\${{\s*secrets\.([A-Z0-9_]+)\s*}}`)
+	matches := pattern.FindAllStringSubmatch(workflowContent, -1)
+
+	// Deduplicate secret names
+	secretSet := make(map[string]bool)
+	for _, match := range matches {
+		if len(match) > 1 {
+			secretSet[match[1]] = true
+		}
+	}
+
+	// Convert to slice
+	secrets := make([]string, 0, len(secretSet))
+	for secret := range secretSet {
+		secrets = append(secrets, secret)
+	}
+
+	return secrets
+}
+
+// GroupSecretsByScope groups secrets by their scope (org/repo)
+// Pure function: creates grouped map
+func GroupSecretsByScope(secrets []Secret) map[string][]Secret {
+	grouped := make(map[string][]Secret)
+
+	for _, secret := range secrets {
+		grouped[secret.Scope] = append(grouped[secret.Scope], secret)
+	}
+
+	return grouped
+}
+
+// DuplicateSecret represents a secret name that appears multiple times
+type DuplicateSecret struct {
+	Name   string
+	Count  int
+	Scopes []string // List of scopes where it appears
+	Repos  []string // List of repositories (for repo-scoped secrets)
+}
+
+// FindDuplicateSecrets identifies secret names that appear in multiple scopes/repos
+// Pure function: analyzes secret list for duplicates
+func FindDuplicateSecrets(secrets []Secret) []DuplicateSecret {
+	// Track occurrences
+	occurrences := make(map[string]*DuplicateSecret)
+
+	for _, secret := range secrets {
+		if dup, exists := occurrences[secret.Name]; exists {
+			dup.Count++
+			// Add scope if not already present
+			if !contains(dup.Scopes, secret.Scope) {
+				dup.Scopes = append(dup.Scopes, secret.Scope)
+			}
+			// Add repo if repo-scoped
+			if secret.Scope == "repo" && !contains(dup.Repos, secret.Repository) {
+				dup.Repos = append(dup.Repos, secret.Repository)
+			}
+		} else {
+			occurrences[secret.Name] = &DuplicateSecret{
+				Name:   secret.Name,
+				Count:  1,
+				Scopes: []string{secret.Scope},
+				Repos:  []string{},
+			}
+			if secret.Scope == "repo" {
+				occurrences[secret.Name].Repos = []string{secret.Repository}
+			}
+		}
+	}
+
+	// Filter to only duplicates (count > 1)
+	duplicates := make([]DuplicateSecret, 0)
+	for _, dup := range occurrences {
+		if dup.Count > 1 {
+			duplicates = append(duplicates, *dup)
+		}
+	}
+
+	return duplicates
 }

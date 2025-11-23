@@ -241,18 +241,112 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines.
 
 ## Alternatives & Related Tools
 
-**When NOT to use gh-sweep:**
+### When NOT to use gh-sweep
+
+**Automation & IaC:**
 - Automated dependency updates → Use [Renovate](https://github.com/renovatebot/renovate)
 - Infrastructure as Code → Use [Pulumi](https://www.pulumi.com/blog/managing-github-with-pulumi/) or [Terraform](https://registry.terraform.io/providers/integrations/github/)
 - Stale issue automation → Use [GitHub Actions](https://github.com/actions/stale)
-- Real-time CI monitoring → Use [watchgha](https://github.com/nedbat/watchgha)
 
 See [anti-phases.md](.phases/anti-phases.md) for detailed comparison and usage guidance.
 
-**Related TUI tools:**
-- [gh-dash](https://github.com/dlvhdr/gh-dash) - GitHub dashboard for PRs and issues
-- [lazygit](https://github.com/jesseduffield/lazygit) - Git TUI
-- [watchgha](https://github.com/nedbat/watchgha) - Real-time GitHub Actions monitoring
+### Related TUI Tools: Niche Comparison
+
+Each tool serves a distinct purpose - choose based on your workflow:
+
+#### [gh-sweep](https://github.com/KyleKing/gh-sweep) (this tool)
+**Niche:** Cross-repository management & settings sync
+**Best for:** DevOps teams managing 10+ repos needing consistency
+**Key Features:**
+- Branch protection comparison across repos
+- Cross-repo settings drift detection
+- Bulk operations (delete branches, sync settings)
+- Actions analytics with flaky test detection
+- Secrets audit and compliance checks
+
+**Use gh-sweep when:** You need to ensure consistency across multiple repositories, detect configuration drift, or perform bulk management operations.
+
+#### [gh-dash](https://github.com/dlvhdr/gh-dash)
+**Niche:** Personal PR/Issue dashboard
+**Best for:** Individual developers managing their workload
+**Key Features:**
+- Unified view of PRs assigned to you
+- Issue tracking across repos
+- Notification management
+- Quick PR review workflow
+
+**Use gh-dash when:** You want a personalized dashboard for your PRs and issues across repos you contribute to.
+
+**Complements gh-sweep:** Use gh-dash for daily PR reviews, gh-sweep for repository administration.
+
+#### [watchgha](https://github.com/nedbat/watchgha)
+**Niche:** Real-time GitHub Actions monitoring
+**Best for:** Watching live CI/CD runs as they happen
+**Key Features:**
+- Live tail of workflow runs
+- Real-time status updates
+- Immediate failure notifications
+- Streaming logs
+
+**Use watchgha when:** You're actively developing and need real-time feedback on CI runs.
+
+**Complements gh-sweep:** Use watchgha for live monitoring, gh-sweep for historical analysis and flaky test detection.
+
+#### [gh-poi](https://github.com/seachicken/gh-poi)
+**Niche:** Local PR/Issue search and filtering
+**Best for:** Developers who prefer local, fast search over web UI
+**Key Features:**
+- Fuzzy search PRs/issues
+- Offline-capable caching
+- Fast local search
+- Minimal UI, keyboard-driven
+
+**Use gh-poi when:** You need lightning-fast local search of GitHub data.
+
+**Complements gh-sweep:** Use gh-poi for quick searches, gh-sweep for analysis and bulk operations.
+
+#### [gh-enhance](https://github.com/nix6839/gh-enhance)
+**Niche:** GitHub CLI enhancements
+**Best for:** Power users extending `gh` CLI functionality
+**Key Features:**
+- Custom `gh` subcommands
+- Scriptable workflows
+- CLI-based automation
+- Integration with existing gh workflows
+
+**Use gh-enhance when:** You want to extend the official `gh` CLI with custom commands.
+
+**Complements gh-sweep:** Use gh-enhance for scripting, gh-sweep for interactive TUI workflows.
+
+### Comparison Matrix
+
+| Feature | gh-sweep | gh-dash | watchgha | gh-poi | gh-enhance |
+|---------|----------|---------|----------|--------|------------|
+| **Primary Focus** | Cross-repo admin | Personal dashboard | Live CI monitoring | Fast PR/issue search | CLI extension |
+| **Multi-repo** | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | ⚠️ Via scripting |
+| **Branch Management** | ✅ Interactive | ❌ No | ❌ No | ❌ No | ⚠️ Via scripts |
+| **Protection Rules** | ✅ Compare & sync | ❌ No | ❌ No | ❌ No | ❌ No |
+| **Actions Analytics** | ✅ Historical + flaky | ❌ No | ✅ Real-time | ❌ No | ❌ No |
+| **Settings Sync** | ✅ Yes | ❌ No | ❌ No | ❌ No | ❌ No |
+| **PR/Issue View** | ✅ Comments focus | ✅ Workload focus | ❌ No | ✅ Search focus | ⚠️ CLI only |
+| **Real-time Updates** | ❌ No | ⚠️ Polling | ✅ Live streaming | ❌ No | ❌ No |
+| **Offline Search** | ❌ No | ❌ No | ❌ No | ✅ Yes | ❌ No |
+| **Scripting** | ⚠️ Via commands | ❌ No | ❌ No | ❌ No | ✅ Yes |
+| **Interface** | Interactive TUI | Interactive TUI | Streaming TUI | Search TUI | CLI |
+
+### Recommended Combinations
+
+**For Solo Developers:**
+- **gh-dash** (daily PR/issue management) + **watchgha** (active development)
+
+**For Team Leads:**
+- **gh-sweep** (repository administration) + **gh-dash** (personal workflow)
+
+**For DevOps/Platform Teams:**
+- **gh-sweep** (settings enforcement) + **watchgha** (incident response)
+
+**For Power Users:**
+- **gh-poi** (fast searches) + **gh-enhance** (custom workflows) + **gh-sweep** (bulk ops)
 
 ## License
 
