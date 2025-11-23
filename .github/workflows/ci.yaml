@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up mise
+        uses: jdx/mise-action@v2
+        with:
+          experimental: true
+
+      - name: Install dependencies
+        run: mise run install
+
+      - name: Run tests
+        run: mise run test
+
+      - name: Run linter
+        run: mise run lint
+
+      - name: Check formatting
+        run: |
+          mise run format
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Code is not formatted. Run 'mise run format'"
+            git diff
+            exit 1
+          fi
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # For version info
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up mise
+        uses: jdx/mise-action@v2
+        with:
+          experimental: true
+
+      - name: Build binary
+        run: mise run build
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gh-sweep-${{ runner.os }}
+          path: dist/gh-sweep
+          retention-days: 7

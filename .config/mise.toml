@@ -1,0 +1,58 @@
+# mise configuration for gh-sweep
+# See: https://mise.jdx.dev/
+
+[env]
+_.file = ".env"
+MISE_ENV = "dev"
+
+[tools]
+go = "1.21"
+golangci-lint = "latest"
+
+[settings]
+experimental = true  # Required for Go support
+
+[tasks.dev]
+description = "Run development build"
+run = "go run ."
+
+[tasks.build]
+description = "Build production binary"
+run = "go build -ldflags '-X github.com/KyleKing/gh-sweep/cmd.version={{.VERSION}} -X github.com/KyleKing/gh-sweep/cmd.commit={{.COMMIT}} -X github.com/KyleKing/gh-sweep/cmd.date={{.DATE}}' -o dist/gh-sweep"
+env = { VERSION = "0.1.0", COMMIT = "dev", DATE = "2024-01-01" }
+
+[tasks.test]
+description = "Run tests"
+run = "go test -v ./..."
+
+[tasks.test-coverage]
+description = "Run tests with coverage"
+run = "go test -v -coverprofile=coverage.out ./... && go tool cover -html=coverage.out -o coverage.html"
+
+[tasks.lint]
+description = "Run linters"
+run = "golangci-lint run --path-prefix=. --config=.golangci.yml --timeout=5m"
+
+[tasks.lint-fix]
+description = "Run linters and fix issues"
+run = "golangci-lint run --path-prefix=. --config=.golangci.yml --timeout=5m --fix"
+
+[tasks.format]
+description = "Format code with gofumpt"
+run = "gofumpt -w $(find . -name '*.go' -not -path './vendor/*')"
+
+[tasks.tidy]
+description = "Run go mod tidy"
+run = "go mod tidy"
+
+[tasks.install]
+description = "Install dependencies"
+run = "go mod download"
+
+[tasks.ci]
+description = "Run CI checks (used in GitHub Actions)"
+depends = ["test", "lint"]
+
+[tasks.clean]
+description = "Clean build artifacts"
+run = "rm -rf dist/ coverage.out coverage.html"

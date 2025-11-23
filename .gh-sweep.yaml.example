@@ -1,0 +1,88 @@
+# gh-sweep configuration example
+# Copy this file to .gh-sweep.yaml in your home directory or project root
+
+# Default GitHub organization (optional)
+default_org: your-org
+
+# Repositories to manage
+# Can be specified as "owner/repo" or just "repo" if default_org is set
+repositories:
+  - owner/repo1
+  - owner/repo2
+  - repo3  # Uses default_org
+
+# Cache settings
+cache:
+  # Cache time-to-live (e.g., 1h, 30m, 1d)
+  ttl: 1h
+
+  # Cache directory path (default: ~/.cache/gh-sweep)
+  path: ~/.cache/gh-sweep
+
+# GitHub API settings
+github:
+  # Personal access token (optional - will use gh CLI if available)
+  # token: ghp_your_token_here
+
+  # API base URL (for GitHub Enterprise)
+  # api_url: https://github.company.com/api/v3
+
+# Filters
+filters:
+  # Exclude bot users from comment search
+  exclude_users:
+    - dependabot[bot]
+    - renovate[bot]
+    - github-actions[bot]
+
+  # Exclude repositories from operations
+  exclude_repos:
+    - owner/archived-repo
+
+# Branch management settings
+branches:
+  # Default branch (usually main or master)
+  default_branch: main
+
+  # Protected branch patterns (won't be deleted)
+  protected_patterns:
+    - main
+    - master
+    - develop
+    - release/*
+
+# Comment review settings
+comments:
+  # Default lookback period for comments
+  default_since_days: 30
+
+  # Fuzzy search similarity threshold (0.0-1.0)
+  fuzzy_threshold: 0.7
+
+# Linear integration (optional)
+# Uncomment to enable Linear integration
+# linear:
+#   # Linear API key (get from https://linear.app/settings/api)
+#   api_key: lin_api_...
+#
+#   # Linear workspace ID
+#   workspace: your-workspace
+
+# mani integration (optional)
+# mani:
+#   # Path to mani.yaml config
+#   config_path: ./mani.yaml
+#
+#   # Auto-import repositories from mani config
+#   auto_import: true
+
+# UI preferences
+ui:
+  # Color scheme: auto, light, dark
+  theme: auto
+
+  # Show icons (requires Nerd Font)
+  icons: true
+
+  # Compact mode (less padding)
+  compact: false
