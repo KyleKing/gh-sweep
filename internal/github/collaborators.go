@@ -86,9 +86,3 @@ func (c *Client) RemoveCollaborator(owner, repo, username string) error {
 	return nil
 }
 
-// Put performs a PUT request to the GitHub API
-func (c *Client) Put(path string, body interface{}, response interface{}) error {
-	// Note: go-gh doesn't have a Put method, so we use Patch or implement custom
-	// For now, returning not implemented
-	return fmt.Errorf("PUT not yet implemented")
-}

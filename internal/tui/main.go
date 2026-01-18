@@ -9,6 +9,7 @@ import (
 	"github.com/KyleKing/gh-sweep/internal/tui/components/releases"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/secrets"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/settings"
+	"github.com/KyleKing/gh-sweep/internal/tui/components/watching"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/webhooks"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -24,6 +25,7 @@ const (
 	ViewComments
 	ViewAnalytics
 	ViewSettings
+	ViewWatching
 	ViewWebhooks
 	ViewCollaborators
 	ViewSecrets
@@ -38,15 +40,16 @@ type MainModel struct {
 	mode   ViewMode
 
 	// Sub-models for each view
-	branchesModel      branches.Model
-	protectionModel    protection.Model
-	commentsModel      comments.Model
 	analyticsModel     analytics.Model
-	settingsModel      settings.Model
-	webhooksModel      webhooks.Model
+	branchesModel      branches.Model
 	collaboratorsModel collaborators.Model
-	secretsModel       secrets.Model
+	commentsModel      comments.Model
+	protectionModel    protection.Model
 	releasesModel      releases.Model
+	secretsModel       secrets.Model
+	settingsModel      settings.Model
+	watchingModel      watching.Model
+	webhooksModel      webhooks.Model
 
 	// Configuration
 	repo     string
@@ -97,6 +100,8 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.secretsModel = newModel.(secrets.Model)
 		newModel, _ = m.releasesModel.Update(msg)
 		m.releasesModel = newModel.(releases.Model)
+		newModel, _ = m.watchingModel.Update(msg)
+		m.watchingModel = newModel.(watching.Model)
 
 		return m, nil
 
@@ -106,6 +111,11 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.String() {
 			case "ctrl+c", "q":
 				return m, tea.Quit
+
+			case "0":
+				m.mode = ViewWatching
+				m.watchingModel = watching.NewModel()
+				return m, m.watchingModel.Init()
 
 			case "1":
 				m.mode = ViewBranches
@@ -224,6 +234,11 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				var newModel tea.Model
 				newModel, cmd = m.releasesModel.Update(msg)
 				m.releasesModel = newModel.(releases.Model)
+
+			case ViewWatching:
+				var newModel tea.Model
+				newModel, cmd = m.watchingModel.Update(msg)
+				m.watchingModel = newModel.(watching.Model)
 			}
 
 			return m, cmd
@@ -259,6 +274,8 @@ func (m MainModel) View() string {
 		return m.secretsModel.View()
 	case ViewReleases:
 		return m.releasesModel.View()
+	case ViewWatching:
+		return m.watchingModel.View()
 	default:
 		return m.renderHome()
 	}
@@ -284,6 +301,11 @@ func (m MainModel) renderHome() string {
 
 	content := titleStyle.Render("🧹 gh-sweep") + "\n"
 	content += titleStyle.Render("GitHub Repository Management TUI") + "\n\n"
+
+	// Watch Audit
+	content += sectionStyle.Render("Watch Audit") + "\n"
+	content += menuItemStyle.Render("[0] 👁️  Watch Status")
+	content += " - Audit and manage repo watching\n\n"
 
 	// Phase 1: Core Management
 	content += sectionStyle.Render("Phase 1: Core Management") + "\n"
@@ -316,7 +338,7 @@ func (m MainModel) renderHome() string {
 		content += helpStyle.Render("💡 Configure with --repo flag or .gh-sweep.yaml\n\n")
 	}
 
-	content += helpStyle.Render("Press 1-9 to select a view | q to quit")
+	content += helpStyle.Render("Press 0-9 to select a view | q to quit")
 
 	return content
 }

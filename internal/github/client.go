@@ -1,7 +1,9 @@
 package github
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -70,16 +72,29 @@ func (c *Client) Get(path string, response interface{}) error {
 
 // Post performs a POST request to the GitHub API
 func (c *Client) Post(path string, body interface{}, response interface{}) error {
-	// The API expects bytes.Buffer or similar for body
-	// For now, we'll handle this at the call site
-	return fmt.Errorf("POST not fully implemented - use specific methods")
+	jsonBody, err := json.Marshal(body)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request body: %w", err)
+	}
+	return c.apiClient.Post(path, bytes.NewReader(jsonBody), response)
 }
 
 // Patch performs a PATCH request to the GitHub API
 func (c *Client) Patch(path string, body interface{}, response interface{}) error {
-	// The API expects bytes.Buffer or similar for body
-	// For now, we'll handle this at the call site
-	return fmt.Errorf("PATCH not fully implemented - use specific methods")
+	jsonBody, err := json.Marshal(body)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request body: %w", err)
+	}
+	return c.apiClient.Patch(path, bytes.NewReader(jsonBody), response)
+}
+
+// Put performs a PUT request to the GitHub API
+func (c *Client) Put(path string, body interface{}, response interface{}) error {
+	jsonBody, err := json.Marshal(body)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request body: %w", err)
+	}
+	return c.apiClient.Put(path, bytes.NewReader(jsonBody), response)
 }
 
 // Delete performs a DELETE request to the GitHub API
