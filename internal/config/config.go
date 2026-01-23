@@ -10,14 +10,15 @@ import (
 
 // Config represents the application configuration
 type Config struct {
-	DefaultOrg   string       `yaml:"default_org"`
-	Repositories []string     `yaml:"repositories"`
-	Cache        CacheConfig  `yaml:"cache"`
-	GitHub       GitHubConfig `yaml:"github"`
-	Filters      FilterConfig `yaml:"filters"`
-	Branches     BranchConfig `yaml:"branches"`
+	DefaultOrg   string        `yaml:"default_org"`
+	Repositories []string      `yaml:"repositories"`
+	Cache        CacheConfig   `yaml:"cache"`
+	GitHub       GitHubConfig  `yaml:"github"`
+	Filters      FilterConfig  `yaml:"filters"`
+	Branches     BranchConfig  `yaml:"branches"`
 	Comments     CommentConfig `yaml:"comments"`
-	UI           UIConfig     `yaml:"ui"`
+	Orphans      OrphansConfig `yaml:"orphans"`
+	UI           UIConfig      `yaml:"ui"`
 }
 
 // CacheConfig represents cache settings
@@ -48,6 +49,13 @@ type BranchConfig struct {
 type CommentConfig struct {
 	DefaultSinceDays int     `yaml:"default_since_days"`
 	FuzzyThreshold   float64 `yaml:"fuzzy_threshold"`
+}
+
+// OrphansConfig represents orphan branch detection settings
+type OrphansConfig struct {
+	StaleDaysThreshold int      `yaml:"stale_days_threshold"`
+	ExcludePatterns    []string `yaml:"exclude_patterns"`
+	DefaultConcurrency int      `yaml:"default_concurrency"`
 }
 
 // UIConfig represents UI preferences
@@ -83,6 +91,17 @@ func DefaultConfig() *Config {
 		Comments: CommentConfig{
 			DefaultSinceDays: 30,
 			FuzzyThreshold:   0.7,
+		},
+		Orphans: OrphansConfig{
+			StaleDaysThreshold: 7,
+			ExcludePatterns: []string{
+				"main",
+				"master",
+				"develop",
+				"release/*",
+				"hotfix/*",
+			},
+			DefaultConcurrency: 5,
 		},
 		UI: UIConfig{
 			Theme:   "auto",

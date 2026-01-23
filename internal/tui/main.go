@@ -1,10 +1,12 @@
 package tui
 
 import (
+	"github.com/KyleKing/gh-sweep/internal/orphans"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/analytics"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/branches"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/collaborators"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/comments"
+	orphanstui "github.com/KyleKing/gh-sweep/internal/tui/components/orphans"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/protection"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/releases"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/secrets"
@@ -30,6 +32,7 @@ const (
 	ViewCollaborators
 	ViewSecrets
 	ViewReleases
+	ViewOrphans
 )
 
 // MainModel represents the main TUI application state with navigation
@@ -44,6 +47,7 @@ type MainModel struct {
 	branchesModel      branches.Model
 	collaboratorsModel collaborators.Model
 	commentsModel      comments.Model
+	orphansModel       orphanstui.Model
 	protectionModel    protection.Model
 	releasesModel      releases.Model
 	secretsModel       secrets.Model
@@ -102,6 +106,8 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.releasesModel = newModel.(releases.Model)
 		newModel, _ = m.watchingModel.Update(msg)
 		m.watchingModel = newModel.(watching.Model)
+		newModel, _ = m.orphansModel.Update(msg)
+		m.orphansModel = newModel.(orphanstui.Model)
 
 		return m, nil
 
@@ -179,6 +185,15 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.releasesModel = releases.NewModel(m.repos)
 					return m, m.releasesModel.Init()
 				}
+
+			case "o":
+				m.mode = ViewOrphans
+				namespace := m.org
+				if namespace == "" {
+					namespace = ""
+				}
+				m.orphansModel = orphanstui.NewModel(namespace, orphans.DefaultScanOptions())
+				return m, m.orphansModel.Init()
 			}
 		} else {
 			// Handle back navigation
@@ -239,6 +254,11 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				var newModel tea.Model
 				newModel, cmd = m.watchingModel.Update(msg)
 				m.watchingModel = newModel.(watching.Model)
+
+			case ViewOrphans:
+				var newModel tea.Model
+				newModel, cmd = m.orphansModel.Update(msg)
+				m.orphansModel = newModel.(orphanstui.Model)
 			}
 
 			return m, cmd
@@ -276,6 +296,8 @@ func (m MainModel) View() string {
 		return m.releasesModel.View()
 	case ViewWatching:
 		return m.watchingModel.View()
+	case ViewOrphans:
+		return m.orphansModel.View()
 	default:
 		return m.renderHome()
 	}
@@ -302,10 +324,12 @@ func (m MainModel) renderHome() string {
 	content := titleStyle.Render("🧹 gh-sweep") + "\n"
 	content += titleStyle.Render("GitHub Repository Management TUI") + "\n\n"
 
-	// Watch Audit
-	content += sectionStyle.Render("Watch Audit") + "\n"
+	// Namespace Audit
+	content += sectionStyle.Render("Namespace Audit") + "\n"
 	content += menuItemStyle.Render("[0] 👁️  Watch Status")
-	content += " - Audit and manage repo watching\n\n"
+	content += " - Audit and manage repo watching\n"
+	content += menuItemStyle.Render("[o] 🌿 Orphan Branches")
+	content += " - Detect and clean up orphaned branches\n\n"
 
 	// Phase 1: Core Management
 	content += sectionStyle.Render("Phase 1: Core Management") + "\n"
