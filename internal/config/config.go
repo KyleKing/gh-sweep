@@ -17,6 +17,7 @@ type Config struct {
 	Filters      FilterConfig  `yaml:"filters"`
 	Branches     BranchConfig  `yaml:"branches"`
 	Comments     CommentConfig `yaml:"comments"`
+	GHAPerf      GHAPerfConfig `yaml:"gha_perf"`
 	Orphans      OrphansConfig `yaml:"orphans"`
 	UI           UIConfig      `yaml:"ui"`
 }
@@ -49,6 +50,15 @@ type BranchConfig struct {
 type CommentConfig struct {
 	DefaultSinceDays int     `yaml:"default_since_days"`
 	FuzzyThreshold   float64 `yaml:"fuzzy_threshold"`
+}
+
+// GHAPerfConfig represents GHA performance analysis settings
+type GHAPerfConfig struct {
+	DefaultLookbackDays int      `yaml:"default_lookback_days"`
+	BaseBranch          string   `yaml:"base_branch"`
+	DefaultWorkflows    []string `yaml:"default_workflows"`
+	CachePath           string   `yaml:"cache_path"`
+	RegressionThreshold float64  `yaml:"regression_threshold"`
 }
 
 // OrphansConfig represents orphan branch detection settings
@@ -91,6 +101,13 @@ func DefaultConfig() *Config {
 		Comments: CommentConfig{
 			DefaultSinceDays: 30,
 			FuzzyThreshold:   0.7,
+		},
+		GHAPerf: GHAPerfConfig{
+			DefaultLookbackDays: 30,
+			BaseBranch:          "main",
+			DefaultWorkflows:    []string{},
+			CachePath:           filepath.Join(homeDir, ".cache", "gh-sweep", "gha-perf"),
+			RegressionThreshold: 20.0,
 		},
 		Orphans: OrphansConfig{
 			StaleDaysThreshold: 7,

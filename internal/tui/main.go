@@ -6,6 +6,7 @@ import (
 	"github.com/KyleKing/gh-sweep/internal/tui/components/branches"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/collaborators"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/comments"
+	"github.com/KyleKing/gh-sweep/internal/tui/components/ghaperf"
 	orphanstui "github.com/KyleKing/gh-sweep/internal/tui/components/orphans"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/protection"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/releases"
@@ -26,6 +27,7 @@ const (
 	ViewProtection
 	ViewComments
 	ViewAnalytics
+	ViewGHAPerf
 	ViewSettings
 	ViewWatching
 	ViewWebhooks
@@ -47,6 +49,7 @@ type MainModel struct {
 	branchesModel      branches.Model
 	collaboratorsModel collaborators.Model
 	commentsModel      comments.Model
+	ghaPerfModel       ghaperf.Model
 	orphansModel       orphanstui.Model
 	protectionModel    protection.Model
 	releasesModel      releases.Model
@@ -94,6 +97,8 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.commentsModel = newModel.(comments.Model)
 		newModel, _ = m.analyticsModel.Update(msg)
 		m.analyticsModel = newModel.(analytics.Model)
+		newModel, _ = m.ghaPerfModel.Update(msg)
+		m.ghaPerfModel = newModel.(ghaperf.Model)
 		newModel, _ = m.settingsModel.Update(msg)
 		m.settingsModel = newModel.(settings.Model)
 		newModel, _ = m.webhooksModel.Update(msg)
@@ -149,6 +154,13 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.repo != "" {
 					m.analyticsModel = analytics.NewModel(m.repo)
 					return m, m.analyticsModel.Init()
+				}
+
+			case "p":
+				m.mode = ViewGHAPerf
+				if m.repo != "" {
+					m.ghaPerfModel = ghaperf.NewModel(m.repo)
+					return m, m.ghaPerfModel.Init()
 				}
 
 			case "5":
@@ -225,6 +237,11 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				newModel, cmd = m.analyticsModel.Update(msg)
 				m.analyticsModel = newModel.(analytics.Model)
 
+			case ViewGHAPerf:
+				var newModel tea.Model
+				newModel, cmd = m.ghaPerfModel.Update(msg)
+				m.ghaPerfModel = newModel.(ghaperf.Model)
+
 			case ViewSettings:
 				var newModel tea.Model
 				newModel, cmd = m.settingsModel.Update(msg)
@@ -284,6 +301,8 @@ func (m MainModel) View() string {
 		return m.commentsModel.View()
 	case ViewAnalytics:
 		return m.analyticsModel.View()
+	case ViewGHAPerf:
+		return m.ghaPerfModel.View()
 	case ViewSettings:
 		return m.settingsModel.View()
 	case ViewWebhooks:
@@ -340,7 +359,9 @@ func (m MainModel) renderHome() string {
 	content += menuItemStyle.Render("[3] 💬 PR Comments")
 	content += " - Review unresolved comments\n"
 	content += menuItemStyle.Render("[4] 📊 Analytics")
-	content += " - CI/CD and repository statistics\n\n"
+	content += " - CI/CD and repository statistics\n"
+	content += menuItemStyle.Render("[p] ⏱️  GHA Performance")
+	content += " - Workflow timing analysis\n\n"
 
 	// Phase 2: Analytics & Settings
 	content += sectionStyle.Render("Phase 2: Analytics & Settings") + "\n"
@@ -362,7 +383,7 @@ func (m MainModel) renderHome() string {
 		content += helpStyle.Render("💡 Configure with --repo flag or .gh-sweep.yaml\n\n")
 	}
 
-	content += helpStyle.Render("Press 0-9 to select a view | q to quit")
+	content += helpStyle.Render("Press 0-9/o/p to select a view | q to quit")
 
 	return content
 }
