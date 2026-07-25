@@ -1,0 +1,16 @@
+[1;38;2;198;160;246m📊 Analytics: acme/widgets[m
+
+[1;38;2;238;212;159m[1] Overview[m  [38;2;147;154;183m[2] Flaky Tests[m  [38;2;147;154;183m[3] Errors[m  
+
+📈 CI/CD Statistics
+
+Total Runs:     20
+Success Rate:   85.0%
+Failures:       3
+Avg Duration:   4m30s
+
+Success/Failure Distribution:
+✓ Success: ██████████████████████████████████████████ (17)
+✗ Failure: ███████ (3)
+
+[38;2;147;154;183m1/2/3: switch view | q: quit[m

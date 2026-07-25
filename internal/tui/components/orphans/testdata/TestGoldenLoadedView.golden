@@ -1,0 +1,16 @@
+[1;38;2;198;160;246mOrphaned Branches[m
+Namespace: acme
+
+[1;38;2;238;212;159m[1] All[m  [38;2;147;154;183m[2] Merged[m  [38;2;147;154;183m[3] Closed[m  [38;2;147;154;183m[4] Stale[m
+
+[38;2;147;154;183mRepos: 2 | Orphans: 3 | View: by_repo[m
+[38;2;147;154;183m[m                                     
+[38;2;147;154;183m[m                                     
+[1;38;2;198;160;246macme/gadgets[m
+[1;38;2;238;212;159m>  fix/typo [m[38;2;237;135;150m[Closed PR][m 30d
+
+[1;38;2;198;160;246macme/widgets[m
+   feature/login [38;2;166;218;149m[Merged PR][m 12d #42
+   spike/cache [38;2;238;212;159m[Stale][m 60d
+
+[38;2;147;154;183mj/k: navigate | space: select | a/n: all/none | d: delete | v: view mode | r: refresh | esc: back[m

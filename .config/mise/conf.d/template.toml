@@ -8,7 +8,7 @@ run = "go build -v -o gh-sweep ./cmd/gh-sweep"
 
 [tasks.ci]
 description = "Run all checks (used in GitHub Actions)"
-run = ["go test -v -coverprofile=coverage.out ./...", "go test -tags=golden -run TestGolden ./internal/tui/", "go build -v -o gh-sweep ./cmd/gh-sweep"]
+run = ["go test -v -coverprofile=coverage.out ./...", "go test -tags=golden -run TestGolden ./internal/tui/...", "go build -v -o gh-sweep ./cmd/gh-sweep"]
 
 [tasks.clean]
 description = "Clean build artifacts"
@@ -37,11 +37,11 @@ run = "go test -coverprofile=coverage.out ./..."
 
 [tasks."test:golden"]
 description = "Run golden snapshot tests"
-run = "go test -tags=golden -run TestGolden ./internal/tui/"
+run = "go test -tags=golden -run TestGolden ./internal/tui/..."
 
 [tasks."test:golden-update"]
 description = "Regenerate golden snapshots"
-run = "go test -tags=golden -run TestGolden ./internal/tui/ -update"
+run = "go test -tags=golden -run TestGolden ./internal/tui/... -update"
 
 [tasks."test:coverage-min"]
 description = "Verify minimum coverage threshold (70%)"
@@ -54,6 +54,10 @@ if (( $(awk "BEGIN {print ($coverage < 70)}") )); then
     exit 1
 fi
 '''
+
+[tasks."test:safety"]
+description = "Check tests for un-faked GitHub client construction"
+run = "./scripts/check-test-safety.sh"
 
 [tasks."test:view-coverage"]
 description = "View coverage report in browser"

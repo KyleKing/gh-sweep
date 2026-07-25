@@ -1,0 +1,72 @@
+package secrets
+
+import (
+	"errors"
+	"strings"
+	"testing"
+
+	tea "charm.land/bubbletea/v2"
+
+	"github.com/KyleKing/gh-sweep/internal/github"
+)
+
+func loadedSecretsModel() Model {
+	m := NewModel("acme", []string{"acme/widgets"})
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	m, _ = m.Update(secretsLoadedMsg{
+		orgSecrets: []github.Secret{
+			{Name: "DEPLOY_KEY", Scope: "org", UpdatedAt: "2026-01-05T00:00:00Z"},
+		},
+		repoSecrets: map[string][]github.Secret{
+			"acme/widgets": {
+				{Name: "CODECOV_TOKEN", Scope: "repo", Repository: "acme/widgets"},
+			},
+		},
+		unusedSecrets: []string{},
+	})
+
+	return m
+}
+
+func TestOrgSecretsViewDefault(t *testing.T) {
+	t.Parallel()
+
+	view := loadedSecretsModel().View()
+	for _, want := range []string{"Secrets Audit", "Organization Secrets: acme", "DEPLOY_KEY"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("view missing %q", want)
+		}
+	}
+}
+
+func TestSecretsViewModeSwitches(t *testing.T) {
+	t.Parallel()
+
+	m := loadedSecretsModel()
+
+	m, _ = m.Update(tea.KeyPressMsg{Code: '2', Text: "2"})
+	if m.viewMode != "repo" || !strings.Contains(m.View(), "CODECOV_TOKEN") {
+		t.Errorf("viewMode = %q after 2, view = %q", m.viewMode, m.View())
+	}
+
+	m, _ = m.Update(tea.KeyPressMsg{Code: '3', Text: "3"})
+	if m.viewMode != "unused" {
+		t.Errorf("viewMode = %q after 3", m.viewMode)
+	}
+
+	m, _ = m.Update(tea.KeyPressMsg{Code: '1', Text: "1"})
+	if m.viewMode != "org" {
+		t.Errorf("viewMode = %q after 1", m.viewMode)
+	}
+}
+
+func TestSecretsLoadError(t *testing.T) {
+	t.Parallel()
+
+	m := NewModel("acme", []string{"acme/widgets"})
+	m, _ = m.Update(secretsLoadedMsg{err: errors.New("forbidden")})
+
+	if !strings.Contains(m.View(), "forbidden") {
+		t.Errorf("view = %q", m.View())
+	}
+}

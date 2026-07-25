@@ -1,0 +1,12 @@
+[1;38;2;198;160;246m💬 PR Review Threads: acme/widgets[m
+
+Showing: Unresolved only
+Total: 2 | Unresolved: 1
+
+[1;38;2;91;96;120mPR #42: Add login flow[m
+[1;38;2;238;212;159m> internal/auth/session.go[m                                       
+[1;38;2;238;212;159m  @alice · 3h[m                                                    
+[1;38;2;238;212;159m  Consider extracting this into a helper so both handlers shar...[m
+[1;38;2;238;212;159m[m                                                                 
+
+[38;2;147;154;183m↑/↓: navigate | r: toggle resolved | q: quit[m

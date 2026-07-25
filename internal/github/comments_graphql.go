@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/cli/go-gh"
-	"github.com/cli/go-gh/pkg/api"
 )
 
 // DefaultOpenPRCap bounds how many of the newest open PRs are scanned for review threads.
@@ -55,7 +54,7 @@ type GQLClient struct {
 
 // NewGQLClient creates a GraphQL client using gh CLI auth or GITHUB_TOKEN.
 func NewGQLClient() (*GQLClient, error) {
-	client, err := gh.GQLClient(&api.ClientOptions{})
+	client, err := gh.GQLClient(clientOptions())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create GraphQL client: %w", err)
 	}

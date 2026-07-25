@@ -216,51 +216,62 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 
-			// Forward to active sub-model
-			var cmd tea.Cmd
-			switch m.mode {
-			case ViewBranches:
-				m.branchesModel, cmd = m.branchesModel.Update(msg)
-
-			case ViewProtection:
-				m.protectionModel, cmd = m.protectionModel.Update(msg)
-
-			case ViewComments:
-				m.commentsModel, cmd = m.commentsModel.Update(msg)
-
-			case ViewAnalytics:
-				m.analyticsModel, cmd = m.analyticsModel.Update(msg)
-
-			case ViewGHAPerf:
-				m.ghaPerfModel, cmd = m.ghaPerfModel.Update(msg)
-
-			case ViewSettings:
-				m.settingsModel, cmd = m.settingsModel.Update(msg)
-
-			case ViewWebhooks:
-				m.webhooksModel, cmd = m.webhooksModel.Update(msg)
-
-			case ViewCollaborators:
-				m.collaboratorsModel, cmd = m.collaboratorsModel.Update(msg)
-
-			case ViewSecrets:
-				m.secretsModel, cmd = m.secretsModel.Update(msg)
-
-			case ViewReleases:
-				m.releasesModel, cmd = m.releasesModel.Update(msg)
-
-			case ViewWatching:
-				m.watchingModel, cmd = m.watchingModel.Update(msg)
-
-			case ViewOrphans:
-				m.orphansModel, cmd = m.orphansModel.Update(msg)
-			}
-
-			return m, cmd
+			return m.updateActive(msg)
 		}
+
+		return m, nil
+	}
+
+	// Forward async messages (e.g. component load results) to the active sub-model.
+	if m.mode != ViewHome {
+		return m.updateActive(msg)
 	}
 
 	return m, nil
+}
+
+func (m MainModel) updateActive(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+
+	switch m.mode {
+	case ViewBranches:
+		m.branchesModel, cmd = m.branchesModel.Update(msg)
+
+	case ViewProtection:
+		m.protectionModel, cmd = m.protectionModel.Update(msg)
+
+	case ViewComments:
+		m.commentsModel, cmd = m.commentsModel.Update(msg)
+
+	case ViewAnalytics:
+		m.analyticsModel, cmd = m.analyticsModel.Update(msg)
+
+	case ViewGHAPerf:
+		m.ghaPerfModel, cmd = m.ghaPerfModel.Update(msg)
+
+	case ViewSettings:
+		m.settingsModel, cmd = m.settingsModel.Update(msg)
+
+	case ViewWebhooks:
+		m.webhooksModel, cmd = m.webhooksModel.Update(msg)
+
+	case ViewCollaborators:
+		m.collaboratorsModel, cmd = m.collaboratorsModel.Update(msg)
+
+	case ViewSecrets:
+		m.secretsModel, cmd = m.secretsModel.Update(msg)
+
+	case ViewReleases:
+		m.releasesModel, cmd = m.releasesModel.Update(msg)
+
+	case ViewWatching:
+		m.watchingModel, cmd = m.watchingModel.Update(msg)
+
+	case ViewOrphans:
+		m.orphansModel, cmd = m.orphansModel.Update(msg)
+	}
+
+	return m, cmd
 }
 
 // View renders the model.

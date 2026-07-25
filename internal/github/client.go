@@ -21,7 +21,7 @@ type Client struct {
 // NewClient creates a new GitHub API client
 // It will use gh CLI authentication if available, or fall back to GITHUB_TOKEN env var.
 func NewClient(ctx context.Context) (*Client, error) {
-	opts := &api.ClientOptions{}
+	opts := clientOptions()
 
 	// Create REST client (will use gh CLI auth or GITHUB_TOKEN)
 	restClient, err := gh.RESTClient(opts)
@@ -30,6 +30,33 @@ func NewClient(ctx context.Context) (*Client, error) {
 	}
 
 	// Create HTTP client
+	httpClient, err := gh.HTTPClient(opts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HTTP client: %w", err)
+	}
+
+	return &Client{
+		httpClient: httpClient,
+		apiClient:  restClient,
+		ctx:        ctx,
+	}, nil
+}
+
+// NewClientWithTransport creates a client whose requests are served by rt,
+// bypassing gh CLI auth resolution. Intended for tests using httptest or
+// in-memory round-trip fakes; no network is reached.
+func NewClientWithTransport(ctx context.Context, rt http.RoundTripper) (*Client, error) {
+	opts := &api.ClientOptions{
+		Host:      testAPIHost,
+		AuthToken: testAuthToken,
+		Transport: rt,
+	}
+
+	restClient, err := gh.RESTClient(opts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create GitHub client: %w", err)
+	}
+
 	httpClient, err := gh.HTTPClient(opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP client: %w", err)

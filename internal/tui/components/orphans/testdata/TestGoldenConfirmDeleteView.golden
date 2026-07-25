@@ -1,0 +1,10 @@
+[1;38;2;198;160;246mOrphaned Branches[m
+Namespace: acme
+
+[1;38;2;237;135;150mConfirm Delete[m
+
+Delete 1 branch(es)?
+
+  - acme/gadgets/fix/typo
+
+Press 'y' to confirm, 'n' or 'esc' to cancel
