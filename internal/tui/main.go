@@ -66,12 +66,23 @@ type MainModel struct {
 	org      string
 }
 
+// MainModelOptions configures the initial state of the main TUI model.
+type MainModelOptions struct {
+	Baseline string
+	Org      string
+	Repo     string
+	Repos    []string
+}
+
 // NewMainModel creates a new main TUI model.
-func NewMainModel(repo string) MainModel {
+func NewMainModel(opts MainModelOptions) MainModel {
 	return MainModel{
-		ready: false,
-		mode:  ViewHome,
-		repo:  repo,
+		ready:    false,
+		mode:     ViewHome,
+		repo:     opts.Repo,
+		repos:    opts.Repos,
+		baseline: opts.Baseline,
+		org:      opts.Org,
 	}
 }
 

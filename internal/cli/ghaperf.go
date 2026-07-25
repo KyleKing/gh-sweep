@@ -79,8 +79,21 @@ func runGHAPerf(cmd *cobra.Command, _ []string) {
 	noCache := boolFlag(cmd, "no-cache")
 	listWorkflows := boolFlag(cmd, "list-workflows")
 
+	cfg := loadConfig()
 	if repo == "" {
-		fmt.Println("Error: --repo flag is required")
+		if qualified := cfg.QualifiedRepos(); len(qualified) > 0 {
+			repo = qualified[0]
+		}
+	}
+	if !cmd.Flags().Changed("days") && cfg.GHAPerf.DefaultLookbackDays > 0 {
+		days = cfg.GHAPerf.DefaultLookbackDays
+	}
+	if !cmd.Flags().Changed("base-branch") && cfg.GHAPerf.BaseBranch != "" {
+		baseBranch = cfg.GHAPerf.BaseBranch
+	}
+
+	if repo == "" {
+		fmt.Println("Error: --repo flag is required or set repositories in .gh-sweep.yaml")
 		return
 	}
 
@@ -117,7 +130,7 @@ func runGHAPerf(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	cacheManager, err := cache.NewGHAPerfCacheManager("")
+	cacheManager, err := cache.NewGHAPerfCacheManager(cfg.GHAPerf.CachePath)
 	if err != nil {
 		fmt.Printf("Error: failed to create cache manager: %v\n", err)
 		return

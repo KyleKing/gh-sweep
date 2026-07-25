@@ -79,8 +79,13 @@ func runOrphans(cmd *cobra.Command, args []string) {
 	outputPath := stringFlag(cmd, "output")
 	format := stringFlag(cmd, "format")
 
+	cfg := loadConfig()
+
 	if namespace == "" {
 		namespace = org
+	}
+	if namespace == "" {
+		namespace = cfg.DefaultOrg
 	}
 	if namespace == "" {
 		username, err := client.GetAuthenticatedUser()
@@ -89,6 +94,10 @@ func runOrphans(cmd *cobra.Command, args []string) {
 			os.Exit(1)
 		}
 		namespace = username
+	}
+
+	if !cmd.Flags().Changed("stale-days") && cfg.Orphans.StaleDaysThreshold > 0 {
+		staleDays = cfg.Orphans.StaleDaysThreshold
 	}
 
 	options := orphans.DefaultScanOptions()

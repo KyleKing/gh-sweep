@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
 
 // Config represents the application configuration.
 type Config struct {
+	Baseline     string        `yaml:"baseline"`
 	DefaultOrg   string        `yaml:"default_org"`
 	Repositories []string      `yaml:"repositories"`
 	Cache        CacheConfig   `yaml:"cache"`
@@ -129,6 +131,19 @@ func DefaultConfig() *Config {
 			Compact: false,
 		},
 	}
+}
+
+// QualifiedRepos returns Repositories with bare names prefixed by DefaultOrg.
+func (c *Config) QualifiedRepos() []string {
+	repos := make([]string, 0, len(c.Repositories))
+	for _, repo := range c.Repositories {
+		if !strings.Contains(repo, "/") && c.DefaultOrg != "" {
+			repo = c.DefaultOrg + "/" + repo
+		}
+		repos = append(repos, repo)
+	}
+
+	return repos
 }
 
 // Load loads configuration from file, falling back to defaults.

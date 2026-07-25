@@ -1,5 +1,9 @@
 # gh-sweep configuration example
-# Copy this file to .gh-sweep.yaml in your home directory or project root
+# Copy this file to .gh-sweep.yaml in your project root or home directory
+# (project file takes precedence over the home file)
+
+# Baseline repository for protection/settings comparisons (optional)
+# baseline: owner/baseline-repo
 
 # Default GitHub organization (optional)
 default_org: your-org
@@ -17,7 +21,7 @@ cache:
   ttl: 1h
 
   # Cache directory path (default: ~/.cache/gh-sweep)
-  path: ~/.cache/gh-sweep
+  # path: /home/you/.cache/gh-sweep
 
 # GitHub API settings
 github:
@@ -59,22 +63,38 @@ comments:
   # Fuzzy search similarity threshold (0.0-1.0)
   fuzzy_threshold: 0.7
 
-# Linear integration (optional)
-# Uncomment to enable Linear integration
-# linear:
-#   # Linear API key (get from https://linear.app/settings/api)
-#   api_key: lin_api_...
-#
-#   # Linear workspace ID
-#   workspace: your-workspace
+# GitHub Actions performance analysis settings
+gha_perf:
+  # Lookback period in days
+  default_lookback_days: 30
 
-# mani integration (optional)
-# mani:
-#   # Path to mani.yaml config
-#   config_path: ./mani.yaml
-#
-#   # Auto-import repositories from mani config
-#   auto_import: true
+  # Base branch for comparisons
+  base_branch: main
+
+  # Workflows to analyze by default (empty means all)
+  default_workflows: []
+
+  # Cache directory for run data (default: ~/.cache/gh-sweep/gha-perf)
+  # cache_path: /home/you/.cache/gh-sweep/gha-perf
+
+  # Percent slowdown flagged as a regression
+  regression_threshold: 20.0
+
+# Orphan branch detection settings
+orphans:
+  # Days of inactivity before a branch without a PR is considered stale
+  stale_days_threshold: 7
+
+  # Branch patterns never treated as orphans
+  exclude_patterns:
+    - main
+    - master
+    - develop
+    - release/*
+    - hotfix/*
+
+  # Number of repositories scanned concurrently
+  default_concurrency: 5
 
 # UI preferences
 ui:
