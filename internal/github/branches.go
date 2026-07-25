@@ -3,6 +3,7 @@ package github
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -56,6 +57,43 @@ func (c *Client) ListBranches(owner, repo string) ([]Branch, error) {
 	}
 
 	return branches, nil
+}
+
+const commitDateWorkers = 4
+
+func (c *Client) fillCommitDates(owner, repo string, branches []Branch) {
+	var wg sync.WaitGroup
+
+	sem := make(chan struct{}, commitDateWorkers)
+
+	for i := range branches {
+		if !branches[i].LastCommitDate.IsZero() {
+			continue
+		}
+
+		wg.Add(1)
+		sem <- struct{}{}
+
+		go func(b *Branch) {
+			defer wg.Done()
+			defer func() { <-sem }()
+
+			var response struct {
+				Commit struct {
+					Author struct {
+						Date time.Time `json:"date"`
+					} `json:"author"`
+				} `json:"commit"`
+			}
+
+			path := fmt.Sprintf("repos/%s/%s/commits/%s", owner, repo, b.SHA)
+			if err := c.Get(path, &response); err == nil {
+				b.LastCommitDate = response.Commit.Author.Date
+			}
+		}(&branches[i])
+	}
+
+	wg.Wait()
 }
 
 // CompareBranches compares two branches and returns ahead/behind counts.
@@ -217,6 +255,8 @@ func (c *Client) ListBranchStatuses(owner, repo, baseBranch string) ([]BranchSta
 	if err != nil {
 		return nil, err
 	}
+
+	c.fillCommitDates(owner, repo, branches)
 
 	prs, err := c.ListPullRequests(owner, repo, "all")
 	if err != nil {
