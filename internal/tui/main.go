@@ -132,7 +132,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "1":
 				m.mode = ViewBranches
 				if m.repo != "" {
-					m.branchesModel = branches.NewModel(m.repo, "main")
+					m.branchesModel = branches.NewModel(m.repo, "")
 					return m, m.branchesModel.Init()
 				}
 

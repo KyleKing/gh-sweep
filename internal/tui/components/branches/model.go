@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -16,16 +17,18 @@ import (
 
 // Model represents the branch management TUI state.
 type Model struct {
-	repo       string
-	branches   []github.BranchWithComparison
-	selected   map[int]bool
-	cursor     int
-	width      int
-	height     int
-	loading    bool
-	err        error
-	baseBranch string
-	showTree   bool
+	repo          string
+	baseBranch    string
+	branches      []github.BranchStatus
+	selected      map[string]bool
+	cursor        int
+	width         int
+	height        int
+	loading       bool
+	err           error
+	statusMsg     string
+	confirmDelete bool
+	deleteTargets []github.BranchStatus
 }
 
 // NewModel creates a new branch management model.
@@ -33,14 +36,19 @@ func NewModel(repo, baseBranch string) Model {
 	return Model{
 		repo:       repo,
 		baseBranch: baseBranch,
-		selected:   make(map[int]bool),
+		selected:   make(map[string]bool),
 		loading:    true,
 	}
 }
 
 type branchesLoadedMsg struct {
-	branches []github.BranchWithComparison
+	branches []github.BranchStatus
 	err      error
+}
+
+type deleteResultMsg struct {
+	branch string
+	err    error
 }
 
 // Init initializes the model.
@@ -49,71 +57,27 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) loadBranches() tea.Msg {
-	// If no repo specified, return empty
 	if m.repo == "" {
-		return branchesLoadedMsg{
-			branches: []github.BranchWithComparison{},
-			err:      errors.New("no repository specified"),
-		}
+		return branchesLoadedMsg{err: errors.New("no repository specified")}
 	}
 
-	// Parse repo (owner/name format)
-	parts := strings.Split(m.repo, "/")
-	if len(parts) != 2 {
-		return branchesLoadedMsg{
-			branches: []github.BranchWithComparison{},
-			err:      errors.New("invalid repo format, expected owner/repo"),
-		}
+	owner, name, ok := splitRepo(m.repo)
+	if !ok {
+		return branchesLoadedMsg{err: errors.New("invalid repo format, expected owner/repo")}
 	}
-	owner, repo := parts[0], parts[1]
 
-	// Create GitHub client
 	ctx := context.Background()
 	client, err := github.NewClient(ctx)
 	if err != nil {
-		return branchesLoadedMsg{
-			branches: []github.BranchWithComparison{},
-			err:      fmt.Errorf("failed to create GitHub client: %w", err),
-		}
+		return branchesLoadedMsg{err: fmt.Errorf("failed to create GitHub client: %w", err)}
 	}
 
-	// Load branches from GitHub
-	branches, err := client.ListBranches(owner, repo)
+	branches, err := client.ListBranchStatuses(owner, name, m.baseBranch)
 	if err != nil {
-		return branchesLoadedMsg{
-			branches: []github.BranchWithComparison{},
-			err:      fmt.Errorf("failed to load branches: %w", err),
-		}
+		return branchesLoadedMsg{err: fmt.Errorf("failed to load branches: %w", err)}
 	}
 
-	// Use default base branch if not specified
-	baseBranch := m.baseBranch
-	if baseBranch == "" {
-		baseBranch = "main"
-	}
-
-	// Build comparison info for each branch
-	branchesWithComparison := make([]github.BranchWithComparison, 0, len(branches))
-	for _, branch := range branches {
-		// Skip comparison for base branch
-		if branch.Name != baseBranch {
-			ahead, behind, compareErr := client.CompareBranches(owner, repo, baseBranch, branch.Name)
-			if compareErr == nil {
-				branch.Ahead = ahead
-				branch.Behind = behind
-			}
-		}
-
-		branchesWithComparison = append(branchesWithComparison, github.BranchWithComparison{
-			Branch:     branch,
-			ComparedTo: baseBranch,
-		})
-	}
-
-	return branchesLoadedMsg{
-		branches: branchesWithComparison,
-		err:      nil,
-	}
+	return branchesLoadedMsg{branches: branches}
 }
 
 // Update handles messages.
@@ -132,42 +96,192 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 		return m, nil
 
-	case tea.KeyPressMsg:
-		switch msg.String() {
-		case "ctrl+c", "q":
-			return m, tea.Quit
-
-		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
-			}
-
-		case "down", "j":
-			if m.cursor < len(m.branches)-1 {
-				m.cursor++
-			}
-
-		case "space": // Space to select
-			m.selected[m.cursor] = !m.selected[m.cursor]
-
-		case "a": // Select all
-			for i := range m.branches {
-				m.selected[i] = true
-			}
-
-		case "n": // Select none
-			m.selected = make(map[int]bool)
-
-		case "t": // Toggle tree view
-			m.showTree = !m.showTree
-
-		case "d": // Delete selected
-			// TODO: Implement delete confirmation
-			return m, nil
+	case deleteResultMsg:
+		if msg.err != nil {
+			m.statusMsg = fmt.Sprintf("Failed to delete %s: %v", msg.branch, msg.err)
+		} else {
+			m.statusMsg = "Deleted: " + msg.branch
+			delete(m.selected, msg.branch)
+			m.removeBranch(msg.branch)
 		}
+		m.confirmDelete = false
+		m.deleteTargets = nil
+
+		return m, nil
+
+	case tea.KeyPressMsg:
+		if m.confirmDelete {
+			return m.handleConfirmKeys(msg)
+		}
+
+		return m.handleListKeys(msg)
 	}
 
 	return m, nil
+}
+
+func (m Model) handleListKeys(msg tea.KeyPressMsg) (Model, tea.Cmd) {
+	switch msg.String() {
+	case "ctrl+c", "q":
+		return m, tea.Quit
+
+	case "up", "k":
+		if m.cursor > 0 {
+			m.cursor--
+		}
+
+	case "down", "j":
+		if m.cursor < len(m.branches)-1 {
+			m.cursor++
+		}
+
+	case "space":
+		if m.cursor < len(m.branches) {
+			name := m.branches[m.cursor].Name
+			m.selected[name] = !m.selected[name]
+		}
+
+	case "a":
+		for _, branch := range m.branches {
+			m.selected[branch.Name] = true
+		}
+
+	case "n":
+		m.selected = make(map[string]bool)
+
+	case "d":
+		return m.handleDelete()
+
+	case "r":
+		m.loading = true
+		m.branches = nil
+		m.err = nil
+		m.cursor = 0
+		m.statusMsg = ""
+		m.selected = make(map[string]bool)
+
+		return m, m.loadBranches
+	}
+
+	return m, nil
+}
+
+func (m Model) handleConfirmKeys(msg tea.KeyPressMsg) (Model, tea.Cmd) {
+	switch msg.String() {
+	case "y", "Y":
+		return m.executeDelete()
+	case "n", "N", "esc":
+		m.confirmDelete = false
+		m.deleteTargets = nil
+		m.statusMsg = "Delete canceled"
+
+		return m, nil
+	}
+
+	return m, nil
+}
+
+func (m Model) handleDelete() (Model, tea.Cmd) {
+	eligible, blocked := collectDeleteTargets(m.branches, m.selected, m.cursor)
+
+	if len(blocked) > 0 {
+		m.statusMsg = describeBlocked(blocked)
+	}
+
+	if len(eligible) == 0 {
+		if len(blocked) == 0 {
+			m.statusMsg = "No branches selected"
+		}
+
+		return m, nil
+	}
+
+	m.confirmDelete = true
+	m.deleteTargets = eligible
+
+	return m, nil
+}
+
+func (m Model) executeDelete() (Model, tea.Cmd) {
+	owner, name, ok := splitRepo(m.repo)
+	if !ok {
+		m.confirmDelete = false
+		m.deleteTargets = nil
+		m.statusMsg = "Invalid repository: " + m.repo
+
+		return m, nil
+	}
+
+	cmds := make([]tea.Cmd, 0, len(m.deleteTargets))
+	for _, target := range m.deleteTargets {
+		branch := target.Name
+		cmds = append(cmds, func() tea.Msg {
+			ctx := context.Background()
+			client, err := github.NewClient(ctx)
+			if err != nil {
+				return deleteResultMsg{branch: branch, err: err}
+			}
+
+			return deleteResultMsg{branch: branch, err: client.DeleteBranch(owner, name, branch)}
+		})
+	}
+
+	m.confirmDelete = false
+
+	return m, tea.Batch(cmds...)
+}
+
+func (m *Model) removeBranch(name string) {
+	for i := range m.branches {
+		if m.branches[i].Name == name {
+			m.branches = append(m.branches[:i], m.branches[i+1:]...)
+
+			break
+		}
+	}
+
+	if m.cursor >= len(m.branches) && m.cursor > 0 {
+		m.cursor = len(m.branches) - 1
+	}
+}
+
+func collectDeleteTargets(
+	branches []github.BranchStatus,
+	selected map[string]bool,
+	cursor int,
+) ([]github.BranchStatus, []github.BranchStatus) {
+	var targets []github.BranchStatus
+
+	for _, branch := range branches {
+		if selected[branch.Name] {
+			targets = append(targets, branch)
+		}
+	}
+
+	if len(targets) == 0 && cursor >= 0 && cursor < len(branches) {
+		targets = append(targets, branches[cursor])
+	}
+
+	var eligible, blocked []github.BranchStatus
+
+	for _, branch := range targets {
+		if branch.DeleteBlocked() != nil {
+			blocked = append(blocked, branch)
+		} else {
+			eligible = append(eligible, branch)
+		}
+	}
+
+	return eligible, blocked
+}
+
+func describeBlocked(blocked []github.BranchStatus) string {
+	reasons := make([]string, 0, len(blocked))
+	for _, branch := range blocked {
+		reasons = append(reasons, fmt.Sprintf("%s (%v)", branch.Name, branch.DeleteBlocked()))
+	}
+
+	return "Blocked: " + strings.Join(reasons, ", ")
 }
 
 // View renders the model.
@@ -177,61 +291,119 @@ func (m Model) View() string {
 	}
 
 	if m.err != nil {
-		return fmt.Sprintf("Error: %v\n", m.err)
+		return fmt.Sprintf("Error: %v\n\nPress 'r' to retry or 'q' to quit\n", m.err)
 	}
 
 	var b strings.Builder
 
-	// Header
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(theme.Current().Primary)
 
-	b.WriteString(titleStyle.Render("📋 Branches for " + m.repo))
+	b.WriteString(titleStyle.Render("Branches for " + m.repo))
 	b.WriteString("\n\n")
 
-	// Branch list
+	if m.confirmDelete {
+		return m.renderConfirmDialog(&b)
+	}
+
 	if len(m.branches) == 0 {
 		b.WriteString("No branches found.\n")
 	} else {
 		for i, branch := range m.branches {
-			cursor := " "
-			if m.cursor == i {
-				cursor = ">"
-			}
-
-			checkbox := "[ ]"
-			if m.selected[i] {
-				checkbox = "[✓]"
-			}
-
-			aheadBehind := fmt.Sprintf("↑%d ↓%d", branch.Ahead, branch.Behind)
-
-			line := fmt.Sprintf("%s %s %s %s",
-				cursor,
-				checkbox,
-				branch.Name,
-				aheadBehind,
-			)
-
-			if m.cursor == i {
-				selectedStyle := lipgloss.NewStyle().
-					Bold(true).
-					Foreground(theme.Current().Warning)
-				b.WriteString(selectedStyle.Render(line))
-			} else {
-				b.WriteString(line)
-			}
-			b.WriteString("\n")
+			m.renderBranchLine(&b, i, branch)
 		}
 	}
 
-	// Help
+	if m.statusMsg != "" {
+		b.WriteString("\n")
+		statusStyle := lipgloss.NewStyle().Foreground(theme.Current().Primary)
+		b.WriteString(statusStyle.Render(m.statusMsg))
+		b.WriteString("\n")
+	}
+
 	b.WriteString("\n")
 	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
-	b.WriteString(helpStyle.Render("↑/↓: navigate | space: select | a: all | n: none | t: tree | d: delete | q: quit"))
+	b.WriteString(helpStyle.Render("j/k: navigate | space: select | a/n: all/none | d: delete | r: refresh | q: quit"))
 
 	return b.String()
+}
+
+func (m Model) renderBranchLine(b *strings.Builder, i int, branch github.BranchStatus) {
+	cursor := " "
+	if m.cursor == i {
+		cursor = ">"
+	}
+
+	checkbox := "[ ]"
+	if m.selected[branch.Name] {
+		checkbox = "[x]"
+	}
+
+	line := fmt.Sprintf("%s %s %s ↑%d ↓%d", cursor, checkbox, branch.Name, branch.Ahead, branch.Behind)
+
+	if m.cursor == i {
+		selectedStyle := lipgloss.NewStyle().
+			Bold(true).
+			Foreground(theme.Current().Warning)
+		b.WriteString(selectedStyle.Render(line))
+	} else {
+		b.WriteString(line)
+	}
+
+	mutedStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
+	b.WriteString(mutedStyle.Render(branchAnnotations(branch)))
+	b.WriteString("\n")
+}
+
+func branchAnnotations(branch github.BranchStatus) string {
+	var parts []string
+
+	if branch.IsDefault {
+		parts = append(parts, "[default]")
+	}
+	if branch.Protected {
+		parts = append(parts, "[protected]")
+	}
+	if branch.PR != nil {
+		parts = append(parts, fmt.Sprintf("PR #%d (%s)", branch.PR.Number, branch.PR.State))
+	}
+	if !branch.LastCommitDate.IsZero() {
+		days := int(time.Since(branch.LastCommitDate).Hours() / 24)
+		parts = append(parts, fmt.Sprintf("%dd", days))
+	}
+
+	if len(parts) == 0 {
+		return ""
+	}
+
+	return " " + strings.Join(parts, " ")
+}
+
+func (m Model) renderConfirmDialog(b *strings.Builder) string {
+	warnStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Error)
+	b.WriteString(warnStyle.Render("Confirm Delete"))
+	b.WriteString("\n\n")
+
+	fmt.Fprintf(b, "Delete %d branch(es) from %s?\n\n", len(m.deleteTargets), m.repo)
+
+	for _, branch := range m.deleteTargets {
+		fmt.Fprintf(b, "  - %s\n", branch.Name)
+	}
+
+	b.WriteString("\n")
+	b.WriteString("Press 'y' to confirm, 'n' or 'esc' to cancel\n")
+
+	return b.String()
+}
+
+func splitRepo(repo string) (string, string, bool) {
+	parts := strings.SplitN(repo, "/", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return "", "", false
+	}
+
+	return parts[0], parts[1], true
 }
 
 // GetLocalBranches loads branches from local Git repository.
