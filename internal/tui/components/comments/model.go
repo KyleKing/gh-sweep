@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -16,8 +17,10 @@ import (
 // Model represents the comments review TUI state.
 type Model struct {
 	repo         string
-	comments     []github.Comment
-	unresolved   []github.Comment
+	prNumber     int
+	filter       github.ThreadFilter
+	threads      []github.ReviewThread
+	unresolved   []github.ReviewThread
 	cursor       int
 	width        int
 	height       int
@@ -26,80 +29,58 @@ type Model struct {
 	showResolved bool
 }
 
-// NewModel creates a new comments model.
+// NewModel creates a comments model scanning all open PRs of the repo.
 func NewModel(repo string) Model {
+	return NewModelWithOptions(repo, 0, github.ThreadFilter{})
+}
+
+// NewModelWithOptions creates a comments model for a single PR (prNumber > 0) with filters applied.
+func NewModelWithOptions(repo string, prNumber int, filter github.ThreadFilter) Model {
 	return Model{
-		repo:         repo,
-		loading:      true,
-		showResolved: false,
+		repo:     repo,
+		prNumber: prNumber,
+		filter:   filter,
+		loading:  true,
 	}
 }
 
-type commentsLoadedMsg struct {
-	comments   []github.Comment
-	unresolved []github.Comment
-	err        error
+type threadsLoadedMsg struct {
+	threads []github.ReviewThread
+	err     error
 }
 
 // Init initializes the model.
 func (m Model) Init() tea.Cmd {
-	return m.loadComments
+	return m.loadThreads
 }
 
-func (m Model) loadComments() tea.Msg {
-	// If no repo specified, return empty
+func (m Model) loadThreads() tea.Msg {
 	if m.repo == "" {
-		return commentsLoadedMsg{
-			comments:   []github.Comment{},
-			unresolved: []github.Comment{},
-			err:        errors.New("no repository specified"),
-		}
+		return threadsLoadedMsg{err: errors.New("no repository specified")}
 	}
 
-	// Parse repo (owner/name format)
 	parts := strings.Split(m.repo, "/")
 	if len(parts) != 2 {
-		return commentsLoadedMsg{
-			comments:   []github.Comment{},
-			unresolved: []github.Comment{},
-			err:        errors.New("invalid repo format, expected owner/repo"),
-		}
+		return threadsLoadedMsg{err: errors.New("invalid repo format, expected owner/repo")}
 	}
 	owner, repo := parts[0], parts[1]
 
-	// Create GitHub client
-	ctx := context.Background()
-	client, err := github.NewClient(ctx)
+	client, err := github.NewClient(context.Background())
 	if err != nil {
-		return commentsLoadedMsg{
-			comments:   []github.Comment{},
-			unresolved: []github.Comment{},
-			err:        fmt.Errorf("failed to create GitHub client: %w", err),
-		}
+		return threadsLoadedMsg{err: fmt.Errorf("failed to create GitHub client: %w", err)}
 	}
 
-	// Load comments from GitHub
-	// Note: ListPRComments loads comments for a specific PR
-	// For now, we'll load from a recent PR (this is a simplification)
-	// In a real implementation, you'd want to iterate through recent PRs
-	comments, err := client.ListPRComments(owner, repo, 1) // PR #1 as example
+	gql, err := github.NewGQLClient()
 	if err != nil {
-		// Return empty on error (repo might not have PR #1)
-		return commentsLoadedMsg{
-			comments:   []github.Comment{},
-			unresolved: []github.Comment{},
-			err:        nil, // Don't error out, just show empty
-		}
+		return threadsLoadedMsg{err: err}
 	}
 
-	// Filter unresolved
-	unresolved := github.FilterUnresolvedComments(comments)
-
-	return commentsLoadedMsg{
-		comments:   comments,
-		unresolved: unresolved,
-		err:        nil,
+	threads, err := gql.ListRepoReviewThreads(client, owner, repo, m.prNumber, github.DefaultOpenPRCap)
+	if err != nil {
+		return threadsLoadedMsg{err: err}
 	}
+
+	return threadsLoadedMsg{threads: threads}
 }
 
 // Update handles messages.
@@ -111,10 +92,10 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 		return m, nil
 
-	case commentsLoadedMsg:
+	case threadsLoadedMsg:
 		m.loading = false
-		m.comments = msg.comments
-		m.unresolved = msg.unresolved
+		m.threads = msg.threads
+		m.unresolved = github.FilterUnresolvedThreads(msg.threads)
 		m.err = msg.err
 
 		return m, nil
@@ -130,8 +111,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			}
 
 		case "down", "j":
-			activeList := m.getActiveList()
-			if m.cursor < len(activeList)-1 {
+			if m.cursor < len(m.visibleThreads())-1 {
 				m.cursor++
 			}
 
@@ -144,18 +124,18 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) getActiveList() []github.Comment {
+func (m Model) visibleThreads() []github.ReviewThread {
 	if m.showResolved {
-		return m.comments
+		return m.filter.Apply(m.threads)
 	}
 
-	return m.unresolved
+	return m.filter.Apply(m.unresolved)
 }
 
 // View renders the model.
 func (m Model) View() string {
 	if m.loading {
-		return "Loading comments...\n"
+		return "Loading review threads...\n"
 	}
 
 	if m.err != nil {
@@ -164,61 +144,105 @@ func (m Model) View() string {
 
 	var b strings.Builder
 
-	// Header
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(theme.Current().Primary)
 
-	b.WriteString(titleStyle.Render("💬 PR Comments: " + m.repo))
+	b.WriteString(titleStyle.Render("💬 PR Review Threads: " + m.repo))
 	b.WriteString("\n\n")
 
-	// Filter status
 	if m.showResolved {
-		b.WriteString("Showing: All comments\n")
+		b.WriteString("Showing: All threads\n")
 	} else {
 		b.WriteString("Showing: Unresolved only\n")
 	}
-	b.WriteString(fmt.Sprintf("Total: %d | Unresolved: %d\n\n", len(m.comments), len(m.unresolved)))
+	b.WriteString(fmt.Sprintf("Total: %d | Unresolved: %d\n\n", len(m.threads), len(m.unresolved)))
 
-	// Comment list
-	activeList := m.getActiveList()
-	if len(activeList) == 0 {
-		b.WriteString("No comments found.\n")
+	visible := m.visibleThreads()
+	if len(visible) == 0 {
+		b.WriteString("No review threads found.\n")
 	} else {
-		for i, comment := range activeList {
-			if i >= m.height-10 { // Limit visible items
-				break
-			}
-
-			cursor := " "
-			if m.cursor == i {
-				cursor = ">"
-			}
-
-			commentStyle := lipgloss.NewStyle()
-			if m.cursor == i {
-				commentStyle = commentStyle.Bold(true).Foreground(theme.Current().Warning)
-			}
-
-			// Truncate body if too long
-			body := comment.Body
-			if len(body) > 60 {
-				body = body[:60] + "..."
-			}
-
-			line := fmt.Sprintf("%s PR#%d @%s\n", cursor, comment.PRNumber, comment.Author)
-			line += fmt.Sprintf("  %s:%d\n", comment.Path, comment.Line)
-			line += fmt.Sprintf("  %s\n", body)
-
-			b.WriteString(commentStyle.Render(line))
-			b.WriteString("\n")
-		}
+		m.renderThreads(&b, visible)
 	}
 
-	// Help
 	b.WriteString("\n")
 	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
 	b.WriteString(helpStyle.Render("↑/↓: navigate | r: toggle resolved | q: quit"))
 
 	return b.String()
+}
+
+func (m Model) renderThreads(b *strings.Builder, visible []github.ReviewThread) {
+	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Secondary)
+
+	lastPR := 0
+	rendered := 0
+	for i, thread := range visible {
+		if rendered >= m.height-10 && m.height > 0 {
+			break
+		}
+
+		if thread.PRNumber != lastPR {
+			b.WriteString(headerStyle.Render(fmt.Sprintf("PR #%d: %s", thread.PRNumber, thread.PRTitle)))
+			b.WriteString("\n")
+			lastPR = thread.PRNumber
+		}
+
+		cursor := " "
+		if m.cursor == i {
+			cursor = ">"
+		}
+
+		threadStyle := lipgloss.NewStyle()
+		if m.cursor == i {
+			threadStyle = threadStyle.Bold(true).Foreground(theme.Current().Warning)
+		}
+
+		b.WriteString(threadStyle.Render(renderThread(cursor, thread)))
+		b.WriteString("\n")
+		rendered++
+	}
+}
+
+func renderThread(cursor string, thread github.ReviewThread) string {
+	outdated := ""
+	if thread.IsOutdated {
+		outdated = " [outdated]"
+	}
+
+	author, age, body := "unknown", "", ""
+	if first, ok := thread.FirstComment(); ok {
+		author = first.Author
+		age = formatAge(first.CreatedAt)
+		body = excerpt(first.Body, 60)
+	}
+
+	line := fmt.Sprintf("%s %s%s\n", cursor, thread.Path, outdated)
+	line += fmt.Sprintf("  @%s · %s\n", author, age)
+	line += fmt.Sprintf("  %s\n", body)
+
+	return line
+}
+
+func excerpt(body string, limit int) string {
+	flat := strings.Join(strings.Fields(body), " ")
+	if len(flat) > limit {
+		return flat[:limit] + "..."
+	}
+
+	return flat
+}
+
+func formatAge(t time.Time) string {
+	d := time.Since(t)
+	switch {
+	case d < time.Hour:
+		return fmt.Sprintf("%dm", int(d.Minutes()))
+	case d < 24*time.Hour:
+		return fmt.Sprintf("%dh", int(d.Hours()))
+	case d < 30*24*time.Hour:
+		return fmt.Sprintf("%dd", int(d.Hours()/24))
+	default:
+		return fmt.Sprintf("%dmo", int(d.Hours()/(24*30)))
+	}
 }
