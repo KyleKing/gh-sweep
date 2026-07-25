@@ -2,7 +2,7 @@ package github
 
 import "fmt"
 
-// RepoSettings represents repository settings
+// RepoSettings represents repository settings.
 type RepoSettings struct {
 	Repository          string
 	DefaultBranch       string
@@ -27,7 +27,7 @@ type repoResponse struct {
 	HasWiki             bool   `json:"has_wiki"`
 }
 
-// GetRepoSettings retrieves repository settings
+// GetRepoSettings retrieves repository settings.
 func (c *Client) GetRepoSettings(owner, repo string) (*RepoSettings, error) {
 	var response repoResponse
 	path := fmt.Sprintf("repos/%s/%s", owner, repo)
@@ -49,7 +49,7 @@ func (c *Client) GetRepoSettings(owner, repo string) (*RepoSettings, error) {
 	}, nil
 }
 
-// SettingsDiff represents differences between repository settings
+// SettingsDiff represents differences between repository settings.
 type SettingsDiff struct {
 	Field    string
 	Baseline interface{}
@@ -57,7 +57,7 @@ type SettingsDiff struct {
 	Severity string // critical, warning, info
 }
 
-// CompareSettings compares repository settings against a baseline
+// CompareSettings compares repository settings against a baseline.
 func CompareSettings(baseline, current *RepoSettings) []SettingsDiff {
 	diffs := []SettingsDiff{}
 

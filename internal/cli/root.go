@@ -1,18 +1,13 @@
-package cmd
+package cli
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/KyleKing/gh-sweep/internal/tui"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
-)
 
-var (
-	version = "dev"
-	commit  = "none"
-	date    = "unknown"
+	"github.com/KyleKing/gh-sweep/internal/tui"
 )
 
 var rootCmd = &cobra.Command{
@@ -30,7 +25,7 @@ It provides interactive tools for:
 
 Use 'gh-sweep <command> --help' for more information about a command.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		repo, _ := cmd.Flags().GetString("repo")
+		repo := stringFlag(cmd, "repo")
 
 		// Launch full interactive TUI
 		m := tui.NewMainModel(repo)
@@ -43,7 +38,9 @@ Use 'gh-sweep <command> --help' for more information about a command.`,
 	},
 }
 
-func Execute() {
+// Execute runs the root command with the given build version string.
+func Execute(version string) {
+	rootCmd.Version = version
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
@@ -51,6 +48,5 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.Version = fmt.Sprintf("%s (commit: %s, built: %s)", version, commit, date)
 	rootCmd.Flags().String("repo", "", "Repository (owner/repo)")
 }

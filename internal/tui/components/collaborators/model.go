@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/KyleKing/gh-sweep/internal/github"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/KyleKing/gh-sweep/internal/github"
 )
 
-// Model represents the collaborator management TUI state
+// Model represents the collaborator management TUI state.
 type Model struct {
 	repos         []string
 	collaborators map[string][]github.Collaborator
@@ -22,7 +23,7 @@ type Model struct {
 	viewMode      string // "byrepo", "byuser"
 }
 
-// NewModel creates a new collaborator management model
+// NewModel creates a new collaborator management model.
 func NewModel(repos []string) Model {
 	return Model{
 		repos:         repos,
@@ -37,7 +38,7 @@ type collaboratorsLoadedMsg struct {
 	err           error
 }
 
-// Init initializes the model
+// Init initializes the model.
 func (m Model) Init() tea.Cmd {
 	return m.loadCollaborators
 }
@@ -77,18 +78,20 @@ func (m Model) loadCollaborators() tea.Msg {
 	}
 }
 
-// Update handles messages
+// Update handles messages.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+
 		return m, nil
 
 	case collaboratorsLoadedMsg:
 		m.loading = false
 		m.collaborators = msg.collaborators
 		m.err = msg.err
+
 		return m, nil
 
 	case tea.KeyMsg:
@@ -130,10 +133,11 @@ func (m Model) getTotalCollaborators() int {
 			uniqueUsers[collab.Login] = true
 		}
 	}
+
 	return len(uniqueUsers)
 }
 
-// View renders the model
+// View renders the model.
 func (m Model) View() string {
 	if m.loading {
 		return "Loading collaborators...\n"
@@ -211,22 +215,25 @@ func (m Model) renderByRepo() string {
 		line := fmt.Sprintf("%s %s (%d collaborators):\n", cursor, repo, len(collabs))
 
 		// Show first few collaborators
+		var lineSb214 strings.Builder
 		for j, collab := range collabs {
 			if j >= 3 {
-				line += fmt.Sprintf("   ... and %d more\n", len(collabs)-3)
+				lineSb214.WriteString(fmt.Sprintf("   ... and %d more\n", len(collabs)-3))
 				break
 			}
 			permColor := "#00FF00"
-			if collab.Permission == "admin" {
+			switch collab.Permission {
+			case "admin":
 				permColor = "#FF0000"
-			} else if collab.Permission == "write" {
+			case "write":
 				permColor = "#FFFF00"
 			}
 			permStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(permColor))
-			line += fmt.Sprintf("   - %s ", collab.Login)
-			line += permStyle.Render(fmt.Sprintf("[%s]", collab.Permission))
-			line += "\n"
+			lineSb214.WriteString(fmt.Sprintf("   - %s ", collab.Login))
+			lineSb214.WriteString(permStyle.Render(fmt.Sprintf("[%s]", collab.Permission)))
+			lineSb214.WriteString("\n")
 		}
+		line += lineSb214.String()
 
 		b.WriteString(statusStyle.Render(line))
 		b.WriteString("\n")
@@ -270,23 +277,26 @@ func (m Model) renderByUser() string {
 		line := fmt.Sprintf("%s %s (access to %d repos):\n", cursor, user, len(repos))
 
 		// Show repos with permissions
+		var lineSb273 strings.Builder
 		for j, repo := range repos {
 			if j >= 3 {
-				line += fmt.Sprintf("   ... and %d more\n", len(repos)-3)
+				lineSb273.WriteString(fmt.Sprintf("   ... and %d more\n", len(repos)-3))
 				break
 			}
 			perm := userPerms[user][repo]
 			permColor := "#00FF00"
-			if perm == "admin" {
+			switch perm {
+			case "admin":
 				permColor = "#FF0000"
-			} else if perm == "write" {
+			case "write":
 				permColor = "#FFFF00"
 			}
 			permStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(permColor))
-			line += fmt.Sprintf("   - %s ", repo)
-			line += permStyle.Render(fmt.Sprintf("[%s]", perm))
-			line += "\n"
+			lineSb273.WriteString(fmt.Sprintf("   - %s ", repo))
+			lineSb273.WriteString(permStyle.Render(fmt.Sprintf("[%s]", perm)))
+			lineSb273.WriteString("\n")
 		}
+		line += lineSb273.String()
 
 		b.WriteString(userStyle.Render(line))
 		b.WriteString("\n")

@@ -2,28 +2,30 @@ package analytics
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/KyleKing/gh-sweep/internal/github"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/KyleKing/gh-sweep/internal/github"
 )
 
-// Model represents the analytics TUI state
+// Model represents the analytics TUI state.
 type Model struct {
-	repo           string
-	stats          *github.WorkflowRunStats
-	runs           []github.WorkflowRun
-	width          int
-	height         int
-	loading        bool
-	err            error
-	viewMode       string // "overview", "flaky", "errors"
+	repo     string
+	stats    *github.WorkflowRunStats
+	runs     []github.WorkflowRun
+	width    int
+	height   int
+	loading  bool
+	err      error
+	viewMode string // "overview", "flaky", "errors"
 }
 
-// NewModel creates a new analytics model
+// NewModel creates a new analytics model.
 func NewModel(repo string) Model {
 	return Model{
 		repo:     repo,
@@ -38,7 +40,7 @@ type analyticsLoadedMsg struct {
 	err   error
 }
 
-// Init initializes the model
+// Init initializes the model.
 func (m Model) Init() tea.Cmd {
 	return m.loadAnalytics
 }
@@ -49,7 +51,7 @@ func (m Model) loadAnalytics() tea.Msg {
 		return analyticsLoadedMsg{
 			stats: nil,
 			runs:  []github.WorkflowRun{},
-			err:   fmt.Errorf("no repository specified"),
+			err:   errors.New("no repository specified"),
 		}
 	}
 
@@ -59,7 +61,7 @@ func (m Model) loadAnalytics() tea.Msg {
 		return analyticsLoadedMsg{
 			stats: nil,
 			runs:  []github.WorkflowRun{},
-			err:   fmt.Errorf("invalid repo format, expected owner/repo"),
+			err:   errors.New("invalid repo format, expected owner/repo"),
 		}
 	}
 	owner, repo := parts[0], parts[1]
@@ -101,12 +103,13 @@ func (m Model) loadAnalytics() tea.Msg {
 	}
 }
 
-// Update handles messages
+// Update handles messages.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+
 		return m, nil
 
 	case analyticsLoadedMsg:
@@ -114,6 +117,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.stats = msg.stats
 		m.runs = msg.runs
 		m.err = msg.err
+
 		return m, nil
 
 	case tea.KeyMsg:
@@ -133,7 +137,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// View renders the model
+// View renders the model.
 func (m Model) View() string {
 	if m.loading {
 		return "Loading analytics...\n"
@@ -150,7 +154,7 @@ func (m Model) View() string {
 		Bold(true).
 		Foreground(lipgloss.Color("#00FFFF"))
 
-	b.WriteString(titleStyle.Render(fmt.Sprintf("📊 Analytics: %s", m.repo)))
+	b.WriteString(titleStyle.Render("📊 Analytics: " + m.repo))
 	b.WriteString("\n\n")
 
 	// View mode tabs

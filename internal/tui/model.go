@@ -5,32 +5,33 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Model represents the main TUI application state
+// Model represents the main TUI application state.
 type Model struct {
 	width  int
 	height int
 	ready  bool
 }
 
-// NewModel creates a new TUI model
+// NewModel creates a new TUI model.
 func NewModel() Model {
 	return Model{
 		ready: false,
 	}
 }
 
-// Init initializes the model
+// Init initializes the model.
 func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-// Update handles messages and updates the model
+// Update handles messages and updates the model.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
 		m.ready = true
+
 		return m, nil
 
 	case tea.KeyMsg:
@@ -43,7 +44,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// View renders the model
+// View renders the model.
 func (m Model) View() string {
 	if !m.ready {
 		return "Initializing..."

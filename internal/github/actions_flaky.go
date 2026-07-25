@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// FlakyTest represents a test that exhibits flaky behavior
+// FlakyTest represents a test that exhibits flaky behavior.
 type FlakyTest struct {
 	Name         string
 	FailureRate  float64
@@ -17,7 +17,7 @@ type FlakyTest struct {
 	Pattern      string // "same-commit-flip", "intermittent", "consistent"
 }
 
-// TestRun represents a single test execution
+// TestRun represents a single test execution.
 type TestRun struct {
 	Name       string
 	Status     string // "success", "failure", "skipped"
@@ -28,20 +28,20 @@ type TestRun struct {
 	WorkflowID int
 }
 
-// FlakyDetectionConfig configures flaky test detection
+// FlakyDetectionConfig configures flaky test detection.
 type FlakyDetectionConfig struct {
-	MinFlips         int     // Minimum flips to be considered flaky
-	MinFailureRate   float64 // Minimum failure rate (0.0-1.0)
-	TimeWindow       time.Duration
-	SameCommitOnly   bool // Only detect same-commit flips
-	IncludeSkipped   bool // Include skipped tests in analysis
+	MinFlips       int     // Minimum flips to be considered flaky
+	MinFailureRate float64 // Minimum failure rate (0.0-1.0)
+	TimeWindow     time.Duration
+	SameCommitOnly bool // Only detect same-commit flips
+	IncludeSkipped bool // Include skipped tests in analysis
 }
 
-// DefaultFlakyConfig returns sensible defaults
+// DefaultFlakyConfig returns sensible defaults.
 func DefaultFlakyConfig() FlakyDetectionConfig {
 	return FlakyDetectionConfig{
 		MinFlips:       2,
-		MinFailureRate: 0.1, // 10%
+		MinFailureRate: 0.1,                // 10%
 		TimeWindow:     7 * 24 * time.Hour, // 7 days
 		SameCommitOnly: false,
 		IncludeSkipped: false,
@@ -49,7 +49,7 @@ func DefaultFlakyConfig() FlakyDetectionConfig {
 }
 
 // DetectFlakyTests identifies flaky tests from test runs
-// Pure function: no side effects, deterministic output
+// Pure function: no side effects, deterministic output.
 func DetectFlakyTests(runs []TestRun, config FlakyDetectionConfig) []FlakyTest {
 	// Group runs by test name
 	grouped := groupByTestName(runs)
@@ -71,7 +71,7 @@ func DetectFlakyTests(runs []TestRun, config FlakyDetectionConfig) []FlakyTest {
 }
 
 // groupByTestName groups test runs by test name
-// Pure function for composition
+// Pure function for composition.
 func groupByTestName(runs []TestRun) map[string][]TestRun {
 	grouped := make(map[string][]TestRun)
 	for _, run := range runs {
@@ -89,7 +89,7 @@ func groupByTestName(runs []TestRun) map[string][]TestRun {
 }
 
 // analyzeFlakyPattern analyzes a single test for flaky behavior
-// Pure function: returns nil if not flaky
+// Pure function: returns nil if not flaky.
 func analyzeFlakyPattern(name string, runs []TestRun, config FlakyDetectionConfig) *FlakyTest {
 	if len(runs) < 2 {
 		return nil // Need at least 2 runs to detect flakiness
@@ -131,7 +131,7 @@ func analyzeFlakyPattern(name string, runs []TestRun, config FlakyDetectionConfi
 	}
 }
 
-// testStats holds calculated statistics
+// testStats holds calculated statistics.
 type testStats struct {
 	totalRuns    int
 	failureCount int
@@ -140,7 +140,7 @@ type testStats struct {
 }
 
 // calculateTestStats computes statistics for a test
-// Pure function for composition
+// Pure function for composition.
 func calculateTestStats(runs []TestRun, includeSkipped bool) testStats {
 	stats := testStats{totalRuns: len(runs)}
 
@@ -170,15 +170,15 @@ func calculateTestStats(runs []TestRun, includeSkipped bool) testStats {
 	return stats
 }
 
-// flipDetection holds flip analysis results
+// flipDetection holds flip analysis results.
 type flipDetection struct {
-	count    int
-	lastFlip time.Time
+	count           int
+	lastFlip        time.Time
 	sameCommitFlips int
 }
 
 // detectFlips identifies status changes between runs
-// Pure function: no side effects
+// Pure function: no side effects.
 func detectFlips(runs []TestRun, sameCommitOnly bool) flipDetection {
 	detection := flipDetection{}
 
@@ -216,7 +216,7 @@ func detectFlips(runs []TestRun, sameCommitOnly bool) flipDetection {
 }
 
 // classifyPattern determines the flaky pattern type
-// Pure function for pattern classification
+// Pure function for pattern classification.
 func classifyPattern(stats testStats, flips flipDetection, config FlakyDetectionConfig) string {
 	// Same-commit flip = strongest signal
 	if flips.sameCommitFlips > 0 {
@@ -238,7 +238,7 @@ func classifyPattern(stats testStats, flips flipDetection, config FlakyDetection
 }
 
 // filterByTime filters test runs within a time window
-// Pure function for composition
+// Pure function for composition.
 func filterByTime(runs []TestRun, cutoff time.Time) []TestRun {
 	filtered := make([]TestRun, 0, len(runs))
 	for _, run := range runs {
@@ -246,11 +246,12 @@ func filterByTime(runs []TestRun, cutoff time.Time) []TestRun {
 			filtered = append(filtered, run)
 		}
 	}
+
 	return filtered
 }
 
 // FilterByRepository creates a filter for specific repositories
-// Higher-order function returning a filter predicate
+// Higher-order function returning a filter predicate.
 func FilterByRepository(repos ...string) func(TestRun) bool {
 	repoSet := make(map[string]bool)
 	for _, r := range repos {
@@ -263,7 +264,7 @@ func FilterByRepository(repos ...string) func(TestRun) bool {
 }
 
 // FilterByCommit creates a filter for specific commits
-// Higher-order function for functional composition
+// Higher-order function for functional composition.
 func FilterByCommit(commits ...string) func(TestRun) bool {
 	commitSet := make(map[string]bool)
 	for _, c := range commits {
@@ -276,7 +277,7 @@ func FilterByCommit(commits ...string) func(TestRun) bool {
 }
 
 // ApplyFilters applies a list of filters to test runs
-// Functional composition helper
+// Functional composition helper.
 func ApplyFilters(runs []TestRun, filters ...func(TestRun) bool) []TestRun {
 	filtered := make([]TestRun, 0, len(runs))
 

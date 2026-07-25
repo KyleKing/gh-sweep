@@ -1,11 +1,12 @@
-package cmd
+package cli
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/KyleKing/gh-sweep/internal/github"
 	"github.com/spf13/cobra"
+
+	"github.com/KyleKing/gh-sweep/internal/github"
 )
 
 var watchingCmd = &cobra.Command{
@@ -23,8 +24,8 @@ Examples:
   # Watch all repos in namespace
   gh-sweep watching --watch-all`,
 	Run: func(cmd *cobra.Command, args []string) {
-		unwatched, _ := cmd.Flags().GetBool("unwatched")
-		watchAll, _ := cmd.Flags().GetBool("watch-all")
+		unwatched := boolFlag(cmd, "unwatched")
+		watchAll := boolFlag(cmd, "watch-all")
 
 		ctx := context.Background()
 		client, err := github.NewClient(ctx)
@@ -66,6 +67,7 @@ Examples:
 				fmt.Printf("  - %s\n", repo.FullName)
 			}
 			fmt.Printf("\nTotal: %d unwatched repositories\n", len(unwatchedRepos))
+
 			return
 		}
 
@@ -84,6 +86,7 @@ Examples:
 				fmt.Printf("  Watching %s\n", repo.FullName)
 			}
 			fmt.Println("\nDone.")
+
 			return
 		}
 

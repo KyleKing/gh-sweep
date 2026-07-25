@@ -6,10 +6,11 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/KyleKing/gh-sweep/internal/github"
-	"github.com/KyleKing/gh-sweep/internal/orphans"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/KyleKing/gh-sweep/internal/github"
+	"github.com/KyleKing/gh-sweep/internal/orphans"
 )
 
 type ViewMode string
@@ -21,24 +22,24 @@ const (
 )
 
 type Model struct {
-	namespace      string
-	options        orphans.ScanOptions
-	result         *orphans.NamespaceScanResult
-	viewMode       ViewMode
-	cursor         int
-	selected       map[string]bool
-	filterType     *orphans.OrphanType
-	loading        bool
-	scanning       string
-	progress       int
-	total          int
-	orphansFound   int
-	statusMsg      string
-	err            error
-	width          int
-	height         int
-	confirmDelete  bool
-	deleteTargets  []orphans.OrphanedBranch
+	namespace     string
+	options       orphans.ScanOptions
+	result        *orphans.NamespaceScanResult
+	viewMode      ViewMode
+	cursor        int
+	selected      map[string]bool
+	filterType    *orphans.OrphanType
+	loading       bool
+	scanning      string
+	progress      int
+	total         int
+	orphansFound  int
+	statusMsg     string
+	err           error
+	width         int
+	height        int
+	confirmDelete bool
+	deleteTargets []orphans.OrphanedBranch
 }
 
 func NewModel(namespace string, options orphans.ScanOptions) Model {
@@ -90,12 +91,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+
 		return m, nil
 
 	case scanCompleteMsg:
 		m.loading = false
 		m.result = msg.result
 		m.err = msg.err
+
 		return m, nil
 
 	case scanProgressMsg:
@@ -103,18 +106,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.total = msg.total
 		m.scanning = msg.currentRepo
 		m.orphansFound = msg.orphans
+
 		return m, nil
 
 	case deleteResultMsg:
 		if msg.err != nil {
 			m.statusMsg = fmt.Sprintf("Failed to delete %s: %v", msg.branch, msg.err)
 		} else {
-			m.statusMsg = fmt.Sprintf("Deleted: %s", msg.branch)
+			m.statusMsg = "Deleted: " + msg.branch
 			delete(m.selected, msg.branch)
 			m.removeOrphanFromResult(msg.branch)
 		}
 		m.confirmDelete = false
 		m.deleteTargets = nil
+
 		return m, nil
 
 	case tea.KeyMsg:
@@ -192,6 +197,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.err = nil
 			m.cursor = 0
 			m.selected = make(map[string]bool)
+
 			return m, m.startScan
 		}
 	}
@@ -206,9 +212,11 @@ func (m Model) handleConfirmKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "n", "N", "esc":
 		m.confirmDelete = false
 		m.deleteTargets = nil
-		m.statusMsg = "Delete cancelled"
+		m.statusMsg = "Delete canceled"
+
 		return m, nil
 	}
+
 	return m, nil
 }
 
@@ -235,6 +243,7 @@ func (m Model) handleDelete() (tea.Model, tea.Cmd) {
 
 	m.confirmDelete = true
 	m.deleteTargets = targets
+
 	return m, nil
 }
 
@@ -242,7 +251,6 @@ func (m Model) executeDelete() (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	for _, orphan := range m.deleteTargets {
-		orphan := orphan
 		cmds = append(cmds, func() tea.Msg {
 			ctx := context.Background()
 			client, err := github.NewClient(ctx)
@@ -256,11 +264,13 @@ func (m Model) executeDelete() (tea.Model, tea.Cmd) {
 			}
 
 			err = client.DeleteBranch(parts[0], parts[1], orphan.BranchName)
+
 			return deleteResultMsg{branch: orphan.Key(), err: err}
 		})
 	}
 
 	m.confirmDelete = false
+
 	return m, tea.Batch(cmds...)
 }
 
@@ -275,6 +285,7 @@ func (m *Model) removeOrphanFromResult(key string) {
 			if result.Orphans[j].Key() == key {
 				result.Orphans = append(result.Orphans[:j], result.Orphans[j+1:]...)
 				m.result.TotalOrphans--
+
 				break
 			}
 		}
@@ -301,6 +312,7 @@ func (m Model) getFilteredOrphans() []orphans.OrphanedBranch {
 			if filtered[i].Type != filtered[j].Type {
 				return filtered[i].Type < filtered[j].Type
 			}
+
 			return filtered[i].Key() < filtered[j].Key()
 		})
 	case ViewModeFlat:
@@ -312,6 +324,7 @@ func (m Model) getFilteredOrphans() []orphans.OrphanedBranch {
 			if filtered[i].Repository != filtered[j].Repository {
 				return filtered[i].Repository < filtered[j].Repository
 			}
+
 			return filtered[i].BranchName < filtered[j].BranchName
 		})
 	}
@@ -325,6 +338,7 @@ func (m Model) View() string {
 			return fmt.Sprintf("Scanning repositories...\nProgress: %d/%d repos\nCurrently: %s\nOrphans found: %d\n",
 				m.progress, m.total, m.scanning, m.orphansFound)
 		}
+
 		return "Loading repositories...\n"
 	}
 
@@ -448,10 +462,10 @@ func (m Model) renderConfirmDialog(b *strings.Builder) string {
 	b.WriteString(warnStyle.Render("Confirm Delete"))
 	b.WriteString("\n\n")
 
-	b.WriteString(fmt.Sprintf("Delete %d branch(es)?\n\n", len(m.deleteTargets)))
+	fmt.Fprintf(b, "Delete %d branch(es)?\n\n", len(m.deleteTargets))
 
 	for _, orphan := range m.deleteTargets {
-		b.WriteString(fmt.Sprintf("  - %s/%s\n", orphan.Repository, orphan.BranchName))
+		fmt.Fprintf(b, "  - %s/%s\n", orphan.Repository, orphan.BranchName)
 	}
 
 	b.WriteString("\n")

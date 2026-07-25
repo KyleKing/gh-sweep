@@ -54,10 +54,10 @@ type ScanResult struct {
 }
 
 type NamespaceScanResult struct {
-	Namespace   string
-	IsOrg       bool
-	Results     []ScanResult
-	TotalRepos  int
+	Namespace    string
+	IsOrg        bool
+	Results      []ScanResult
+	TotalRepos   int
 	TotalOrphans int
 }
 
@@ -66,6 +66,7 @@ func (r *NamespaceScanResult) AllOrphans() []OrphanedBranch {
 	for _, result := range r.Results {
 		all = append(all, result.Orphans...)
 	}
+
 	return all
 }
 
@@ -76,6 +77,7 @@ func (r *NamespaceScanResult) OrphansByType(t OrphanType) []OrphanedBranch {
 			filtered = append(filtered, orphan)
 		}
 	}
+
 	return filtered
 }
 

@@ -2,18 +2,20 @@ package git
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 )
 
-// LocalRepo represents a local Git repository
+// LocalRepo represents a local Git repository.
 type LocalRepo struct {
 	Path string
 }
 
-// BranchInfo represents information about a branch
+// BranchInfo represents information about a branch.
 type BranchInfo struct {
 	Name           string
 	SHA            string
@@ -23,12 +25,12 @@ type BranchInfo struct {
 	LastCommitMsg  string
 }
 
-// NewLocalRepo creates a new local repository handle
+// NewLocalRepo creates a new local repository handle.
 func NewLocalRepo(path string) *LocalRepo {
 	return &LocalRepo{Path: path}
 }
 
-// ListBranches lists all local branches
+// ListBranches lists all local branches.
 func (r *LocalRepo) ListBranches() ([]BranchInfo, error) {
 	// Run: git for-each-ref --format='%(refname:short)|%(objectname)|%(committerdate:iso8601)|%(subject)' refs/heads
 	cmd := exec.Command("git", "for-each-ref",
@@ -56,7 +58,10 @@ func (r *LocalRepo) ListBranches() ([]BranchInfo, error) {
 			continue
 		}
 
-		date, _ := time.Parse("2006-01-02 15:04:05 -0700", parts[2])
+		date, err := time.Parse("2006-01-02 15:04:05 -0700", parts[2])
+		if err != nil {
+			date = time.Time{}
+		}
 
 		branches = append(branches, BranchInfo{
 			Name:           parts[0],
@@ -69,7 +74,7 @@ func (r *LocalRepo) ListBranches() ([]BranchInfo, error) {
 	return branches, nil
 }
 
-// GetCurrentBranch returns the current branch name
+// GetCurrentBranch returns the current branch name.
 func (r *LocalRepo) GetCurrentBranch() (string, error) {
 	cmd := exec.Command("git", "branch", "--show-current")
 	cmd.Dir = r.Path
@@ -84,7 +89,7 @@ func (r *LocalRepo) GetCurrentBranch() (string, error) {
 	return strings.TrimSpace(out.String()), nil
 }
 
-// CompareBranches compares two branches and returns ahead/behind counts
+// CompareBranches compares two branches and returns ahead/behind counts.
 func (r *LocalRepo) CompareBranches(base, head string) (ahead, behind int, err error) {
 	// Run: git rev-list --left-right --count base...head
 	cmd := exec.Command("git", "rev-list", "--left-right", "--count", fmt.Sprintf("%s...%s", base, head))
@@ -103,14 +108,19 @@ func (r *LocalRepo) CompareBranches(base, head string) (ahead, behind int, err e
 		return 0, 0, fmt.Errorf("unexpected git output: %s", out.String())
 	}
 
-	// Parse counts
-	fmt.Sscanf(parts[0], "%d", &behind)
-	fmt.Sscanf(parts[1], "%d", &ahead)
+	behind, err = strconv.Atoi(parts[0])
+	if err != nil {
+		return 0, 0, fmt.Errorf("unexpected git output: %s", out.String())
+	}
+	ahead, err = strconv.Atoi(parts[1])
+	if err != nil {
+		return 0, 0, fmt.Errorf("unexpected git output: %s", out.String())
+	}
 
 	return ahead, behind, nil
 }
 
-// DeleteBranch deletes a branch locally
+// DeleteBranch deletes a branch locally.
 func (r *LocalRepo) DeleteBranch(branch string, force bool) error {
 	args := []string{"branch"}
 	if force {
@@ -130,7 +140,7 @@ func (r *LocalRepo) DeleteBranch(branch string, force bool) error {
 	return nil
 }
 
-// GetMergeBase returns the merge base of two branches
+// GetMergeBase returns the merge base of two branches.
 func (r *LocalRepo) GetMergeBase(branch1, branch2 string) (string, error) {
 	cmd := exec.Command("git", "merge-base", branch1, branch2)
 	cmd.Dir = r.Path
@@ -145,7 +155,7 @@ func (r *LocalRepo) GetMergeBase(branch1, branch2 string) (string, error) {
 	return strings.TrimSpace(out.String()), nil
 }
 
-// GetDefaultBranch attempts to get the default branch (main or master)
+// GetDefaultBranch attempts to get the default branch (main or master).
 func (r *LocalRepo) GetDefaultBranch() (string, error) {
 	// Try to get from remote
 	cmd := exec.Command("git", "symbolic-ref", "refs/remotes/origin/HEAD")
@@ -183,10 +193,10 @@ func (r *LocalRepo) GetDefaultBranch() (string, error) {
 		return branches[0].Name, nil
 	}
 
-	return "", fmt.Errorf("no branches found")
+	return "", errors.New("no branches found")
 }
 
-// IsInsideWorkTree checks if the path is inside a Git repository
+// IsInsideWorkTree checks if the path is inside a Git repository.
 func (r *LocalRepo) IsInsideWorkTree() bool {
 	cmd := exec.Command("git", "rev-parse", "--is-inside-work-tree")
 	cmd.Dir = r.Path

@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-// TestCompareSettings tests settings comparison logic
+// TestCompareSettings tests settings comparison logic.
 func TestCompareSettings(t *testing.T) {
 	baseline := &RepoSettings{
 		Repository:          "owner/baseline",
@@ -116,7 +116,7 @@ func TestCompareSettings(t *testing.T) {
 	}
 }
 
-// TestSettingsDiffSeverity tests severity classification
+// TestSettingsDiffSeverity tests severity classification.
 func TestSettingsDiffSeverity(t *testing.T) {
 	baseline := &RepoSettings{
 		DefaultBranch:       "main",
@@ -151,7 +151,7 @@ func TestSettingsDiffSeverity(t *testing.T) {
 	}
 }
 
-// TestBatchCompareSettings tests comparing multiple repositories
+// TestBatchCompareSettings tests comparing multiple repositories.
 func TestBatchCompareSettings(t *testing.T) {
 	baseline := &RepoSettings{
 		Repository:    "owner/baseline",
@@ -182,12 +182,13 @@ func TestBatchCompareSettings(t *testing.T) {
 	}
 }
 
-// Helper function to find a specific diff
+// Helper function to find a specific diff.
 func findDiff(diffs []SettingsDiff, field string) *SettingsDiff {
 	for i := range diffs {
 		if diffs[i].Field == field {
 			return &diffs[i]
 		}
 	}
+
 	return nil
 }

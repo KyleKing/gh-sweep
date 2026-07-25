@@ -6,12 +6,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/KyleKing/gh-sweep/internal/github"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/KyleKing/gh-sweep/internal/github"
 )
 
-// Model represents the releases overview TUI state
+// Model represents the releases overview TUI state.
 type Model struct {
 	repos    []string
 	releases map[string][]github.Release
@@ -24,7 +25,7 @@ type Model struct {
 	viewMode string // "latest", "all", "outdated"
 }
 
-// NewModel creates a new releases overview model
+// NewModel creates a new releases overview model.
 func NewModel(repos []string) Model {
 	return Model{
 		repos:    repos,
@@ -41,7 +42,7 @@ type releasesLoadedMsg struct {
 	err      error
 }
 
-// Init initializes the model
+// Init initializes the model.
 func (m Model) Init() tea.Cmd {
 	return m.loadReleases
 }
@@ -93,12 +94,13 @@ func (m Model) loadReleases() tea.Msg {
 	}
 }
 
-// Update handles messages
+// Update handles messages.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+
 		return m, nil
 
 	case releasesLoadedMsg:
@@ -106,6 +108,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.releases = msg.releases
 		m.latest = msg.latest
 		m.err = msg.err
+
 		return m, nil
 
 	case tea.KeyMsg:
@@ -139,7 +142,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// View renders the model
+// View renders the model.
 func (m Model) View() string {
 	if m.loading {
 		return "Loading releases...\n"
@@ -230,6 +233,7 @@ func (m Model) renderLatest() string {
 		if release == nil {
 			line := fmt.Sprintf("%s %s: No releases\n", cursor, repo)
 			b.WriteString(releaseStyle.Render(line))
+
 			continue
 		}
 
@@ -278,15 +282,17 @@ func (m Model) renderAll() string {
 		line := fmt.Sprintf("%s %s (%d releases):\n", cursor, repo, len(releases))
 
 		// Show first few releases
+		var lineSb281 strings.Builder
 		for j, release := range releases {
 			if j >= 5 {
-				line += fmt.Sprintf("   ... and %d more\n", len(releases)-5)
+				lineSb281.WriteString(fmt.Sprintf("   ... and %d more\n", len(releases)-5))
 				break
 			}
-			line += fmt.Sprintf("   - %s (%s)\n",
+			lineSb281.WriteString(fmt.Sprintf("   - %s (%s)\n",
 				release.TagName,
-				release.PublishedAt.Format("2006-01-02"))
+				release.PublishedAt.Format("2006-01-02")))
 		}
+		line += lineSb281.String()
 
 		b.WriteString(repoStyle.Render(line))
 		b.WriteString("\n")

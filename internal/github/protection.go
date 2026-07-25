@@ -2,7 +2,7 @@ package github
 
 import "fmt"
 
-// ProtectionRule represents branch protection settings
+// ProtectionRule represents branch protection settings.
 type ProtectionRule struct {
 	Repository              string
 	Branch                  string
@@ -37,7 +37,7 @@ type protectionResponse struct {
 	} `json:"allow_deletions"`
 }
 
-// GetBranchProtection retrieves branch protection rules
+// GetBranchProtection retrieves branch protection rules.
 func (c *Client) GetBranchProtection(owner, repo, branch string) (*ProtectionRule, error) {
 	var response protectionResponse
 	path := fmt.Sprintf("repos/%s/%s/branches/%s/protection", owner, repo, branch)
@@ -67,7 +67,7 @@ func (c *Client) GetBranchProtection(owner, repo, branch string) (*ProtectionRul
 	return rule, nil
 }
 
-// CompareProtectionRules compares protection rules across repositories
+// CompareProtectionRules compares protection rules across repositories.
 func CompareProtectionRules(rules []*ProtectionRule) map[string][]string {
 	differences := make(map[string][]string)
 

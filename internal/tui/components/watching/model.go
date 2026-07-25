@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/KyleKing/gh-sweep/internal/github"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/KyleKing/gh-sweep/internal/github"
 )
 
 type Model struct {
@@ -102,6 +103,7 @@ func (m Model) watchRepo(repo github.RepoBasic) tea.Cmd {
 		}
 
 		m.subscriptions[repo.FullName] = sub
+
 		return watchResultMsg{repo: repo.FullName, err: nil}
 	}
 }
@@ -127,6 +129,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+
 		return m, nil
 
 	case dataLoadedMsg:
@@ -135,31 +138,34 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.userRepos = msg.userRepos
 		m.subscriptions = msg.subscriptions
 		m.err = msg.err
+
 		return m, nil
 
 	case watchResultMsg:
 		if msg.err != nil {
 			m.statusMsg = fmt.Sprintf("Failed to watch %s: %v", msg.repo, msg.err)
 		} else {
-			m.statusMsg = fmt.Sprintf("Watching %s", msg.repo)
+			m.statusMsg = "Watching " + msg.repo
 			if sub, ok := m.subscriptions[msg.repo]; ok {
 				sub.Subscribed = true
 				sub.Ignored = false
 				sub.State = github.WatchStateSubscribed
 			}
 		}
+
 		return m, nil
 
 	case unwatchResultMsg:
 		if msg.err != nil {
 			m.statusMsg = fmt.Sprintf("Failed to unwatch %s: %v", msg.repo, msg.err)
 		} else {
-			m.statusMsg = fmt.Sprintf("Unwatched %s", msg.repo)
+			m.statusMsg = "Unwatched " + msg.repo
 			if sub, ok := m.subscriptions[msg.repo]; ok {
 				sub.Subscribed = false
 				sub.State = github.WatchStateNotWatching
 			}
 		}
+
 		return m, nil
 
 	case tea.KeyMsg:
@@ -224,6 +230,7 @@ func (m Model) getFilteredRepos() []github.RepoBasic {
 			filtered = append(filtered, repo)
 		}
 	}
+
 	return filtered
 }
 
@@ -244,6 +251,7 @@ func (m Model) handleWatch() (tea.Model, tea.Cmd) {
 	}
 
 	m.selected = make(map[int]bool)
+
 	return m, tea.Batch(cmds...)
 }
 
@@ -264,6 +272,7 @@ func (m Model) handleUnwatch() (tea.Model, tea.Cmd) {
 	}
 
 	m.selected = make(map[int]bool)
+
 	return m, tea.Batch(cmds...)
 }
 

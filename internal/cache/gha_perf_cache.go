@@ -12,9 +12,9 @@ import (
 )
 
 type GHAPerfCache struct {
-	UpdatedAt time.Time            `json:"updated_at"`
-	Repo      string               `json:"repo"`
-	Runs      []github.RunTiming   `json:"runs"`
+	UpdatedAt time.Time          `json:"updated_at"`
+	Repo      string             `json:"repo"`
+	Runs      []github.RunTiming `json:"runs"`
 }
 
 type GHAPerfCacheManager struct {
@@ -30,7 +30,7 @@ func NewGHAPerfCacheManager(cacheDir string) (*GHAPerfCacheManager, error) {
 		cacheDir = filepath.Join(homeDir, ".cache", "gh-sweep", "gha-perf")
 	}
 
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create cache directory: %w", err)
 	}
 
@@ -53,6 +53,7 @@ func (m *GHAPerfCacheManager) Load(owner, repo string) (*GHAPerfCache, error) {
 				Runs: []github.RunTiming{},
 			}, nil
 		}
+
 		return nil, fmt.Errorf("failed to read cache file: %w", err)
 	}
 
@@ -86,7 +87,7 @@ func (m *GHAPerfCacheManager) Save(owner, repo string, cache *GHAPerfCache) erro
 	}
 
 	path := m.cacheFilePath(owner, repo)
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(path, data, 0o644); err != nil {
 		return fmt.Errorf("failed to write cache file: %w", err)
 	}
 
@@ -144,6 +145,7 @@ func (m *GHAPerfCacheManager) Clear(owner, repo string) error {
 	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to remove cache file: %w", err)
 	}
+
 	return nil
 }
 
@@ -153,6 +155,7 @@ func (m *GHAPerfCacheManager) ClearAll() error {
 		if os.IsNotExist(err) {
 			return nil
 		}
+
 		return fmt.Errorf("failed to read cache directory: %w", err)
 	}
 
@@ -174,6 +177,7 @@ func (m *GHAPerfCacheManager) ListCaches() ([]string, error) {
 		if os.IsNotExist(err) {
 			return nil, nil
 		}
+
 		return nil, fmt.Errorf("failed to read cache directory: %w", err)
 	}
 
@@ -200,6 +204,7 @@ func FilterRunsByCommit(runs []github.RunTiming, commitSHA string) []github.RunT
 			filtered = append(filtered, r)
 		}
 	}
+
 	return filtered
 }
 
@@ -213,6 +218,7 @@ func FilterRunsByConclusion(runs []github.RunTiming, conclusion string) []github
 			filtered = append(filtered, r)
 		}
 	}
+
 	return filtered
 }
 
@@ -227,6 +233,7 @@ func GetRunsInDateRange(runs []github.RunTiming, since, until time.Time) []githu
 		}
 		filtered = append(filtered, r)
 	}
+
 	return filtered
 }
 

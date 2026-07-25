@@ -6,12 +6,12 @@ import (
 	"time"
 )
 
-// TestAnalyzeWorkflowRuns tests workflow run statistics
+// TestAnalyzeWorkflowRuns tests workflow run statistics.
 func TestAnalyzeWorkflowRuns(t *testing.T) {
 	tests := []struct {
-		name            string
-		runs            []WorkflowRun
-		expectedSuccess float64
+		name             string
+		runs             []WorkflowRun
+		expectedSuccess  float64
 		expectedFailures int
 	}{
 		{
@@ -35,8 +35,8 @@ func TestAnalyzeWorkflowRuns(t *testing.T) {
 			expectedFailures: 2,
 		},
 		{
-			name:            "empty runs",
-			runs:            []WorkflowRun{},
+			name:             "empty runs",
+			runs:             []WorkflowRun{},
 			expectedSuccess:  0.0,
 			expectedFailures: 0,
 		},
@@ -64,15 +64,15 @@ func TestAnalyzeWorkflowRuns(t *testing.T) {
 	}
 }
 
-// TestDetectFlakyTests tests flaky test detection
+// TestDetectFlakyTests tests flaky test detection.
 func TestDetectFlakyTests(t *testing.T) {
 	now := time.Now()
 
 	tests := []struct {
-		name          string
-		runs          []TestRun
-		config        FlakyDetectionConfig
-		expectFlaky   bool
+		name            string
+		runs            []TestRun
+		config          FlakyDetectionConfig
+		expectFlaky     bool
 		expectedPattern string
 	}{
 		{
@@ -96,7 +96,7 @@ func TestDetectFlakyTests(t *testing.T) {
 				MinFailureRate: 0.1,
 				TimeWindow:     7 * 24 * time.Hour,
 			},
-			expectFlaky:   true,
+			expectFlaky:     true,
 			expectedPattern: "same-commit-flip",
 		},
 		{
@@ -108,8 +108,8 @@ func TestDetectFlakyTests(t *testing.T) {
 				{Name: "TestBar", Status: "failure", CommitSHA: "d", Timestamp: now.Add(-2 * time.Hour)},
 				{Name: "TestBar", Status: "success", CommitSHA: "e", Timestamp: now.Add(-1 * time.Hour)},
 			},
-			config:        DefaultFlakyConfig(),
-			expectFlaky:   true,
+			config:          DefaultFlakyConfig(),
+			expectFlaky:     true,
 			expectedPattern: "intermittent",
 		},
 		{
@@ -119,8 +119,8 @@ func TestDetectFlakyTests(t *testing.T) {
 				{Name: "TestBaz", Status: "failure", CommitSHA: "b", Timestamp: now.Add(-2 * time.Hour)},
 				{Name: "TestBaz", Status: "failure", CommitSHA: "c", Timestamp: now.Add(-1 * time.Hour)},
 			},
-			config:        DefaultFlakyConfig(),
-			expectFlaky:   false, // Too consistent, not flaky
+			config:      DefaultFlakyConfig(),
+			expectFlaky: false, // Too consistent, not flaky
 		},
 		{
 			name: "not enough flips",
@@ -171,7 +171,7 @@ func TestDetectFlakyTests(t *testing.T) {
 	}
 }
 
-// TestGroupByTestName tests grouping functionality
+// TestGroupByTestName tests grouping functionality.
 func TestGroupByTestName(t *testing.T) {
 	now := time.Now()
 
@@ -203,7 +203,7 @@ func TestGroupByTestName(t *testing.T) {
 	}
 }
 
-// TestFilterByTime tests time-based filtering
+// TestFilterByTime tests time-based filtering.
 func TestFilterByTime(t *testing.T) {
 	now := time.Now()
 	cutoff := now.Add(-2 * time.Hour)
@@ -221,7 +221,7 @@ func TestFilterByTime(t *testing.T) {
 	}
 }
 
-// TestApplyFilters tests filter composition
+// TestApplyFilters tests filter composition.
 func TestApplyFilters(t *testing.T) {
 	runs := []TestRun{
 		{Name: "Test1", Repository: "repo-a", CommitSHA: "abc"},
@@ -246,7 +246,7 @@ func TestApplyFilters(t *testing.T) {
 	}
 }
 
-// TestExtractErrorContext tests error extraction
+// TestExtractErrorContext tests error extraction.
 func TestExtractErrorContext(t *testing.T) {
 	config := DefaultLogConfig()
 
@@ -314,6 +314,7 @@ func TestExtractErrorContext(t *testing.T) {
 				if ctx != nil {
 					t.Error("Expected nil context for successful run")
 				}
+
 				return
 			}
 
@@ -338,7 +339,7 @@ func TestExtractErrorContext(t *testing.T) {
 	}
 }
 
-// TestFilterNoise tests log noise filtering
+// TestFilterNoise tests log noise filtering.
 func TestFilterNoise(t *testing.T) {
 	lines := []string{
 		"2024-01-15T10:30:00 Starting test...",
@@ -373,7 +374,7 @@ func TestFilterNoise(t *testing.T) {
 	}
 }
 
-// TestClassifyError tests error type classification
+// TestClassifyError tests error type classification.
 func TestClassifyError(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -424,7 +425,7 @@ func TestClassifyError(t *testing.T) {
 	}
 }
 
-// TestFormatAsJSON tests JSON formatting
+// TestFormatAsJSON tests JSON formatting.
 func TestFormatAsJSON(t *testing.T) {
 	contexts := []*ErrorContext{
 		{
@@ -452,7 +453,7 @@ func TestFormatAsJSON(t *testing.T) {
 	}
 }
 
-// TestFormatAsMarkdown tests Markdown formatting
+// TestFormatAsMarkdown tests Markdown formatting.
 func TestFormatAsMarkdown(t *testing.T) {
 	contexts := []*ErrorContext{
 		{
@@ -486,7 +487,7 @@ func TestFormatAsMarkdown(t *testing.T) {
 	}
 }
 
-// TestBatchExtractErrors tests batch extraction
+// TestBatchExtractErrors tests batch extraction.
 func TestBatchExtractErrors(t *testing.T) {
 	logs := []JobLog{
 		{

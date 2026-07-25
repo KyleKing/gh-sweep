@@ -55,6 +55,7 @@ func (c *Client) GetAuthenticatedUser() (string, error) {
 	if err := c.Get("user", &response); err != nil {
 		return "", fmt.Errorf("failed to get authenticated user: %w", err)
 	}
+
 	return response.Login, nil
 }
 
@@ -106,6 +107,7 @@ func (c *Client) GetRepoSubscription(owner, repo string) (*Subscription, error) 
 				State:      WatchStateNotWatching,
 			}, nil
 		}
+
 		return nil, fmt.Errorf("failed to get subscription: %w", err)
 	}
 
@@ -160,5 +162,6 @@ func (c *Client) DeleteRepoSubscription(owner, repo string) error {
 	if err := c.Delete(path, nil); err != nil {
 		return fmt.Errorf("failed to delete subscription: %w", err)
 	}
+
 	return nil
 }

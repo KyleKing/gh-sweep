@@ -15,9 +15,9 @@ type Repository struct {
 }
 
 type repoListItemResponse struct {
-	Name          string `json:"name"`
-	FullName      string `json:"full_name"`
-	Owner         struct {
+	Name     string `json:"name"`
+	FullName string `json:"full_name"`
+	Owner    struct {
 		Login string `json:"login"`
 	} `json:"owner"`
 	Private       bool   `json:"private"`

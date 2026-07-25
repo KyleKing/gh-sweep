@@ -5,17 +5,17 @@ import (
 	"time"
 )
 
-// WorkflowRun represents a GitHub Actions workflow run
+// WorkflowRun represents a GitHub Actions workflow run.
 type WorkflowRun struct {
-	ID          int
-	Name        string
-	Status      string
-	Conclusion  string
-	Branch      string
-	HeadSHA     string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	Duration    time.Duration
+	ID         int
+	Name       string
+	Status     string
+	Conclusion string
+	Branch     string
+	HeadSHA    string
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	Duration   time.Duration
 }
 
 type workflowRunsResponse struct {
@@ -31,7 +31,7 @@ type workflowRunsResponse struct {
 	} `json:"workflow_runs"`
 }
 
-// ListWorkflowRuns lists workflow runs for a repository
+// ListWorkflowRuns lists workflow runs for a repository.
 func (c *Client) ListWorkflowRuns(owner, repo string) ([]WorkflowRun, error) {
 	var response workflowRunsResponse
 	path := fmt.Sprintf("repos/%s/%s/actions/runs", owner, repo)
@@ -58,16 +58,16 @@ func (c *Client) ListWorkflowRuns(owner, repo string) ([]WorkflowRun, error) {
 	return runs, nil
 }
 
-// WorkflowRunStats represents statistics about workflow runs
+// WorkflowRunStats represents statistics about workflow runs.
 type WorkflowRunStats struct {
-	TotalRuns      int
-	SuccessRate    float64
-	FailureCount   int
-	AvgDuration    time.Duration
-	Runs           []WorkflowRun
+	TotalRuns    int
+	SuccessRate  float64
+	FailureCount int
+	AvgDuration  time.Duration
+	Runs         []WorkflowRun
 }
 
-// AnalyzeWorkflowRuns analyzes workflow runs and returns statistics
+// AnalyzeWorkflowRuns analyzes workflow runs and returns statistics.
 func AnalyzeWorkflowRuns(runs []WorkflowRun) WorkflowRunStats {
 	stats := WorkflowRunStats{
 		TotalRuns: len(runs),
@@ -82,9 +82,10 @@ func AnalyzeWorkflowRuns(runs []WorkflowRun) WorkflowRunStats {
 	var totalDuration time.Duration
 
 	for _, run := range runs {
-		if run.Conclusion == "success" {
+		switch run.Conclusion {
+		case "success":
 			successCount++
-		} else if run.Conclusion == "failure" {
+		case "failure":
 			stats.FailureCount++
 		}
 		totalDuration += run.Duration

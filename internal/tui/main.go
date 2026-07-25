@@ -1,6 +1,9 @@
 package tui
 
 import (
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+
 	"github.com/KyleKing/gh-sweep/internal/orphans"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/analytics"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/branches"
@@ -14,11 +17,9 @@ import (
 	"github.com/KyleKing/gh-sweep/internal/tui/components/settings"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/watching"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/webhooks"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
-// ViewMode represents different TUI views
+// ViewMode represents different TUI views.
 type ViewMode int
 
 const (
@@ -37,7 +38,7 @@ const (
 	ViewOrphans
 )
 
-// MainModel represents the main TUI application state with navigation
+// MainModel represents the main TUI application state with navigation.
 type MainModel struct {
 	width  int
 	height int
@@ -65,7 +66,7 @@ type MainModel struct {
 	org      string
 }
 
-// NewMainModel creates a new main TUI model
+// NewMainModel creates a new main TUI model.
 func NewMainModel(repo string) MainModel {
 	return MainModel{
 		ready: false,
@@ -74,12 +75,12 @@ func NewMainModel(repo string) MainModel {
 	}
 }
 
-// Init initializes the model
+// Init initializes the model.
 func (m MainModel) Init() tea.Cmd {
 	return nil
 }
 
-// Update handles messages and updates the model
+// Update handles messages and updates the model.
 func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -90,29 +91,53 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Forward to sub-models
 		var newModel tea.Model
 		newModel, _ = m.branchesModel.Update(msg)
-		m.branchesModel = newModel.(branches.Model)
+		if updated, ok := newModel.(branches.Model); ok {
+			m.branchesModel = updated
+		}
 		newModel, _ = m.protectionModel.Update(msg)
-		m.protectionModel = newModel.(protection.Model)
+		if updated, ok := newModel.(protection.Model); ok {
+			m.protectionModel = updated
+		}
 		newModel, _ = m.commentsModel.Update(msg)
-		m.commentsModel = newModel.(comments.Model)
+		if updated, ok := newModel.(comments.Model); ok {
+			m.commentsModel = updated
+		}
 		newModel, _ = m.analyticsModel.Update(msg)
-		m.analyticsModel = newModel.(analytics.Model)
+		if updated, ok := newModel.(analytics.Model); ok {
+			m.analyticsModel = updated
+		}
 		newModel, _ = m.ghaPerfModel.Update(msg)
-		m.ghaPerfModel = newModel.(ghaperf.Model)
+		if updated, ok := newModel.(ghaperf.Model); ok {
+			m.ghaPerfModel = updated
+		}
 		newModel, _ = m.settingsModel.Update(msg)
-		m.settingsModel = newModel.(settings.Model)
+		if updated, ok := newModel.(settings.Model); ok {
+			m.settingsModel = updated
+		}
 		newModel, _ = m.webhooksModel.Update(msg)
-		m.webhooksModel = newModel.(webhooks.Model)
+		if updated, ok := newModel.(webhooks.Model); ok {
+			m.webhooksModel = updated
+		}
 		newModel, _ = m.collaboratorsModel.Update(msg)
-		m.collaboratorsModel = newModel.(collaborators.Model)
+		if updated, ok := newModel.(collaborators.Model); ok {
+			m.collaboratorsModel = updated
+		}
 		newModel, _ = m.secretsModel.Update(msg)
-		m.secretsModel = newModel.(secrets.Model)
+		if updated, ok := newModel.(secrets.Model); ok {
+			m.secretsModel = updated
+		}
 		newModel, _ = m.releasesModel.Update(msg)
-		m.releasesModel = newModel.(releases.Model)
+		if updated, ok := newModel.(releases.Model); ok {
+			m.releasesModel = updated
+		}
 		newModel, _ = m.watchingModel.Update(msg)
-		m.watchingModel = newModel.(watching.Model)
+		if updated, ok := newModel.(watching.Model); ok {
+			m.watchingModel = updated
+		}
 		newModel, _ = m.orphansModel.Update(msg)
-		m.orphansModel = newModel.(orphanstui.Model)
+		if updated, ok := newModel.(orphanstui.Model); ok {
+			m.orphansModel = updated
+		}
 
 		return m, nil
 
@@ -126,6 +151,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "0":
 				m.mode = ViewWatching
 				m.watchingModel = watching.NewModel()
+
 				return m, m.watchingModel.Init()
 
 			case "1":
@@ -205,6 +231,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					namespace = ""
 				}
 				m.orphansModel = orphanstui.NewModel(namespace, orphans.DefaultScanOptions())
+
 				return m, m.orphansModel.Init()
 			}
 		} else {
@@ -220,62 +247,86 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case ViewBranches:
 				var newModel tea.Model
 				newModel, cmd = m.branchesModel.Update(msg)
-				m.branchesModel = newModel.(branches.Model)
+				if updated, ok := newModel.(branches.Model); ok {
+					m.branchesModel = updated
+				}
 
 			case ViewProtection:
 				var newModel tea.Model
 				newModel, cmd = m.protectionModel.Update(msg)
-				m.protectionModel = newModel.(protection.Model)
+				if updated, ok := newModel.(protection.Model); ok {
+					m.protectionModel = updated
+				}
 
 			case ViewComments:
 				var newModel tea.Model
 				newModel, cmd = m.commentsModel.Update(msg)
-				m.commentsModel = newModel.(comments.Model)
+				if updated, ok := newModel.(comments.Model); ok {
+					m.commentsModel = updated
+				}
 
 			case ViewAnalytics:
 				var newModel tea.Model
 				newModel, cmd = m.analyticsModel.Update(msg)
-				m.analyticsModel = newModel.(analytics.Model)
+				if updated, ok := newModel.(analytics.Model); ok {
+					m.analyticsModel = updated
+				}
 
 			case ViewGHAPerf:
 				var newModel tea.Model
 				newModel, cmd = m.ghaPerfModel.Update(msg)
-				m.ghaPerfModel = newModel.(ghaperf.Model)
+				if updated, ok := newModel.(ghaperf.Model); ok {
+					m.ghaPerfModel = updated
+				}
 
 			case ViewSettings:
 				var newModel tea.Model
 				newModel, cmd = m.settingsModel.Update(msg)
-				m.settingsModel = newModel.(settings.Model)
+				if updated, ok := newModel.(settings.Model); ok {
+					m.settingsModel = updated
+				}
 
 			case ViewWebhooks:
 				var newModel tea.Model
 				newModel, cmd = m.webhooksModel.Update(msg)
-				m.webhooksModel = newModel.(webhooks.Model)
+				if updated, ok := newModel.(webhooks.Model); ok {
+					m.webhooksModel = updated
+				}
 
 			case ViewCollaborators:
 				var newModel tea.Model
 				newModel, cmd = m.collaboratorsModel.Update(msg)
-				m.collaboratorsModel = newModel.(collaborators.Model)
+				if updated, ok := newModel.(collaborators.Model); ok {
+					m.collaboratorsModel = updated
+				}
 
 			case ViewSecrets:
 				var newModel tea.Model
 				newModel, cmd = m.secretsModel.Update(msg)
-				m.secretsModel = newModel.(secrets.Model)
+				if updated, ok := newModel.(secrets.Model); ok {
+					m.secretsModel = updated
+				}
 
 			case ViewReleases:
 				var newModel tea.Model
 				newModel, cmd = m.releasesModel.Update(msg)
-				m.releasesModel = newModel.(releases.Model)
+				if updated, ok := newModel.(releases.Model); ok {
+					m.releasesModel = updated
+				}
 
 			case ViewWatching:
 				var newModel tea.Model
 				newModel, cmd = m.watchingModel.Update(msg)
-				m.watchingModel = newModel.(watching.Model)
+				if updated, ok := newModel.(watching.Model); ok {
+					m.watchingModel = updated
+				}
 
 			case ViewOrphans:
 				var newModel tea.Model
 				newModel, cmd = m.orphansModel.Update(msg)
-				m.orphansModel = newModel.(orphanstui.Model)
+				if updated, ok := newModel.(orphanstui.Model); ok {
+					m.orphansModel = updated
+				}
 			}
 
 			return m, cmd
@@ -285,7 +336,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// View renders the model
+// View renders the model.
 func (m MainModel) View() string {
 	if !m.ready {
 		return "Initializing..."

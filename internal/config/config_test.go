@@ -37,14 +37,11 @@ cache:
   path: /tmp/cache
 `
 
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(configContent), 0o644); err != nil {
 		t.Fatalf("Failed to write test config: %v", err)
 	}
 
-	// Change to temp directory
-	oldDir, _ := os.Getwd()
-	defer os.Chdir(oldDir)
-	os.Chdir(tmpDir)
+	t.Chdir(tmpDir)
 
 	// Load config
 	cfg, err := Load()

@@ -5,26 +5,27 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/KyleKing/gh-sweep/internal/github"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/KyleKing/gh-sweep/internal/github"
 )
 
-// Model represents the settings comparison TUI state
+// Model represents the settings comparison TUI state.
 type Model struct {
-	repos      []string
-	settings   map[string]*github.RepoSettings
-	baseline   string
-	diffs      map[string][]github.SettingsDiff
-	cursor     int
-	width      int
-	height     int
-	loading    bool
-	err        error
-	viewMode   string // "overview", "diff"
+	repos    []string
+	settings map[string]*github.RepoSettings
+	baseline string
+	diffs    map[string][]github.SettingsDiff
+	cursor   int
+	width    int
+	height   int
+	loading  bool
+	err      error
+	viewMode string // "overview", "diff"
 }
 
-// NewModel creates a new settings comparison model
+// NewModel creates a new settings comparison model.
 func NewModel(repos []string, baseline string) Model {
 	return Model{
 		repos:    repos,
@@ -42,7 +43,7 @@ type settingsLoadedMsg struct {
 	err      error
 }
 
-// Init initializes the model
+// Init initializes the model.
 func (m Model) Init() tea.Cmd {
 	return m.loadSettings
 }
@@ -100,12 +101,13 @@ func (m Model) loadSettings() tea.Msg {
 	}
 }
 
-// Update handles messages
+// Update handles messages.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+
 		return m, nil
 
 	case settingsLoadedMsg:
@@ -113,6 +115,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.settings = msg.settings
 		m.diffs = msg.diffs
 		m.err = msg.err
+
 		return m, nil
 
 	case tea.KeyMsg:
@@ -140,7 +143,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// View renders the model
+// View renders the model.
 func (m Model) View() string {
 	if m.loading {
 		return "Loading repository settings...\n"
@@ -251,9 +254,10 @@ func (m Model) renderDiff() string {
 		b.WriteString(fmt.Sprintf("📦 %s:\n", repo))
 		for _, diff := range diffs {
 			severityColor := "#FFFF00" // warning
-			if diff.Severity == "critical" {
+			switch diff.Severity {
+			case "critical":
 				severityColor = "#FF0000"
-			} else if diff.Severity == "info" {
+			case "info":
 				severityColor = "#00FF00"
 			}
 

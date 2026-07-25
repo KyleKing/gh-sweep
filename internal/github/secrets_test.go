@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-// TestDetectUnusedSecrets tests unused secret detection
+// TestDetectUnusedSecrets tests unused secret detection.
 func TestDetectUnusedSecrets(t *testing.T) {
 	secrets := []Secret{
 		{Name: "ACTIVE_SECRET", Scope: "org"},
@@ -69,7 +69,7 @@ func TestDetectUnusedSecrets(t *testing.T) {
 	}
 }
 
-// TestScanWorkflowForSecrets tests workflow scanning
+// TestScanWorkflowForSecrets tests workflow scanning.
 func TestScanWorkflowForSecrets(t *testing.T) {
 	workflowYAML := `
 name: CI
@@ -113,7 +113,7 @@ jobs:
 	}
 }
 
-// TestScanWorkflowMultipleFormats tests various secret reference formats
+// TestScanWorkflowMultipleFormats tests various secret reference formats.
 func TestScanWorkflowMultipleFormats(t *testing.T) {
 	workflowYAML := `
 name: Multi-format
@@ -147,7 +147,7 @@ jobs:
 	}
 }
 
-// TestGroupSecretsByScope tests grouping secrets
+// TestGroupSecretsByScope tests grouping secrets.
 func TestGroupSecretsByScope(t *testing.T) {
 	secrets := []Secret{
 		{Name: "ORG_SECRET_1", Scope: "org"},
@@ -167,7 +167,7 @@ func TestGroupSecretsByScope(t *testing.T) {
 	}
 }
 
-// TestFindDuplicateSecrets tests duplicate detection across scopes
+// TestFindDuplicateSecrets tests duplicate detection across scopes.
 func TestFindDuplicateSecrets(t *testing.T) {
 	secrets := []Secret{
 		{Name: "API_KEY", Scope: "org"},

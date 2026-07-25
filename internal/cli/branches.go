@@ -1,4 +1,4 @@
-package cmd
+package cli
 
 import (
 	"fmt"
@@ -29,13 +29,14 @@ Examples:
   # Create stacked PRs
   gh-sweep branches --repo owner/repo --stacked-prs`,
 	Run: func(cmd *cobra.Command, args []string) {
-		repo, _ := cmd.Flags().GetString("repo")
-		tree, _ := cmd.Flags().GetBool("tree")
-		stackedPRs, _ := cmd.Flags().GetBool("stacked-prs")
+		repo := stringFlag(cmd, "repo")
+		tree := boolFlag(cmd, "tree")
+		stackedPRs := boolFlag(cmd, "stacked-prs")
 
 		if repo == "" {
 			fmt.Println("Error: --repo flag is required")
 			fmt.Println("\nUsage: gh-sweep branches --repo owner/repo")
+
 			return
 		}
 

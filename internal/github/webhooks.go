@@ -2,7 +2,7 @@ package github
 
 import "fmt"
 
-// Webhook represents a repository webhook
+// Webhook represents a repository webhook.
 type Webhook struct {
 	ID         int
 	Repository string
@@ -21,7 +21,7 @@ type webhookResponse struct {
 	Active bool     `json:"active"`
 }
 
-// ListWebhooks lists all webhooks for a repository
+// ListWebhooks lists all webhooks for a repository.
 func (c *Client) ListWebhooks(owner, repo string) ([]Webhook, error) {
 	var response []webhookResponse
 	path := fmt.Sprintf("repos/%s/%s/hooks", owner, repo)
@@ -44,8 +44,8 @@ func (c *Client) ListWebhooks(owner, repo string) ([]Webhook, error) {
 	return webhooks, nil
 }
 
-// WebhookDelivery represents a webhook delivery
-type WebhookDelivery struct{
+// WebhookDelivery represents a webhook delivery.
+type WebhookDelivery struct {
 	ID        int
 	Event     string
 	Status    int
@@ -54,14 +54,14 @@ type WebhookDelivery struct{
 }
 
 type deliveryResponse struct {
-	ID       int    `json:"id"`
-	Event    string `json:"event"`
-	Status   int    `json:"status_code"`
-	Duration int    `json:"duration"`
+	ID        int    `json:"id"`
+	Event     string `json:"event"`
+	Status    int    `json:"status_code"`
+	Duration  int    `json:"duration"`
 	Delivered string `json:"delivered_at"`
 }
 
-// ListWebhookDeliveries lists recent deliveries for a webhook
+// ListWebhookDeliveries lists recent deliveries for a webhook.
 func (c *Client) ListWebhookDeliveries(owner, repo string, hookID int) ([]WebhookDelivery, error) {
 	var response []deliveryResponse
 	path := fmt.Sprintf("repos/%s/%s/hooks/%d/deliveries", owner, repo, hookID)
@@ -84,7 +84,7 @@ func (c *Client) ListWebhookDeliveries(owner, repo string, hookID int) ([]Webhoo
 	return deliveries, nil
 }
 
-// WebhookHealth represents webhook health metrics
+// WebhookHealth represents webhook health metrics.
 type WebhookHealth struct {
 	WebhookID       int
 	SuccessRate     float64
@@ -93,7 +93,7 @@ type WebhookHealth struct {
 	AvgDuration     int
 }
 
-// AnalyzeWebhookHealth analyzes webhook delivery health
+// AnalyzeWebhookHealth analyzes webhook delivery health.
 func AnalyzeWebhookHealth(deliveries []WebhookDelivery) WebhookHealth {
 	health := WebhookHealth{
 		TotalDeliveries: len(deliveries),

@@ -20,24 +20,34 @@ func setupTestRepo(t *testing.T) string {
 	// Configure git
 	configName := exec.Command("git", "config", "user.name", "Test User")
 	configName.Dir = tmpDir
-	configName.Run()
+	if err := configName.Run(); err != nil {
+		t.Fatalf("Failed to configure user.name: %v", err)
+	}
 
 	configEmail := exec.Command("git", "config", "user.email", "test@example.com")
 	configEmail.Dir = tmpDir
-	configEmail.Run()
+	if err := configEmail.Run(); err != nil {
+		t.Fatalf("Failed to configure user.email: %v", err)
+	}
 
 	// Disable commit signing for tests
 	configSign := exec.Command("git", "config", "commit.gpgsign", "false")
 	configSign.Dir = tmpDir
-	configSign.Run()
+	if err := configSign.Run(); err != nil {
+		t.Fatalf("Failed to disable commit signing: %v", err)
+	}
 
 	// Create initial commit
 	testFile := filepath.Join(tmpDir, "test.txt")
-	os.WriteFile(testFile, []byte("test"), 0644)
+	if err := os.WriteFile(testFile, []byte("test"), 0o644); err != nil {
+		t.Fatalf("Failed to write test file: %v", err)
+	}
 
 	cmd = exec.Command("git", "add", "test.txt")
 	cmd.Dir = tmpDir
-	cmd.Run()
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("Failed to stage test file: %v", err)
+	}
 
 	cmd = exec.Command("git", "commit", "-m", "Initial commit")
 	cmd.Dir = tmpDir

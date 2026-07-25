@@ -63,12 +63,14 @@ func (d *Detector) ClassifyBranch(
 		orphan.Type = OrphanTypeMergedPR
 		orphan.PRNumber = &mergedPR.Number
 		orphan.PRTitle = &mergedPR.Title
+
 		return &orphan
 
 	case closedPR != nil:
 		orphan.Type = OrphanTypeClosedPR
 		orphan.PRNumber = &closedPR.Number
 		orphan.PRTitle = &closedPR.Title
+
 		return &orphan
 
 	case daysSince >= d.options.StaleDaysThreshold:
@@ -94,5 +96,6 @@ func (d *Detector) shouldExclude(branchName string) bool {
 			return true
 		}
 	}
+
 	return false
 }

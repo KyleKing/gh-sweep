@@ -1,4 +1,4 @@
-package cmd
+package cli
 
 import (
 	"fmt"
@@ -31,10 +31,10 @@ Examples:
   # Fuzzy search in comment text
   gh-sweep comments --search "TODO|FIXME"`,
 	Run: func(cmd *cobra.Command, args []string) {
-		repo, _ := cmd.Flags().GetString("repo")
-		author, _ := cmd.Flags().GetString("author")
-		since, _ := cmd.Flags().GetString("since")
-		search, _ := cmd.Flags().GetString("search")
+		repo := stringFlag(cmd, "repo")
+		author := stringFlag(cmd, "author")
+		since := stringFlag(cmd, "since")
+		search := stringFlag(cmd, "search")
 
 		fmt.Printf("Unresolved comment review for: %s\n", repo)
 		fmt.Printf("Author: %s, Since: %s, Search: %s\n", author, since, search)

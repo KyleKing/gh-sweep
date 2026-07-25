@@ -33,7 +33,7 @@ jobs:
           experimental: true
 
       - name: Install dependencies
-        run: mise run install
+        run: go mod download
 
       - name: Run tests
         run: mise run test

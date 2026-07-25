@@ -5,15 +5,16 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/KyleKing/gh-sweep/internal/github"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/KyleKing/gh-sweep/internal/github"
 )
 
-// Model represents the webhook management TUI state
+// Model represents the webhook management TUI state.
 type Model struct {
 	repos    []string
-	webhooks map[string][]github.Webhook              // repo -> webhooks
+	webhooks map[string][]github.Webhook             // repo -> webhooks
 	health   map[string]map[int]github.WebhookHealth // repo -> webhook ID -> health
 	cursor   int
 	width    int
@@ -22,7 +23,7 @@ type Model struct {
 	err      error
 }
 
-// NewModel creates a new webhook management model
+// NewModel creates a new webhook management model.
 func NewModel(repos []string) Model {
 	return Model{
 		repos:    repos,
@@ -38,7 +39,7 @@ type webhooksLoadedMsg struct {
 	err      error
 }
 
-// Init initializes the model
+// Init initializes the model.
 func (m Model) Init() tea.Cmd {
 	return m.loadWebhooks
 }
@@ -95,12 +96,13 @@ func (m Model) loadWebhooks() tea.Msg {
 	}
 }
 
-// Update handles messages
+// Update handles messages.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+
 		return m, nil
 
 	case webhooksLoadedMsg:
@@ -108,6 +110,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.webhooks = msg.webhooks
 		m.health = msg.health
 		m.err = msg.err
+
 		return m, nil
 
 	case tea.KeyMsg:
@@ -130,7 +133,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// View renders the model
+// View renders the model.
 func (m Model) View() string {
 	if m.loading {
 		return "Loading webhooks...\n"
@@ -169,14 +172,15 @@ func (m Model) View() string {
 			line := fmt.Sprintf("%s %s (%d webhooks):\n", cursor, repo, len(webhooks))
 
 			// Show first few webhooks
+			var lineSb172 strings.Builder
 			for j, webhook := range webhooks {
 				if j >= 3 {
-					line += fmt.Sprintf("   ... and %d more\n", len(webhooks)-3)
+					lineSb172.WriteString(fmt.Sprintf("   ... and %d more\n", len(webhooks)-3))
 					break
 				}
 
-				line += fmt.Sprintf("   ID: %d | %s\n", webhook.ID, webhook.URL)
-				line += fmt.Sprintf("   Events: %s\n", strings.Join(webhook.Events, ", "))
+				lineSb172.WriteString(fmt.Sprintf("   ID: %d | %s\n", webhook.ID, webhook.URL))
+				lineSb172.WriteString(fmt.Sprintf("   Events: %s\n", strings.Join(webhook.Events, ", ")))
 
 				// Add health metrics if available
 				if repoHealth, ok := m.health[repo]; ok {
@@ -193,10 +197,11 @@ func (m Model) View() string {
 							health.SuccessRate,
 							health.AvgDuration,
 							health.TotalDeliveries)
-						line += healthStyle.Render(healthLine)
+						lineSb172.WriteString(healthStyle.Render(healthLine))
 					}
 				}
 			}
+			line += lineSb172.String()
 
 			b.WriteString(repoStyle.Render(line))
 			b.WriteString("\n")

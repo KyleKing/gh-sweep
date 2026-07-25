@@ -11,7 +11,7 @@ import (
 	"github.com/cli/go-gh/pkg/api"
 )
 
-// Client wraps the GitHub API client
+// Client wraps the GitHub API client.
 type Client struct {
 	httpClient *http.Client
 	apiClient  api.RESTClient
@@ -19,7 +19,7 @@ type Client struct {
 }
 
 // NewClient creates a new GitHub API client
-// It will use gh CLI authentication if available, or fall back to GITHUB_TOKEN env var
+// It will use gh CLI authentication if available, or fall back to GITHUB_TOKEN env var.
 func NewClient(ctx context.Context) (*Client, error) {
 	opts := &api.ClientOptions{}
 
@@ -42,7 +42,7 @@ func NewClient(ctx context.Context) (*Client, error) {
 	}, nil
 }
 
-// NewClientWithToken creates a new GitHub API client with an explicit token
+// NewClientWithToken creates a new GitHub API client with an explicit token.
 func NewClientWithToken(ctx context.Context, token string) (*Client, error) {
 	opts := &api.ClientOptions{
 		AuthToken: token,
@@ -65,44 +65,47 @@ func NewClientWithToken(ctx context.Context, token string) (*Client, error) {
 	}, nil
 }
 
-// Get performs a GET request to the GitHub API
+// Get performs a GET request to the GitHub API.
 func (c *Client) Get(path string, response interface{}) error {
 	return c.apiClient.Get(path, response)
 }
 
-// Post performs a POST request to the GitHub API
-func (c *Client) Post(path string, body interface{}, response interface{}) error {
+// Post performs a POST request to the GitHub API.
+func (c *Client) Post(path string, body, response interface{}) error {
 	jsonBody, err := json.Marshal(body)
 	if err != nil {
 		return fmt.Errorf("failed to marshal request body: %w", err)
 	}
+
 	return c.apiClient.Post(path, bytes.NewReader(jsonBody), response)
 }
 
-// Patch performs a PATCH request to the GitHub API
-func (c *Client) Patch(path string, body interface{}, response interface{}) error {
+// Patch performs a PATCH request to the GitHub API.
+func (c *Client) Patch(path string, body, response interface{}) error {
 	jsonBody, err := json.Marshal(body)
 	if err != nil {
 		return fmt.Errorf("failed to marshal request body: %w", err)
 	}
+
 	return c.apiClient.Patch(path, bytes.NewReader(jsonBody), response)
 }
 
-// Put performs a PUT request to the GitHub API
-func (c *Client) Put(path string, body interface{}, response interface{}) error {
+// Put performs a PUT request to the GitHub API.
+func (c *Client) Put(path string, body, response interface{}) error {
 	jsonBody, err := json.Marshal(body)
 	if err != nil {
 		return fmt.Errorf("failed to marshal request body: %w", err)
 	}
+
 	return c.apiClient.Put(path, bytes.NewReader(jsonBody), response)
 }
 
-// Delete performs a DELETE request to the GitHub API
+// Delete performs a DELETE request to the GitHub API.
 func (c *Client) Delete(path string, response interface{}) error {
 	return c.apiClient.Delete(path, response)
 }
 
-// Context returns the client's context
+// Context returns the client's context.
 func (c *Client) Context() context.Context {
 	return c.ctx
 }

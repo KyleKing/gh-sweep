@@ -38,11 +38,16 @@ func TestMemoryManager(t *testing.T) {
 func TestMemoryManagerExpiration(t *testing.T) {
 	mgr := NewMemoryManager(100 * time.Millisecond)
 
-	mgr.Set("test-key", "test-value")
+	if err := mgr.Set("test-key", "test-value"); err != nil {
+		t.Fatalf("Failed to set: %v", err)
+	}
 
 	// Should be found immediately
 	var value1 string
-	found, _ := mgr.Get("test-key", &value1)
+	found, err := mgr.Get("test-key", &value1)
+	if err != nil {
+		t.Fatalf("Failed to get: %v", err)
+	}
 	if !found {
 		t.Fatal("Expected to find cached value")
 	}
@@ -52,7 +57,10 @@ func TestMemoryManagerExpiration(t *testing.T) {
 
 	// Should not be found after expiration
 	var value2 string
-	found, _ = mgr.Get("test-key", &value2)
+	found, err = mgr.Get("test-key", &value2)
+	if err != nil {
+		t.Fatalf("Failed to get: %v", err)
+	}
 	if found {
 		t.Error("Expected cache to be expired")
 	}
@@ -61,14 +69,19 @@ func TestMemoryManagerExpiration(t *testing.T) {
 func TestMemoryManagerDelete(t *testing.T) {
 	mgr := NewMemoryManager(1 * time.Hour)
 
-	mgr.Set("test-key", "test-value")
+	if err := mgr.Set("test-key", "test-value"); err != nil {
+		t.Fatalf("Failed to set: %v", err)
+	}
 
 	if err := mgr.Delete("test-key"); err != nil {
 		t.Fatalf("Failed to delete: %v", err)
 	}
 
 	var value string
-	found, _ := mgr.Get("test-key", &value)
+	found, err := mgr.Get("test-key", &value)
+	if err != nil {
+		t.Fatalf("Failed to get: %v", err)
+	}
 	if found {
 		t.Error("Expected key to be deleted")
 	}
@@ -77,16 +90,25 @@ func TestMemoryManagerDelete(t *testing.T) {
 func TestMemoryManagerClear(t *testing.T) {
 	mgr := NewMemoryManager(1 * time.Hour)
 
-	mgr.Set("key1", "value1")
-	mgr.Set("key2", "value2")
-	mgr.Set("key3", "value3")
+	if err := mgr.Set("key1", "value1"); err != nil {
+		t.Fatalf("Failed to set: %v", err)
+	}
+	if err := mgr.Set("key2", "value2"); err != nil {
+		t.Fatalf("Failed to set: %v", err)
+	}
+	if err := mgr.Set("key3", "value3"); err != nil {
+		t.Fatalf("Failed to set: %v", err)
+	}
 
 	if err := mgr.Clear(); err != nil {
 		t.Fatalf("Failed to clear: %v", err)
 	}
 
 	var value string
-	found, _ := mgr.Get("key1", &value)
+	found, err := mgr.Get("key1", &value)
+	if err != nil {
+		t.Fatalf("Failed to get: %v", err)
+	}
 	if found {
 		t.Error("Expected all entries to be cleared")
 	}
@@ -95,8 +117,12 @@ func TestMemoryManagerClear(t *testing.T) {
 func TestMemoryManagerStats(t *testing.T) {
 	mgr := NewMemoryManager(100 * time.Millisecond)
 
-	mgr.Set("key1", "value1")
-	mgr.Set("key2", "value2")
+	if err := mgr.Set("key1", "value1"); err != nil {
+		t.Fatalf("Failed to set: %v", err)
+	}
+	if err := mgr.Set("key2", "value2"); err != nil {
+		t.Fatalf("Failed to set: %v", err)
+	}
 
 	total, expired, err := mgr.Stats()
 	if err != nil {

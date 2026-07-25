@@ -2,15 +2,17 @@ package comments
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
-	"github.com/KyleKing/gh-sweep/internal/github"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/KyleKing/gh-sweep/internal/github"
 )
 
-// Model represents the comments review TUI state
+// Model represents the comments review TUI state.
 type Model struct {
 	repo         string
 	comments     []github.Comment
@@ -20,11 +22,10 @@ type Model struct {
 	height       int
 	loading      bool
 	err          error
-	filterAuthor string
 	showResolved bool
 }
 
-// NewModel creates a new comments model
+// NewModel creates a new comments model.
 func NewModel(repo string) Model {
 	return Model{
 		repo:         repo,
@@ -39,7 +40,7 @@ type commentsLoadedMsg struct {
 	err        error
 }
 
-// Init initializes the model
+// Init initializes the model.
 func (m Model) Init() tea.Cmd {
 	return m.loadComments
 }
@@ -50,7 +51,7 @@ func (m Model) loadComments() tea.Msg {
 		return commentsLoadedMsg{
 			comments:   []github.Comment{},
 			unresolved: []github.Comment{},
-			err:        fmt.Errorf("no repository specified"),
+			err:        errors.New("no repository specified"),
 		}
 	}
 
@@ -60,7 +61,7 @@ func (m Model) loadComments() tea.Msg {
 		return commentsLoadedMsg{
 			comments:   []github.Comment{},
 			unresolved: []github.Comment{},
-			err:        fmt.Errorf("invalid repo format, expected owner/repo"),
+			err:        errors.New("invalid repo format, expected owner/repo"),
 		}
 	}
 	owner, repo := parts[0], parts[1]
@@ -100,12 +101,13 @@ func (m Model) loadComments() tea.Msg {
 	}
 }
 
-// Update handles messages
+// Update handles messages.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+
 		return m, nil
 
 	case commentsLoadedMsg:
@@ -113,6 +115,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.comments = msg.comments
 		m.unresolved = msg.unresolved
 		m.err = msg.err
+
 		return m, nil
 
 	case tea.KeyMsg:
@@ -144,10 +147,11 @@ func (m Model) getActiveList() []github.Comment {
 	if m.showResolved {
 		return m.comments
 	}
+
 	return m.unresolved
 }
 
-// View renders the model
+// View renders the model.
 func (m Model) View() string {
 	if m.loading {
 		return "Loading comments...\n"
@@ -164,7 +168,7 @@ func (m Model) View() string {
 		Bold(true).
 		Foreground(lipgloss.Color("#00FFFF"))
 
-	b.WriteString(titleStyle.Render(fmt.Sprintf("💬 PR Comments: %s", m.repo)))
+	b.WriteString(titleStyle.Render("💬 PR Comments: " + m.repo))
 	b.WriteString("\n\n")
 
 	// Filter status

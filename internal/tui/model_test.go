@@ -34,7 +34,10 @@ func TestModelUpdate(t *testing.T) {
 	// Test window size message
 	msg := tea.WindowSizeMsg{Width: 100, Height: 50}
 	updated, _ := m.Update(msg)
-	updatedModel := updated.(Model)
+	updatedModel, ok := updated.(Model)
+	if !ok {
+		t.Fatalf("Expected Update to return Model, got %T", updated)
+	}
 
 	if !updatedModel.ready {
 		t.Error("Expected model to be ready after WindowSizeMsg")

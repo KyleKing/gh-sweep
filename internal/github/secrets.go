@@ -5,7 +5,7 @@ import (
 	"regexp"
 )
 
-// Secret represents a GitHub Actions secret
+// Secret represents a GitHub Actions secret.
 type Secret struct {
 	Name       string
 	Scope      string // "org" or "repo"
@@ -22,7 +22,7 @@ type secretsResponse struct {
 	} `json:"secrets"`
 }
 
-// ListOrgSecrets lists organization-level secrets
+// ListOrgSecrets lists organization-level secrets.
 func (c *Client) ListOrgSecrets(org string) ([]Secret, error) {
 	var response secretsResponse
 	path := fmt.Sprintf("orgs/%s/actions/secrets", org)
@@ -44,7 +44,7 @@ func (c *Client) ListOrgSecrets(org string) ([]Secret, error) {
 	return secrets, nil
 }
 
-// ListRepoSecrets lists repository-level secrets
+// ListRepoSecrets lists repository-level secrets.
 func (c *Client) ListRepoSecrets(owner, repo string) ([]Secret, error) {
 	var response secretsResponse
 	path := fmt.Sprintf("repos/%s/%s/actions/secrets", owner, repo)
@@ -67,7 +67,7 @@ func (c *Client) ListRepoSecrets(owner, repo string) ([]Secret, error) {
 	return secrets, nil
 }
 
-// SecretUsage tracks secret usage in workflows
+// SecretUsage tracks secret usage in workflows.
 type SecretUsage struct {
 	Name         string
 	Scope        string
@@ -76,7 +76,7 @@ type SecretUsage struct {
 	Unused       bool
 }
 
-// DetectUnusedSecrets compares secrets against workflow references
+// DetectUnusedSecrets compares secrets against workflow references.
 func DetectUnusedSecrets(secrets []Secret, workflowRefs map[string][]string) []SecretUsage {
 	usages := []SecretUsage{}
 
@@ -102,7 +102,7 @@ func DetectUnusedSecrets(secrets []Secret, workflowRefs map[string][]string) []S
 }
 
 // ScanWorkflowForSecrets extracts secret references from workflow YAML
-// Pure function: parses YAML content for secrets.* references
+// Pure function: parses YAML content for secrets.* references.
 func ScanWorkflowForSecrets(workflowContent string) []string {
 	// Match ${{ secrets.SECRET_NAME }} pattern (with optional spaces)
 	pattern := regexp.MustCompile(`\${{\s*secrets\.([A-Z0-9_]+)\s*}}`)
@@ -126,7 +126,7 @@ func ScanWorkflowForSecrets(workflowContent string) []string {
 }
 
 // GroupSecretsByScope groups secrets by their scope (org/repo)
-// Pure function: creates grouped map
+// Pure function: creates grouped map.
 func GroupSecretsByScope(secrets []Secret) map[string][]Secret {
 	grouped := make(map[string][]Secret)
 
@@ -137,7 +137,7 @@ func GroupSecretsByScope(secrets []Secret) map[string][]Secret {
 	return grouped
 }
 
-// DuplicateSecret represents a secret name that appears multiple times
+// DuplicateSecret represents a secret name that appears multiple times.
 type DuplicateSecret struct {
 	Name   string
 	Count  int
@@ -146,7 +146,7 @@ type DuplicateSecret struct {
 }
 
 // FindDuplicateSecrets identifies secret names that appear in multiple scopes/repos
-// Pure function: analyzes secret list for duplicates
+// Pure function: analyzes secret list for duplicates.
 func FindDuplicateSecrets(secrets []Secret) []DuplicateSecret {
 	// Track occurrences
 	occurrences := make(map[string]*DuplicateSecret)

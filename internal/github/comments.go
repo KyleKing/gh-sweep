@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// Comment represents a PR review comment
+// Comment represents a PR review comment.
 type Comment struct {
 	ID          int
 	Repository  string
@@ -21,11 +21,11 @@ type Comment struct {
 }
 
 type commentResponse struct {
-	ID        int    `json:"id"`
-	Body      string `json:"body"`
-	Path      string `json:"path"`
-	Line      int    `json:"line"`
-	User      struct {
+	ID   int    `json:"id"`
+	Body string `json:"body"`
+	Path string `json:"path"`
+	Line int    `json:"line"`
+	User struct {
 		Login string `json:"login"`
 	} `json:"user"`
 	CreatedAt   time.Time `json:"created_at"`
@@ -33,7 +33,7 @@ type commentResponse struct {
 	InReplyToID *int      `json:"in_reply_to_id"`
 }
 
-// ListPRComments lists all comments for a pull request
+// ListPRComments lists all comments for a pull request.
 func (c *Client) ListPRComments(owner, repo string, prNumber int) ([]Comment, error) {
 	var response []commentResponse
 	path := fmt.Sprintf("repos/%s/%s/pulls/%d/comments", owner, repo, prNumber)
@@ -62,7 +62,7 @@ func (c *Client) ListPRComments(owner, repo string, prNumber int) ([]Comment, er
 	return comments, nil
 }
 
-// FilterUnresolvedComments filters comments to only unresolved ones
+// FilterUnresolvedComments filters comments to only unresolved ones.
 func FilterUnresolvedComments(comments []Comment) []Comment {
 	// Simple heuristic: a comment is unresolved if it's not a reply
 	// and doesn't have recent replies

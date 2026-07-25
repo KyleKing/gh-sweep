@@ -1,4 +1,4 @@
-package cmd
+package cli
 
 import (
 	"context"
@@ -7,11 +7,12 @@ import (
 	"os"
 	"strings"
 
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/spf13/cobra"
+
 	"github.com/KyleKing/gh-sweep/internal/github"
 	"github.com/KyleKing/gh-sweep/internal/orphans"
 	orphanstui "github.com/KyleKing/gh-sweep/internal/tui/components/orphans"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/spf13/cobra"
 )
 
 var orphansCmd = &cobra.Command{
@@ -67,16 +68,16 @@ func runOrphans(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	org, _ := cmd.Flags().GetString("org")
-	namespace, _ := cmd.Flags().GetString("namespace")
-	listMode, _ := cmd.Flags().GetBool("list")
-	cleanup, _ := cmd.Flags().GetBool("cleanup")
-	dryRun, _ := cmd.Flags().GetBool("dry-run")
-	staleDays, _ := cmd.Flags().GetInt("stale-days")
-	includeRecent, _ := cmd.Flags().GetBool("include-recent")
-	excludePatterns, _ := cmd.Flags().GetStringSlice("exclude")
-	outputPath, _ := cmd.Flags().GetString("output")
-	format, _ := cmd.Flags().GetString("format")
+	org := stringFlag(cmd, "org")
+	namespace := stringFlag(cmd, "namespace")
+	listMode := boolFlag(cmd, "list")
+	cleanup := boolFlag(cmd, "cleanup")
+	dryRun := boolFlag(cmd, "dry-run")
+	staleDays := intFlag(cmd, "stale-days")
+	includeRecent := boolFlag(cmd, "include-recent")
+	excludePatterns := stringSliceFlag(cmd, "exclude")
+	outputPath := stringFlag(cmd, "output")
+	format := stringFlag(cmd, "format")
 
 	if namespace == "" {
 		namespace = org
@@ -105,6 +106,7 @@ func runOrphans(cmd *cobra.Command, args []string) {
 			fmt.Fprintf(os.Stderr, "Error running TUI: %v\n", err)
 			os.Exit(1)
 		}
+
 		return
 	}
 
@@ -157,6 +159,7 @@ func runCleanup(ctx context.Context, client *github.Client, result *orphans.Name
 		if dryRun {
 			fmt.Printf("  [DRY RUN] Would delete %s/%s\n", orphan.Repository, orphan.BranchName)
 			deleted++
+
 			continue
 		}
 
@@ -195,7 +198,7 @@ func outputResult(result *orphans.NamespaceScanResult, outputPath, format string
 	}
 
 	if outputPath != "" {
-		if err := os.WriteFile(outputPath, []byte(output), 0644); err != nil {
+		if err := os.WriteFile(outputPath, []byte(output), 0o644); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: failed to write output file: %v\n", err)
 			os.Exit(1)
 		}
@@ -244,9 +247,9 @@ func printTable(result *orphans.NamespaceScanResult) {
 }
 
 func printTableTo(b *strings.Builder, result *orphans.NamespaceScanResult) {
-	b.WriteString(fmt.Sprintf("Orphaned Branches Report: %s\n\n", result.Namespace))
-	b.WriteString(fmt.Sprintf("Total Repositories: %d\n", result.TotalRepos))
-	b.WriteString(fmt.Sprintf("Total Orphaned Branches: %d\n\n", result.TotalOrphans))
+	fmt.Fprintf(b, "Orphaned Branches Report: %s\n\n", result.Namespace)
+	fmt.Fprintf(b, "Total Repositories: %d\n", result.TotalRepos)
+	fmt.Fprintf(b, "Total Orphaned Branches: %d\n\n", result.TotalOrphans)
 
 	if result.TotalOrphans == 0 {
 		b.WriteString("No orphaned branches found.\n")
@@ -254,10 +257,10 @@ func printTableTo(b *strings.Builder, result *orphans.NamespaceScanResult) {
 	}
 
 	b.WriteString("Summary by Type:\n")
-	b.WriteString(fmt.Sprintf("  Merged PR:      %d\n", len(result.OrphansByType(orphans.OrphanTypeMergedPR))))
-	b.WriteString(fmt.Sprintf("  Closed PR:      %d\n", len(result.OrphansByType(orphans.OrphanTypeClosedPR))))
-	b.WriteString(fmt.Sprintf("  Stale:          %d\n", len(result.OrphansByType(orphans.OrphanTypeStale))))
-	b.WriteString(fmt.Sprintf("  Recent (no PR): %d\n\n", len(result.OrphansByType(orphans.OrphanTypeRecentNoPR))))
+	fmt.Fprintf(b, "  Merged PR:      %d\n", len(result.OrphansByType(orphans.OrphanTypeMergedPR)))
+	fmt.Fprintf(b, "  Closed PR:      %d\n", len(result.OrphansByType(orphans.OrphanTypeClosedPR)))
+	fmt.Fprintf(b, "  Stale:          %d\n", len(result.OrphansByType(orphans.OrphanTypeStale)))
+	fmt.Fprintf(b, "  Recent (no PR): %d\n\n", len(result.OrphansByType(orphans.OrphanTypeRecentNoPR)))
 
 	b.WriteString("Orphaned Branches:\n\n")
 
@@ -266,15 +269,15 @@ func printTableTo(b *strings.Builder, result *orphans.NamespaceScanResult) {
 			continue
 		}
 
-		b.WriteString(fmt.Sprintf("  %s (%d orphans)\n", scanResult.Repository.FullName, len(scanResult.Orphans)))
+		fmt.Fprintf(b, "  %s (%d orphans)\n", scanResult.Repository.FullName, len(scanResult.Orphans))
 
 		for _, orphan := range scanResult.Orphans {
 			prInfo := ""
 			if orphan.PRNumber != nil {
 				prInfo = fmt.Sprintf(" (PR #%d)", *orphan.PRNumber)
 			}
-			b.WriteString(fmt.Sprintf("    - %s [%s, %d days]%s\n",
-				orphan.BranchName, orphan.Type.Label(), orphan.DaysSinceActivity, prInfo))
+			fmt.Fprintf(b, "    - %s [%s, %d days]%s\n",
+				orphan.BranchName, orphan.Type.Label(), orphan.DaysSinceActivity, prInfo)
 		}
 		b.WriteString("\n")
 	}

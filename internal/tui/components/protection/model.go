@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/KyleKing/gh-sweep/internal/github"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/KyleKing/gh-sweep/internal/github"
 )
 
-// Model represents the protection rules TUI state
+// Model represents the protection rules TUI state.
 type Model struct {
 	repos    []string
 	rules    map[string]*github.ProtectionRule
@@ -23,7 +24,7 @@ type Model struct {
 	err      error
 }
 
-// NewModel creates a new protection rules model
+// NewModel creates a new protection rules model.
 func NewModel(repos []string, baseline string) Model {
 	return Model{
 		repos:    repos,
@@ -40,7 +41,7 @@ type rulesLoadedMsg struct {
 	err   error
 }
 
-// Init initializes the model
+// Init initializes the model.
 func (m Model) Init() tea.Cmd {
 	return m.loadRules
 }
@@ -97,12 +98,13 @@ func (m Model) loadRules() tea.Msg {
 	}
 }
 
-// Update handles messages
+// Update handles messages.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+
 		return m, nil
 
 	case rulesLoadedMsg:
@@ -110,6 +112,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.rules = msg.rules
 		m.diffs = msg.diffs
 		m.err = msg.err
+
 		return m, nil
 
 	case tea.KeyMsg:
@@ -132,7 +135,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// View renders the model
+// View renders the model.
 func (m Model) View() string {
 	if m.loading {
 		return "Loading protection rules...\n"
@@ -191,7 +194,7 @@ func (m Model) View() string {
 	if len(m.diffs) > 0 {
 		b.WriteString("\n⚠️  Differences from baseline:\n\n")
 		for field, differences := range m.diffs {
-			b.WriteString(fmt.Sprintf("%s:\n", field))
+			b.WriteString(field + ":\n")
 			for _, diff := range differences {
 				b.WriteString(fmt.Sprintf("  - %s\n", diff))
 			}

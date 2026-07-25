@@ -2,15 +2,18 @@ package ghaperf
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/KyleKing/gh-sweep/internal/cache"
-	"github.com/KyleKing/gh-sweep/internal/github"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/KyleKing/gh-sweep/internal/cache"
+	"github.com/KyleKing/gh-sweep/internal/github"
 )
 
 type viewMode int
@@ -47,9 +50,8 @@ type Model struct {
 	branchStats   map[string]*github.BranchStats
 	baseBranch    string
 
-	cacheManager *cache.GHAPerfCacheManager
-	cachedCount  int
-	newCount     int
+	cachedCount int
+	newCount    int
 }
 
 func NewModel(repo string, opts ...Option) Model {
@@ -60,14 +62,14 @@ func NewModel(repo string, opts ...Option) Model {
 	}
 
 	m := Model{
-		repo:        repo,
-		owner:       owner,
-		repoName:    repoName,
-		loading:     true,
-		viewMode:    viewOverview,
-		filterDays:  30,
-		baseBranch:  "main",
-		maxVisible:  15,
+		repo:       repo,
+		owner:      owner,
+		repoName:   repoName,
+		loading:    true,
+		viewMode:   viewOverview,
+		filterDays: 30,
+		baseBranch: "main",
+		maxVisible: 15,
 	}
 
 	for _, opt := range opts {
@@ -126,7 +128,7 @@ func (m Model) Init() tea.Cmd {
 
 func (m Model) loadData() tea.Msg {
 	if m.owner == "" || m.repoName == "" {
-		return dataLoadedMsg{err: fmt.Errorf("invalid repo format, expected owner/repo")}
+		return dataLoadedMsg{err: errors.New("invalid repo format, expected owner/repo")}
 	}
 
 	cacheManager, err := cache.NewGHAPerfCacheManager("")
@@ -190,6 +192,7 @@ func (m Model) loadData() tea.Msg {
 
 			if newCount > 0 {
 				cachedData.Runs = allRuns
+				//nolint:errcheck // cache write failures must not block rendering fetched data
 				_ = cacheManager.Save(m.owner, m.repoName, cachedData)
 			}
 		}
@@ -228,6 +231,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.maxVisible < 5 {
 			m.maxVisible = 5
 		}
+
 		return m, nil
 
 	case dataLoadedMsg:
@@ -240,6 +244,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.branchStats = msg.branchStats
 		m.cachedCount = msg.cachedCount
 		m.newCount = msg.newCount
+
 		return m, nil
 
 	case tea.KeyMsg:
@@ -283,6 +288,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "r":
 			m.loading = true
 			m.cacheOnly = false
+
 			return m, m.loadData
 		}
 	}
@@ -318,7 +324,7 @@ func (m Model) View() string {
 		Bold(true).
 		Foreground(lipgloss.Color("#00FFFF"))
 
-	b.WriteString(titleStyle.Render(fmt.Sprintf("GHA Performance: %s", m.repo)))
+	b.WriteString(titleStyle.Render("GHA Performance: " + m.repo))
 	b.WriteString("\n")
 
 	subtitleStyle := lipgloss.NewStyle().
@@ -408,12 +414,12 @@ func (m Model) renderOverview() string {
 		avgDuration = totalDuration / time.Duration(totalRuns)
 	}
 
-	b.WriteString(fmt.Sprintf("  Total Runs:     %s\n", valueStyle.Render(fmt.Sprintf("%d", totalRuns))))
+	b.WriteString(fmt.Sprintf("  Total Runs:     %s\n", valueStyle.Render(strconv.Itoa(totalRuns))))
 	b.WriteString(fmt.Sprintf("  Success Rate:   %s\n", valueStyle.Render(fmt.Sprintf("%.1f%%", successRate))))
-	b.WriteString(fmt.Sprintf("  Failures:       %s\n", valueStyle.Render(fmt.Sprintf("%d", failureCount))))
+	b.WriteString(fmt.Sprintf("  Failures:       %s\n", valueStyle.Render(strconv.Itoa(failureCount))))
 	b.WriteString(fmt.Sprintf("  Avg Duration:   %s\n", valueStyle.Render(github.FormatDuration(avgDuration))))
-	b.WriteString(fmt.Sprintf("  Workflows:      %s\n", valueStyle.Render(fmt.Sprintf("%d", len(m.workflowStats)))))
-	b.WriteString(fmt.Sprintf("  Branches:       %s\n", valueStyle.Render(fmt.Sprintf("%d", len(m.branchStats)))))
+	b.WriteString(fmt.Sprintf("  Workflows:      %s\n", valueStyle.Render(strconv.Itoa(len(m.workflowStats)))))
+	b.WriteString(fmt.Sprintf("  Branches:       %s\n", valueStyle.Render(strconv.Itoa(len(m.branchStats)))))
 
 	b.WriteString("\n")
 	b.WriteString(sectionStyle.Render("Recent Runs"))
@@ -584,6 +590,7 @@ func (m Model) renderBranches() string {
 		if branches[j].Branch == m.baseBranch {
 			return false
 		}
+
 		return branches[i].AvgDuration > branches[j].AvgDuration
 	})
 

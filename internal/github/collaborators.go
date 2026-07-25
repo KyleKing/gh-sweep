@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// Collaborator represents a repository collaborator
+// Collaborator represents a repository collaborator.
 type Collaborator struct {
 	Login      string
 	Permission string
@@ -21,7 +21,7 @@ type collaboratorResponse struct {
 	} `json:"permissions"`
 }
 
-// ListCollaborators lists all collaborators for a repository
+// ListCollaborators lists all collaborators for a repository.
 func (c *Client) ListCollaborators(owner, repo string) ([]Collaborator, error) {
 	var response []collaboratorResponse
 	path := fmt.Sprintf("repos/%s/%s/collaborators", owner, repo)
@@ -49,7 +49,7 @@ func (c *Client) ListCollaborators(owner, repo string) ([]Collaborator, error) {
 	return collaborators, nil
 }
 
-// CollaboratorGrant represents a time-boxed access grant
+// CollaboratorGrant represents a time-boxed access grant.
 type CollaboratorGrant struct {
 	User       string
 	Repository string
@@ -60,7 +60,7 @@ type CollaboratorGrant struct {
 	RevokedAt  *time.Time
 }
 
-// AddCollaborator adds a collaborator to a repository
+// AddCollaborator adds a collaborator to a repository.
 func (c *Client) AddCollaborator(owner, repo, username, permission string) error {
 	body := map[string]string{
 		"permission": permission,
@@ -75,7 +75,7 @@ func (c *Client) AddCollaborator(owner, repo, username, permission string) error
 	return nil
 }
 
-// RemoveCollaborator removes a collaborator from a repository
+// RemoveCollaborator removes a collaborator from a repository.
 func (c *Client) RemoveCollaborator(owner, repo, username string) error {
 	path := fmt.Sprintf("repos/%s/%s/collaborators/%s", owner, repo, username)
 
@@ -85,4 +85,3 @@ func (c *Client) RemoveCollaborator(owner, repo, username string) error {
 
 	return nil
 }
-

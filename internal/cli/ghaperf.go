@@ -1,4 +1,4 @@
-package cmd
+package cli
 
 import (
 	"context"
@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"github.com/KyleKing/gh-sweep/internal/cache"
 	"github.com/KyleKing/gh-sweep/internal/github"
-	"github.com/spf13/cobra"
 )
 
 var ghaPerfCmd = &cobra.Command{
@@ -63,19 +65,19 @@ func init() {
 }
 
 func runGHAPerf(cmd *cobra.Command, _ []string) {
-	repo, _ := cmd.Flags().GetString("repo")
-	workflow, _ := cmd.Flags().GetString("workflow")
-	branch, _ := cmd.Flags().GetString("branch")
-	limit, _ := cmd.Flags().GetInt("limit")
-	days, _ := cmd.Flags().GetInt("days")
-	compare, _ := cmd.Flags().GetString("compare")
-	baseBranch, _ := cmd.Flags().GetString("base-branch")
-	csvPath, _ := cmd.Flags().GetString("csv")
-	jobFilter, _ := cmd.Flags().GetString("job")
-	byBranch, _ := cmd.Flags().GetBool("by-branch")
-	cacheOnly, _ := cmd.Flags().GetBool("cache-only")
-	noCache, _ := cmd.Flags().GetBool("no-cache")
-	listWorkflows, _ := cmd.Flags().GetBool("list-workflows")
+	repo := stringFlag(cmd, "repo")
+	workflow := stringFlag(cmd, "workflow")
+	branch := stringFlag(cmd, "branch")
+	limit := intFlag(cmd, "limit")
+	days := intFlag(cmd, "days")
+	compare := stringFlag(cmd, "compare")
+	baseBranch := stringFlag(cmd, "base-branch")
+	csvPath := stringFlag(cmd, "csv")
+	jobFilter := stringFlag(cmd, "job")
+	byBranch := boolFlag(cmd, "by-branch")
+	cacheOnly := boolFlag(cmd, "cache-only")
+	noCache := boolFlag(cmd, "no-cache")
+	listWorkflows := boolFlag(cmd, "list-workflows")
 
 	if repo == "" {
 		fmt.Println("Error: --repo flag is required")
@@ -111,6 +113,7 @@ func runGHAPerf(cmd *cobra.Command, _ []string) {
 			}
 			fmt.Printf("  %s%s\n", w.Path, state)
 		}
+
 		return
 	}
 
@@ -209,6 +212,7 @@ func runGHAPerf(cmd *cobra.Command, _ []string) {
 		currentRuns := github.FilterRunsByBranch(allRuns, compare)
 		baseRuns := github.FilterRunsByBranch(allRuns, baseBranch)
 		printComparison(currentRuns, baseRuns, compare, baseBranch)
+
 		return
 	}
 
@@ -226,7 +230,11 @@ func exportCSV(runs []github.RunTiming, path string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		if closeErr := f.Close(); closeErr != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to close %s: %v\n", path, closeErr)
+		}
+	}()
 
 	w := csv.NewWriter(f)
 	defer w.Flush()
@@ -243,7 +251,7 @@ func exportCSV(runs []github.RunTiming, path string) error {
 		for _, j := range r.Jobs {
 			for _, s := range j.Steps {
 				row := []string{
-					fmt.Sprintf("%d", r.RunID),
+					strconv.Itoa(r.RunID),
 					r.Workflow,
 					r.Branch,
 					r.Conclusion,
@@ -372,6 +380,7 @@ func printByBranch(runs []github.RunTiming, baseBranch string) {
 		if branches[j].Branch == baseBranch {
 			return false
 		}
+
 		return branches[i].Branch < branches[j].Branch
 	})
 
@@ -471,6 +480,7 @@ func truncate(s string, maxLen int) string {
 	if len(s) <= maxLen {
 		return s
 	}
+
 	return s[:maxLen-3] + "..."
 }
 
@@ -478,5 +488,6 @@ func abs(d time.Duration) time.Duration {
 	if d < 0 {
 		return -d
 	}
+
 	return d
 }

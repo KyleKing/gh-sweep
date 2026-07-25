@@ -8,7 +8,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Config represents the application configuration
+// Config represents the application configuration.
 type Config struct {
 	DefaultOrg   string        `yaml:"default_org"`
 	Repositories []string      `yaml:"repositories"`
@@ -22,37 +22,37 @@ type Config struct {
 	UI           UIConfig      `yaml:"ui"`
 }
 
-// CacheConfig represents cache settings
+// CacheConfig represents cache settings.
 type CacheConfig struct {
 	TTL  string `yaml:"ttl"`
 	Path string `yaml:"path"`
 }
 
-// GitHubConfig represents GitHub API settings
+// GitHubConfig represents GitHub API settings.
 type GitHubConfig struct {
 	Token  string `yaml:"token"`
 	APIURL string `yaml:"api_url"`
 }
 
-// FilterConfig represents filter settings
+// FilterConfig represents filter settings.
 type FilterConfig struct {
 	ExcludeUsers []string `yaml:"exclude_users"`
 	ExcludeRepos []string `yaml:"exclude_repos"`
 }
 
-// BranchConfig represents branch management settings
+// BranchConfig represents branch management settings.
 type BranchConfig struct {
 	DefaultBranch     string   `yaml:"default_branch"`
 	ProtectedPatterns []string `yaml:"protected_patterns"`
 }
 
-// CommentConfig represents comment review settings
+// CommentConfig represents comment review settings.
 type CommentConfig struct {
 	DefaultSinceDays int     `yaml:"default_since_days"`
 	FuzzyThreshold   float64 `yaml:"fuzzy_threshold"`
 }
 
-// GHAPerfConfig represents GHA performance analysis settings
+// GHAPerfConfig represents GHA performance analysis settings.
 type GHAPerfConfig struct {
 	DefaultLookbackDays int      `yaml:"default_lookback_days"`
 	BaseBranch          string   `yaml:"base_branch"`
@@ -61,23 +61,26 @@ type GHAPerfConfig struct {
 	RegressionThreshold float64  `yaml:"regression_threshold"`
 }
 
-// OrphansConfig represents orphan branch detection settings
+// OrphansConfig represents orphan branch detection settings.
 type OrphansConfig struct {
 	StaleDaysThreshold int      `yaml:"stale_days_threshold"`
 	ExcludePatterns    []string `yaml:"exclude_patterns"`
 	DefaultConcurrency int      `yaml:"default_concurrency"`
 }
 
-// UIConfig represents UI preferences
+// UIConfig represents UI preferences.
 type UIConfig struct {
 	Theme   string `yaml:"theme"`
 	Icons   bool   `yaml:"icons"`
 	Compact bool   `yaml:"compact"`
 }
 
-// DefaultConfig returns a configuration with sensible defaults
+// DefaultConfig returns a configuration with sensible defaults.
 func DefaultConfig() *Config {
-	homeDir, _ := os.UserHomeDir()
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		homeDir = "."
+	}
 	return &Config{
 		Cache: CacheConfig{
 			TTL:  "1h",
@@ -128,7 +131,7 @@ func DefaultConfig() *Config {
 	}
 }
 
-// Load loads configuration from file, falling back to defaults
+// Load loads configuration from file, falling back to defaults.
 func Load() (*Config, error) {
 	cfg := DefaultConfig()
 
@@ -163,14 +166,17 @@ func Load() (*Config, error) {
 
 	// Expand cache path if needed
 	if cfg.Cache.Path == "" {
-		homeDir, _ := os.UserHomeDir()
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			homeDir = "."
+		}
 		cfg.Cache.Path = filepath.Join(homeDir, ".cache", "gh-sweep")
 	}
 
 	return cfg, nil
 }
 
-// Save saves the configuration to a file
+// Save saves the configuration to a file.
 func (c *Config) Save(path string) error {
 	data, err := yaml.Marshal(c)
 	if err != nil {
@@ -179,11 +185,11 @@ func (c *Config) Save(path string) error {
 
 	// Create directory if needed
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(path, data, 0o644); err != nil {
 		return fmt.Errorf("failed to write config: %w", err)
 	}
 

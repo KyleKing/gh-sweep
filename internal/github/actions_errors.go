@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// JobLog represents a GitHub Actions job log
+// JobLog represents a GitHub Actions job log.
 type JobLog struct {
 	JobID      int
 	JobName    string
@@ -19,7 +19,7 @@ type JobLog struct {
 	Timestamp  time.Time
 }
 
-// ErrorContext represents extracted error information
+// ErrorContext represents extracted error information.
 type ErrorContext struct {
 	Repository   string    `json:"repository"`
 	WorkflowName string    `json:"workflow_name"`
@@ -33,24 +33,24 @@ type ErrorContext struct {
 	Summary      string    `json:"summary"`
 }
 
-// LogExtractionConfig configures log extraction behavior
+// LogExtractionConfig configures log extraction behavior.
 type LogExtractionConfig struct {
-	TailLines       int      // Number of lines from end of log
-	ContextLines    int      // Additional context lines around errors
-	FilterNoise     bool     // Remove timestamps, ANSI codes
-	ExtractStackTrace bool   // Include full stack traces
-	IncludeSuccess  bool     // Include successful runs
-	ErrorPatterns   []string // Custom regex patterns for errors
+	TailLines         int      // Number of lines from end of log
+	ContextLines      int      // Additional context lines around errors
+	FilterNoise       bool     // Remove timestamps, ANSI codes
+	ExtractStackTrace bool     // Include full stack traces
+	IncludeSuccess    bool     // Include successful runs
+	ErrorPatterns     []string // Custom regex patterns for errors
 }
 
-// DefaultLogConfig returns sensible defaults for log extraction
+// DefaultLogConfig returns sensible defaults for log extraction.
 func DefaultLogConfig() LogExtractionConfig {
 	return LogExtractionConfig{
-		TailLines:       100,
-		ContextLines:    5,
-		FilterNoise:     true,
+		TailLines:         100,
+		ContextLines:      5,
+		FilterNoise:       true,
 		ExtractStackTrace: false, // Usually too verbose
-		IncludeSuccess:  false,
+		IncludeSuccess:    false,
 		ErrorPatterns: []string{
 			`(?i)error:`,
 			`(?i)failed:`,
@@ -62,7 +62,7 @@ func DefaultLogConfig() LogExtractionConfig {
 }
 
 // ExtractErrorContext extracts actionable error information from job logs
-// Pure function: deterministic, no side effects
+// Pure function: deterministic, no side effects.
 func ExtractErrorContext(log JobLog, workflow string, config LogExtractionConfig) *ErrorContext {
 	// Skip successful runs if not included
 	if !config.IncludeSuccess && log.Conclusion == "success" {
@@ -103,16 +103,17 @@ func ExtractErrorContext(log JobLog, workflow string, config LogExtractionConfig
 }
 
 // extractTail returns the last N lines from a log
-// Pure function for composition
+// Pure function for composition.
 func extractTail(lines []string, n int) []string {
 	if len(lines) <= n {
 		return lines
 	}
+
 	return lines[len(lines)-n:]
 }
 
 // filterNoise removes common noise from log lines
-// Pure function: transforms input without side effects
+// Pure function: transforms input without side effects.
 func filterNoise(lines []string) []string {
 	filtered := make([]string, 0, len(lines))
 
@@ -146,8 +147,8 @@ func filterNoise(lines []string) []string {
 }
 
 // identifyErrors finds lines matching error patterns
-// Pure function: returns indices of error lines
-func identifyErrors(lines []string, patterns []string) []string {
+// Pure function: returns indices of error lines.
+func identifyErrors(lines, patterns []string) []string {
 	errors := make([]string, 0)
 
 	// Compile patterns
@@ -169,7 +170,7 @@ func identifyErrors(lines []string, patterns []string) []string {
 }
 
 // extractContext extracts context lines around errors
-// Pure function for composition
+// Pure function for composition.
 func extractContext(allLines, errorLines []string, contextSize int) []string {
 	if contextSize == 0 {
 		return []string{}
@@ -200,7 +201,7 @@ func extractContext(allLines, errorLines []string, contextSize int) []string {
 }
 
 // classifyError determines error type from error lines
-// Pure function for error classification
+// Pure function for error classification.
 func classifyError(errorLines []string) string {
 	if len(errorLines) == 0 {
 		return "unknown"
@@ -250,18 +251,19 @@ func classifyError(errorLines []string) string {
 	return "generic-error"
 }
 
-// containsAny checks if the text contains any of the keywords
+// containsAny checks if the text contains any of the keywords.
 func containsAny(text string, keywords ...string) bool {
 	for _, keyword := range keywords {
 		if strings.Contains(text, keyword) {
 			return true
 		}
 	}
+
 	return false
 }
 
 // generateSummary creates a human-readable summary
-// Pure function for summary generation
+// Pure function for summary generation.
 func generateSummary(log JobLog, errorType string, errorCount int) string {
 	if errorCount == 0 {
 		return fmt.Sprintf("%s job '%s' failed without clear error messages",
@@ -273,17 +275,18 @@ func generateSummary(log JobLog, errorType string, errorCount int) string {
 }
 
 // FormatAsJSON formats error context as JSON for AI consumption
-// Pure function: serializes to JSON
+// Pure function: serializes to JSON.
 func FormatAsJSON(contexts []*ErrorContext) (string, error) {
 	data, err := json.MarshalIndent(contexts, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal JSON: %w", err)
 	}
+
 	return string(data), nil
 }
 
 // FormatAsMarkdown formats error context as Markdown for AI consumption
-// Pure function: generates Markdown string
+// Pure function: generates Markdown string.
 func FormatAsMarkdown(contexts []*ErrorContext) string {
 	var sb strings.Builder
 
@@ -327,7 +330,7 @@ func FormatAsMarkdown(contexts []*ErrorContext) string {
 }
 
 // BatchExtractErrors extracts errors from multiple logs
-// Pure function: maps over logs
+// Pure function: maps over logs.
 func BatchExtractErrors(logs []JobLog, workflow string, config LogExtractionConfig) []*ErrorContext {
 	contexts := make([]*ErrorContext, 0, len(logs))
 
@@ -340,27 +343,12 @@ func BatchExtractErrors(logs []JobLog, workflow string, config LogExtractionConf
 	return contexts
 }
 
-// Helper functions
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 func contains(slice []string, item string) bool {
 	for _, s := range slice {
 		if s == item {
 			return true
 		}
 	}
+
 	return false
 }

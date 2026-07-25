@@ -1,4 +1,4 @@
-package cmd
+package cli
 
 import (
 	"fmt"
@@ -27,9 +27,9 @@ Examples:
   # Show drift from baseline
   gh-sweep protection --baseline owner/baseline-repo`,
 	Run: func(cmd *cobra.Command, args []string) {
-		repos, _ := cmd.Flags().GetString("repos")
-		template, _ := cmd.Flags().GetString("template")
-		baseline, _ := cmd.Flags().GetString("baseline")
+		repos := stringFlag(cmd, "repos")
+		template := stringFlag(cmd, "template")
+		baseline := stringFlag(cmd, "baseline")
 
 		fmt.Printf("Protection rule management\n")
 		fmt.Printf("Repos: %s\n", repos)

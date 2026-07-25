@@ -86,16 +86,16 @@ type workflowsResponse struct {
 
 type workflowRunsDetailResponse struct {
 	WorkflowRuns []struct {
-		ID           int       `json:"id"`
-		Name         string    `json:"name"`
-		WorkflowID   int       `json:"workflow_id"`
-		Status       string    `json:"status"`
-		Conclusion   string    `json:"conclusion"`
-		HeadBranch   string    `json:"head_branch"`
-		HeadSHA      string    `json:"head_sha"`
-		CreatedAt    time.Time `json:"created_at"`
-		UpdatedAt    time.Time `json:"updated_at"`
-		Path         string    `json:"path"`
+		ID         int       `json:"id"`
+		Name       string    `json:"name"`
+		WorkflowID int       `json:"workflow_id"`
+		Status     string    `json:"status"`
+		Conclusion string    `json:"conclusion"`
+		HeadBranch string    `json:"head_branch"`
+		HeadSHA    string    `json:"head_sha"`
+		CreatedAt  time.Time `json:"created_at"`
+		UpdatedAt  time.Time `json:"updated_at"`
+		Path       string    `json:"path"`
 	} `json:"workflow_runs"`
 }
 
@@ -421,6 +421,7 @@ func FilterRunsByBranch(runs []RunTiming, branch string) []RunTiming {
 			filtered = append(filtered, r)
 		}
 	}
+
 	return filtered
 }
 
@@ -438,6 +439,7 @@ func FilterRunsByWorkflows(runs []RunTiming, workflows []string) []RunTiming {
 			filtered = append(filtered, r)
 		}
 	}
+
 	return filtered
 }
 
@@ -452,6 +454,7 @@ func FilterRunsByTimeRange(runs []RunTiming, since, until time.Time) []RunTiming
 		}
 		filtered = append(filtered, r)
 	}
+
 	return filtered
 }
 
@@ -460,6 +463,7 @@ func SortRunsByDate(runs []RunTiming, ascending bool) {
 		if ascending {
 			return runs[i].CreatedAt.Before(runs[j].CreatedAt)
 		}
+
 		return runs[i].CreatedAt.After(runs[j].CreatedAt)
 	})
 }
@@ -488,5 +492,6 @@ func FormatDuration(d time.Duration) string {
 	if d < time.Hour {
 		return fmt.Sprintf("%.1fm", d.Minutes())
 	}
+
 	return fmt.Sprintf("%.1fh", d.Hours())
 }

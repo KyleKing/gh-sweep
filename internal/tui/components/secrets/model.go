@@ -5,27 +5,28 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/KyleKing/gh-sweep/internal/github"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/KyleKing/gh-sweep/internal/github"
 )
 
-// Model represents the secrets audit TUI state
+// Model represents the secrets audit TUI state.
 type Model struct {
-	org        string
-	repos      []string
-	orgSecrets []github.Secret
-	repoSecrets map[string][]github.Secret
+	org           string
+	repos         []string
+	orgSecrets    []github.Secret
+	repoSecrets   map[string][]github.Secret
 	unusedSecrets []string
-	cursor     int
-	width      int
-	height     int
-	loading    bool
-	err        error
-	viewMode   string // "org", "repo", "unused"
+	cursor        int
+	width         int
+	height        int
+	loading       bool
+	err           error
+	viewMode      string // "org", "repo", "unused"
 }
 
-// NewModel creates a new secrets audit model
+// NewModel creates a new secrets audit model.
 func NewModel(org string, repos []string) Model {
 	return Model{
 		org:         org,
@@ -43,7 +44,7 @@ type secretsLoadedMsg struct {
 	err           error
 }
 
-// Init initializes the model
+// Init initializes the model.
 func (m Model) Init() tea.Cmd {
 	return m.loadSecrets
 }
@@ -101,12 +102,13 @@ func (m Model) loadSecrets() tea.Msg {
 	}
 }
 
-// Update handles messages
+// Update handles messages.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+
 		return m, nil
 
 	case secretsLoadedMsg:
@@ -115,6 +117,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.repoSecrets = msg.repoSecrets
 		m.unusedSecrets = msg.unusedSecrets
 		m.err = msg.err
+
 		return m, nil
 
 	case tea.KeyMsg:
@@ -129,9 +132,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "down", "j":
 			maxCursor := len(m.orgSecrets) - 1
-			if m.viewMode == "repo" {
+			switch m.viewMode {
+			case "repo":
 				maxCursor = len(m.repos) - 1
-			} else if m.viewMode == "unused" {
+			case "unused":
 				maxCursor = len(m.unusedSecrets) - 1
 			}
 			if m.cursor < maxCursor {
@@ -153,7 +157,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// View renders the model
+// View renders the model.
 func (m Model) View() string {
 	if m.loading {
 		return "Loading secrets...\n"
@@ -285,13 +289,15 @@ func (m Model) renderRepoSecrets() string {
 		line := fmt.Sprintf("%s %s (%d secrets):\n", cursor, repo, len(secrets))
 
 		// Show first few secrets
+		var lineSb288 strings.Builder
 		for j, secret := range secrets {
 			if j >= 3 {
-				line += fmt.Sprintf("   ... and %d more\n", len(secrets)-3)
+				lineSb288.WriteString(fmt.Sprintf("   ... and %d more\n", len(secrets)-3))
 				break
 			}
-			line += fmt.Sprintf("   - %s\n", secret.Name)
+			lineSb288.WriteString(fmt.Sprintf("   - %s\n", secret.Name))
 		}
+		line += lineSb288.String()
 
 		b.WriteString(repoStyle.Render(line))
 		b.WriteString("\n")
@@ -308,6 +314,7 @@ func (m Model) renderUnusedSecrets() string {
 	if len(m.unusedSecrets) == 0 {
 		b.WriteString("✅ All secrets appear to be in use.\n")
 		b.WriteString("(Full analysis requires workflow file parsing)\n")
+
 		return b.String()
 	}
 

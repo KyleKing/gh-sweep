@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// Release represents a GitHub release
+// Release represents a GitHub release.
 type Release struct {
 	ID          int
 	Repository  string
@@ -20,11 +20,11 @@ type Release struct {
 }
 
 type releaseResponse struct {
-	ID        int    `json:"id"`
-	TagName   string `json:"tag_name"`
-	Name      string `json:"name"`
-	Body      string `json:"body"`
-	Author    struct {
+	ID      int    `json:"id"`
+	TagName string `json:"tag_name"`
+	Name    string `json:"name"`
+	Body    string `json:"body"`
+	Author  struct {
 		Login string `json:"login"`
 	} `json:"author"`
 	CreatedAt   time.Time `json:"created_at"`
@@ -33,7 +33,7 @@ type releaseResponse struct {
 	Prerelease  bool      `json:"prerelease"`
 }
 
-// ListReleases lists all releases for a repository
+// ListReleases lists all releases for a repository.
 func (c *Client) ListReleases(owner, repo string) ([]Release, error) {
 	var response []releaseResponse
 	path := fmt.Sprintf("repos/%s/%s/releases", owner, repo)
@@ -61,7 +61,7 @@ func (c *Client) ListReleases(owner, repo string) ([]Release, error) {
 	return releases, nil
 }
 
-// GetLatestRelease returns the most recent release
+// GetLatestRelease returns the most recent release.
 func (c *Client) GetLatestRelease(owner, repo string) (*Release, error) {
 	var response releaseResponse
 	path := fmt.Sprintf("repos/%s/%s/releases/latest", owner, repo)
@@ -84,15 +84,15 @@ func (c *Client) GetLatestRelease(owner, repo string) (*Release, error) {
 	}, nil
 }
 
-// ReleaseComparison compares releases across repositories
+// ReleaseComparison compares releases across repositories.
 type ReleaseComparison struct {
-	Repositories     []string
-	LatestReleases   map[string]*Release
-	OutdatedRepos    []string // Repos with no release in 90+ days
-	NonSemVerRepos   []string // Repos not following semver
+	Repositories   []string
+	LatestReleases map[string]*Release
+	OutdatedRepos  []string // Repos with no release in 90+ days
+	NonSemVerRepos []string // Repos not following semver
 }
 
-// CompareReleases compares releases across multiple repositories
+// CompareReleases compares releases across multiple repositories.
 func CompareReleases(releases map[string]*Release) ReleaseComparison {
 	comparison := ReleaseComparison{
 		LatestReleases: releases,
