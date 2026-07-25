@@ -15,7 +15,7 @@ violations=0
 
 # Test files must not build clients via the raw go-gh constructors; those skip
 # the transport seam entirely.
-if grep -rn "gh\.RESTClient\|gh\.HTTPClient\|gh\.GQLClient" --include="*_test.go" .; then
+if grep -rn "gh\.RESTClient\|gh\.HTTPClient\|gh\.GQLClient\|NewClientWithToken" --include="*_test.go" .; then
     echo "ERROR: test files construct go-gh clients directly (above)"
     echo "Use github.NewClientWithTransport or github.SetTestTransport instead"
     ((violations++)) || true

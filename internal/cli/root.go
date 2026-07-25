@@ -14,7 +14,7 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:   "gh-sweep",
-	Short: "A powerful TUI for GitHub repository management",
+	Short: "TUI for sweeping GitHub repositories",
 	Long: `gh-sweep is a Terminal User Interface (TUI) for managing multiple GitHub repositories.
 
 It provides interactive tools for:

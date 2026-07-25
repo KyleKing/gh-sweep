@@ -28,7 +28,8 @@ class GhSweep < Formula
   end
 
   def install
-    binary_name = "gh-sweep-#{OS.kernel_name.downcase}-#{Hardware::CPU.arch}"
+    arch = Hardware::CPU.arm? ? "arm64" : "amd64"
+    binary_name = "gh-sweep-#{OS.kernel_name.downcase}-#{arch}"
     bin.install binary_name => "gh-sweep"
   end
 
