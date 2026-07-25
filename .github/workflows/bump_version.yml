@@ -1,0 +1,43 @@
+---
+name: Bump Version
+
+"on":
+  push:
+    branches: ['main']
+  workflow_dispatch: null # For manual runs
+
+jobs:
+  bump-version:
+    # Ignore the commits from this action
+    if: "!startsWith(github.event.head_commit.message, 'bump:')"
+    runs-on: ubuntu-latest
+    name: Bump version and make release with commitizen
+    # Fix 403 error (https://github.com/softprops/action-gh-release/issues/400)
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Bump version and generate changelog
+        uses: commitizen-tools/commitizen-action@338bbd841b75aaee6bf5340e1fa12f6ab58ff9ff # master
+        with:
+          branch: main
+          changelog_increment_filename: body.md
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+
+      # Runs in the same workflow because tags pushed with GITHUB_TOKEN do not
+      # trigger other workflows, so a separate on-tag release workflow never fires.
+      - name: Build release binaries and publish release
+        uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean --release-notes body.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

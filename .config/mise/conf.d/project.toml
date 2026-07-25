@@ -1,2 +1,11 @@
 # Project-specific tasks for gh-sweep
 # Generic tasks are in template.toml (managed by copier template)
+
+[tasks."brew:sha"]
+description = "Print SHA256 for Homebrew formula (run after release)"
+run = """
+echo "Download binaries from the latest release and run:"
+echo "  shasum -a 256 gh-sweep-darwin-arm64 gh-sweep-darwin-amd64 gh-sweep-linux-arm64 gh-sweep-linux-amd64"
+echo ""
+echo "Then update Formula/gh-sweep.rb with the SHA256 values and version."
+"""
