@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -14,16 +15,25 @@ import (
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
+const maxFailedRunsToExtract = 3
+
 // Model represents the analytics TUI state.
 type Model struct {
-	repo     string
-	stats    *github.WorkflowRunStats
-	runs     []github.WorkflowRun
-	width    int
-	height   int
-	loading  bool
-	err      error
-	viewMode string // "overview", "flaky", "errors"
+	repo          string
+	stats         *github.WorkflowRunStats
+	runs          []github.WorkflowRun
+	flaky         []github.FlakyTest
+	errorContexts []*github.ErrorContext
+	errorsLoaded  bool
+	errorsLoading bool
+	errorsErr     error
+	exportPath    string
+	exportErr     error
+	width         int
+	height        int
+	loading       bool
+	err           error
+	viewMode      string // "overview", "flaky", "errors"
 }
 
 // NewModel creates a new analytics model.
@@ -38,7 +48,18 @@ func NewModel(repo string) Model {
 type analyticsLoadedMsg struct {
 	stats *github.WorkflowRunStats
 	runs  []github.WorkflowRun
+	flaky []github.FlakyTest
 	err   error
+}
+
+type errorsLoadedMsg struct {
+	contexts []*github.ErrorContext
+	err      error
+}
+
+type errorsExportedMsg struct {
+	path string
+	err  error
 }
 
 // Init initializes the model.
@@ -46,62 +67,97 @@ func (m Model) Init() tea.Cmd {
 	return m.loadAnalytics
 }
 
-func (m Model) loadAnalytics() tea.Msg {
-	// If no repo specified, return empty
-	if m.repo == "" {
-		return analyticsLoadedMsg{
-			stats: nil,
-			runs:  []github.WorkflowRun{},
-			err:   errors.New("no repository specified"),
-		}
+func splitRepo(repo string) (string, string, error) {
+	if repo == "" {
+		return "", "", errors.New("no repository specified")
 	}
 
-	// Parse repo (owner/name format)
-	parts := strings.Split(m.repo, "/")
+	parts := strings.Split(repo, "/")
 	if len(parts) != 2 {
-		return analyticsLoadedMsg{
-			stats: nil,
-			runs:  []github.WorkflowRun{},
-			err:   errors.New("invalid repo format, expected owner/repo"),
-		}
+		return "", "", errors.New("invalid repo format, expected owner/repo")
 	}
-	owner, repo := parts[0], parts[1]
 
-	// Create GitHub client
+	return parts[0], parts[1], nil
+}
+
+func (m Model) loadAnalytics() tea.Msg {
+	owner, repo, err := splitRepo(m.repo)
+	if err != nil {
+		return analyticsLoadedMsg{err: err}
+	}
+
 	ctx := context.Background()
 	client, err := github.NewClient(ctx)
 	if err != nil {
-		return analyticsLoadedMsg{
-			stats: nil,
-			runs:  []github.WorkflowRun{},
-			err:   fmt.Errorf("failed to create GitHub client: %w", err),
-		}
+		return analyticsLoadedMsg{err: fmt.Errorf("failed to create GitHub client: %w", err)}
 	}
 
-	// Load workflow runs from GitHub
 	runs, err := client.ListWorkflowRuns(owner, repo)
 	if err != nil {
-		// Return empty on error (repo might not have workflows)
 		return analyticsLoadedMsg{
-			stats: &github.WorkflowRunStats{
-				TotalRuns:    0,
-				SuccessRate:  0,
-				FailureCount: 0,
-				AvgDuration:  0,
-			},
-			runs: []github.WorkflowRun{},
-			err:  nil, // Don't error out, just show empty
+			stats: &github.WorkflowRunStats{},
+			runs:  []github.WorkflowRun{},
 		}
 	}
 
-	// Analyze runs to get statistics
 	stats := github.AnalyzeWorkflowRuns(runs)
+	flaky := github.DetectFlakyTests(
+		github.WorkflowRunsToTestRuns(m.repo, runs),
+		github.DefaultFlakyConfig(),
+	)
 
 	return analyticsLoadedMsg{
 		stats: &stats,
 		runs:  runs,
-		err:   nil,
+		flaky: flaky,
 	}
+}
+
+func (m Model) loadErrors() tea.Msg {
+	owner, repo, err := splitRepo(m.repo)
+	if err != nil {
+		return errorsLoadedMsg{err: err}
+	}
+
+	ctx := context.Background()
+	client, err := github.NewClient(ctx)
+	if err != nil {
+		return errorsLoadedMsg{err: fmt.Errorf("failed to create GitHub client: %w", err)}
+	}
+
+	config := github.DefaultLogConfig()
+	contexts := make([]*github.ErrorContext, 0)
+	extracted := 0
+
+	for _, run := range m.runs {
+		if run.Conclusion != "failure" {
+			continue
+		}
+		if extracted >= maxFailedRunsToExtract {
+			break
+		}
+		extracted++
+
+		logs, err := client.FetchFailedJobLogs(owner, repo, run.ID)
+		if err != nil {
+			continue
+		}
+
+		contexts = append(contexts, github.BatchExtractErrors(logs, run.Name, config)...)
+	}
+
+	return errorsLoadedMsg{contexts: contexts}
+}
+
+func (m Model) exportErrors() tea.Msg {
+	path := fmt.Sprintf("gha-errors-%s.md", strings.ReplaceAll(m.repo, "/", "-"))
+	report := github.FormatAsMarkdown(m.errorContexts)
+
+	if err := os.WriteFile(path, []byte(report), 0o644); err != nil {
+		return errorsExportedMsg{err: fmt.Errorf("failed to write error report: %w", err)}
+	}
+
+	return errorsExportedMsg{path: path}
 }
 
 // Update handles messages.
@@ -117,21 +173,53 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		m.loading = false
 		m.stats = msg.stats
 		m.runs = msg.runs
+		m.flaky = msg.flaky
 		m.err = msg.err
 
 		return m, nil
 
-	case tea.KeyPressMsg:
-		switch msg.String() {
-		case "ctrl+c", "q":
-			return m, tea.Quit
+	case errorsLoadedMsg:
+		m.errorsLoading = false
+		m.errorsLoaded = true
+		m.errorContexts = msg.contexts
+		m.errorsErr = msg.err
 
-		case "1":
-			m.viewMode = "overview"
-		case "2":
-			m.viewMode = "flaky"
-		case "3":
-			m.viewMode = "errors"
+		return m, nil
+
+	case errorsExportedMsg:
+		m.exportPath = msg.path
+		m.exportErr = msg.err
+
+		return m, nil
+
+	case tea.KeyPressMsg:
+		return m.handleKey(msg)
+	}
+
+	return m, nil
+}
+
+func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
+	switch msg.String() {
+	case "ctrl+c", "q":
+		return m, tea.Quit
+
+	case "1":
+		m.viewMode = "overview"
+
+	case "2":
+		m.viewMode = "flaky"
+
+	case "3":
+		m.viewMode = "errors"
+		if !m.errorsLoaded && !m.errorsLoading && !m.loading {
+			m.errorsLoading = true
+			return m, m.loadErrors
+		}
+
+	case "s":
+		if m.viewMode == "errors" && m.errorsLoaded && len(m.errorContexts) > 0 {
+			return m, m.exportErrors
 		}
 	}
 
@@ -150,7 +238,6 @@ func (m Model) View() string {
 
 	var b strings.Builder
 
-	// Header
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(theme.Current().Primary)
@@ -158,7 +245,6 @@ func (m Model) View() string {
 	b.WriteString(titleStyle.Render("📊 Analytics: " + m.repo))
 	b.WriteString("\n\n")
 
-	// View mode tabs
 	activeTab := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(theme.Current().Warning)
@@ -183,7 +269,6 @@ func (m Model) View() string {
 	}
 	b.WriteString("\n\n")
 
-	// Content based on view mode
 	switch m.viewMode {
 	case "overview":
 		b.WriteString(m.renderOverview())
@@ -193,17 +278,20 @@ func (m Model) View() string {
 		b.WriteString(m.renderErrors())
 	}
 
-	// Help
 	b.WriteString("\n")
 	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
-	b.WriteString(helpStyle.Render("1/2/3: switch view | q: quit"))
+	help := "1/2/3: switch view | q: quit"
+	if m.viewMode == "errors" && m.errorsLoaded && len(m.errorContexts) > 0 {
+		help = "1/2/3: switch view | s: export markdown | q: quit"
+	}
+	b.WriteString(helpStyle.Render(help))
 
 	return b.String()
 }
 
 func (m Model) renderOverview() string {
-	if m.stats == nil {
-		return "No data available\n"
+	if m.stats == nil || m.stats.TotalRuns == 0 {
+		return "No workflow runs found\n"
 	}
 
 	var b strings.Builder
@@ -214,7 +302,6 @@ func (m Model) renderOverview() string {
 	b.WriteString(fmt.Sprintf("Failures:       %d\n", m.stats.FailureCount))
 	b.WriteString(fmt.Sprintf("Avg Duration:   %s\n", m.stats.AvgDuration.Round(time.Second)))
 
-	// Simple bar chart
 	b.WriteString("\nSuccess/Failure Distribution:\n")
 	successCount := m.stats.TotalRuns - m.stats.FailureCount
 	b.WriteString(fmt.Sprintf("✓ Success: %s (%d)\n",
@@ -229,21 +316,24 @@ func (m Model) renderFlaky() string {
 	var b strings.Builder
 
 	b.WriteString("🔍 Flaky Test Detection\n\n")
-	b.WriteString("Pattern-based detection (fail → pass on same commit)\n\n")
+	b.WriteString("Pattern-based detection over workflow conclusions (fail → pass flips)\n\n")
 
-	// Mock flaky tests
-	b.WriteString("Found 3 potentially flaky tests:\n\n")
-	b.WriteString("1. TestUserAuthentication\n")
-	b.WriteString("   Failure rate: 15% (3/20 runs)\n")
-	b.WriteString("   Last flip: 2 days ago\n\n")
+	if len(m.flaky) == 0 {
+		b.WriteString(fmt.Sprintf("No flaky tests detected in last %d runs\n", len(m.runs)))
+		return b.String()
+	}
 
-	b.WriteString("2. TestDatabaseConnection\n")
-	b.WriteString("   Failure rate: 8% (2/25 runs)\n")
-	b.WriteString("   Last flip: 1 week ago\n\n")
-
-	b.WriteString("3. TestAPITimeout\n")
-	b.WriteString("   Failure rate: 12% (6/50 runs)\n")
-	b.WriteString("   Last flip: 3 days ago\n")
+	b.WriteString(fmt.Sprintf("Found %d potentially flaky workflow(s):\n\n", len(m.flaky)))
+	for i, test := range m.flaky {
+		b.WriteString(fmt.Sprintf("%d. %s\n", i+1, test.Name))
+		b.WriteString(fmt.Sprintf("   Failure rate: %.0f%% (%d/%d runs)\n",
+			test.FailureRate*100, test.FailureCount, test.TotalRuns))
+		b.WriteString(fmt.Sprintf("   Pattern: %s | Flips: %d\n", test.Pattern, test.FlipCount))
+		if !test.LastFlip.IsZero() {
+			b.WriteString(fmt.Sprintf("   Last flip: %s\n", test.LastFlip.Format("2006-01-02 15:04")))
+		}
+		b.WriteString("\n")
+	}
 
 	return b.String()
 }
@@ -252,19 +342,54 @@ func (m Model) renderErrors() string {
 	var b strings.Builder
 
 	b.WriteString("❌ Recent Errors\n\n")
-	b.WriteString("Extracting last 100 lines of failed jobs...\n\n")
 
-	// Mock error logs
-	b.WriteString("Latest Failure (2 hours ago):\n")
-	b.WriteString("---\n")
-	b.WriteString("FAIL: TestUserLogin (0.45s)\n")
-	b.WriteString("    user_test.go:42: expected status 200, got 401\n")
-	b.WriteString("    Stack trace:\n")
-	b.WriteString("        TestUserLogin\n")
-	b.WriteString("            /app/test/user_test.go:42\n")
-	b.WriteString("---\n\n")
+	if m.errorsLoading {
+		b.WriteString("Extracting errors from failed runs...\n")
+		return b.String()
+	}
 
-	b.WriteString("💡 AI-friendly format: JSON export available\n")
+	if m.errorsErr != nil {
+		b.WriteString(fmt.Sprintf("Error: %v\n", m.errorsErr))
+		return b.String()
+	}
+
+	if len(m.errorContexts) == 0 {
+		b.WriteString(fmt.Sprintf("No errors extracted from the last %d failed runs\n",
+			min(maxFailedRunsToExtract, countFailedRuns(m.runs))))
+		return b.String()
+	}
+
+	for i, ctx := range m.errorContexts {
+		b.WriteString(fmt.Sprintf("%d. %s\n", i+1, ctx.Summary))
+		b.WriteString(fmt.Sprintf("   Workflow: %s | Type: %s | %s\n",
+			ctx.WorkflowName, ctx.ErrorType, ctx.Timestamp.Format("2006-01-02 15:04")))
+
+		for j, line := range ctx.ErrorLines {
+			if j >= 5 {
+				b.WriteString(fmt.Sprintf("   ... %d more error line(s)\n", len(ctx.ErrorLines)-j))
+				break
+			}
+			b.WriteString("   | " + line + "\n")
+		}
+		b.WriteString("\n")
+	}
+
+	if m.exportErr != nil {
+		b.WriteString(fmt.Sprintf("Export failed: %v\n", m.exportErr))
+	} else if m.exportPath != "" {
+		b.WriteString(fmt.Sprintf("Exported markdown report to %s\n", m.exportPath))
+	}
 
 	return b.String()
+}
+
+func countFailedRuns(runs []github.WorkflowRun) int {
+	count := 0
+	for _, run := range runs {
+		if run.Conclusion == "failure" {
+			count++
+		}
+	}
+
+	return count
 }

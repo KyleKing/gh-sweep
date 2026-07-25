@@ -3,6 +3,8 @@ package github
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"regexp"
 	"strings"
 	"time"
@@ -31,6 +33,70 @@ type ErrorContext struct {
 	Context      []string  `json:"context_lines,omitempty"`
 	ErrorType    string    `json:"error_type,omitempty"`
 	Summary      string    `json:"summary"`
+}
+
+const maxJobLogBytes = 5 << 20
+
+// FetchFailedJobLogs downloads logs for each failed job of a workflow run.
+// Jobs whose logs cannot be fetched are skipped.
+func (c *Client) FetchFailedJobLogs(owner, repo string, runID int) ([]JobLog, error) {
+	var response jobsResponse
+	path := fmt.Sprintf("repos/%s/%s/actions/runs/%d/jobs", owner, repo, runID)
+
+	if err := c.Get(path, &response); err != nil {
+		return nil, fmt.Errorf("failed to list jobs for run %d: %w", runID, err)
+	}
+
+	logs := make([]JobLog, 0)
+	for _, job := range response.Jobs {
+		if job.Conclusion != "failure" {
+			continue
+		}
+
+		lines, err := c.fetchJobLogLines(owner, repo, job.ID)
+		if err != nil {
+			continue
+		}
+
+		logs = append(logs, JobLog{
+			JobID:      job.ID,
+			JobName:    job.Name,
+			WorkflowID: runID,
+			Repository: fmt.Sprintf("%s/%s", owner, repo),
+			Conclusion: job.Conclusion,
+			Lines:      lines,
+			Timestamp:  job.CompletedAt,
+		})
+	}
+
+	return logs, nil
+}
+
+func (c *Client) fetchJobLogLines(owner, repo string, jobID int) ([]string, error) {
+	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/actions/jobs/%d/logs", owner, repo, jobID)
+
+	req, err := http.NewRequestWithContext(c.ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build job log request: %w", err)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch job logs: %w", err)
+	}
+	//nolint:errcheck // response body close failures are not actionable here
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status %d fetching job logs", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxJobLogBytes))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read job logs: %w", err)
+	}
+
+	return strings.Split(strings.ReplaceAll(string(body), "\r\n", "\n"), "\n"), nil
 }
 
 // LogExtractionConfig configures log extraction behavior.

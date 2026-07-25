@@ -58,6 +58,33 @@ func (c *Client) ListWorkflowRuns(owner, repo string) ([]WorkflowRun, error) {
 	return runs, nil
 }
 
+// WorkflowRunsToTestRuns adapts workflow runs for flaky detection, treating
+// each workflow as a test keyed by its name. Runs without a terminal
+// success/failure/skipped conclusion are dropped.
+func WorkflowRunsToTestRuns(repo string, runs []WorkflowRun) []TestRun {
+	testRuns := make([]TestRun, 0, len(runs))
+
+	for _, run := range runs {
+		switch run.Conclusion {
+		case "success", "failure", "skipped":
+		default:
+			continue
+		}
+
+		testRuns = append(testRuns, TestRun{
+			Name:       run.Name,
+			Status:     run.Conclusion,
+			CommitSHA:  run.HeadSHA,
+			Timestamp:  run.CreatedAt,
+			Duration:   run.Duration,
+			Repository: repo,
+			WorkflowID: run.ID,
+		})
+	}
+
+	return testRuns
+}
+
 // WorkflowRunStats represents statistics about workflow runs.
 type WorkflowRunStats struct {
 	TotalRuns    int

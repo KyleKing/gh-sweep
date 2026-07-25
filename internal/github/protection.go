@@ -67,6 +67,16 @@ func (c *Client) GetBranchProtection(owner, repo, branch string) (*ProtectionRul
 	return rule, nil
 }
 
+// GetDefaultBranchProtection retrieves protection rules for the repo's default branch.
+func (c *Client) GetDefaultBranchProtection(owner, repo string) (*ProtectionRule, error) {
+	branch := "main"
+	if settings, err := c.GetRepoSettings(owner, repo); err == nil && settings.DefaultBranch != "" {
+		branch = settings.DefaultBranch
+	}
+
+	return c.GetBranchProtection(owner, repo, branch)
+}
+
 // CompareProtectionRules compares protection rules across repositories.
 func CompareProtectionRules(rules []*ProtectionRule) map[string][]string {
 	differences := make(map[string][]string)

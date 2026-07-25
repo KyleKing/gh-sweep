@@ -68,28 +68,24 @@ func (m Model) loadRules() tea.Msg {
 		}
 		owner, repo := parts[0], parts[1]
 
-		// Use default branch (main) for now
-		branch := "main"
-		rule, err := client.GetBranchProtection(owner, repo, branch)
+		rule, err := client.GetDefaultBranchProtection(owner, repo)
 		if err != nil {
-			// Skip repos without protection or on error
 			continue
 		}
 
 		rules[repoStr] = rule
 	}
 
-	// Compare rules if baseline is specified
 	diffs := make(map[string][]string)
-	if m.baseline != "" {
-		baselineRule := rules[m.baseline]
-		if baselineRule != nil {
-			rulesSlice := make([]*github.ProtectionRule, 0, len(rules))
-			for _, rule := range rules {
+	if m.baseline != "" && rules[m.baseline] != nil {
+		rulesSlice := make([]*github.ProtectionRule, 0, len(rules))
+		rulesSlice = append(rulesSlice, rules[m.baseline])
+		for repo, rule := range rules {
+			if repo != m.baseline {
 				rulesSlice = append(rulesSlice, rule)
 			}
-			diffs = github.CompareProtectionRules(rulesSlice)
 		}
+		diffs = github.CompareProtectionRules(rulesSlice)
 	}
 
 	return rulesLoadedMsg{
