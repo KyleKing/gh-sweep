@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/KyleKing/gh-sweep/internal/github"
+	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
 // Model represents the secrets audit TUI state.
@@ -103,7 +104,7 @@ func (m Model) loadSecrets() tea.Msg {
 }
 
 // Update handles messages.
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -120,7 +121,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, nil
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
@@ -172,7 +173,7 @@ func (m Model) View() string {
 	// Header
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#00FFFF"))
+		Foreground(theme.Current().Primary)
 
 	b.WriteString(titleStyle.Render("🔐 Secrets Audit (Read-Only)"))
 	b.WriteString("\n\n")
@@ -180,10 +181,10 @@ func (m Model) View() string {
 	// View mode tabs
 	activeTab := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#FFFF00"))
+		Foreground(theme.Current().Warning)
 
 	inactiveTab := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#777777"))
+		Foreground(theme.Current().Muted)
 
 	if m.viewMode == "org" {
 		b.WriteString(activeTab.Render("[1] Organization"))
@@ -216,7 +217,7 @@ func (m Model) View() string {
 
 	// Help
 	b.WriteString("\n")
-	helpStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#777777"))
+	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
 	b.WriteString(helpStyle.Render("↑/↓: navigate | 1/2/3: switch view | q: quit"))
 
 	return b.String()
@@ -246,7 +247,7 @@ func (m Model) renderOrgSecrets() string {
 
 		secretStyle := lipgloss.NewStyle()
 		if m.cursor == i {
-			secretStyle = secretStyle.Bold(true).Foreground(lipgloss.Color("#FFFF00"))
+			secretStyle = secretStyle.Bold(true).Foreground(theme.Current().Warning)
 		}
 
 		line := fmt.Sprintf("%s %s\n", cursor, secret.Name)
@@ -283,7 +284,7 @@ func (m Model) renderRepoSecrets() string {
 
 		repoStyle := lipgloss.NewStyle()
 		if m.cursor == i {
-			repoStyle = repoStyle.Bold(true).Foreground(lipgloss.Color("#FFFF00"))
+			repoStyle = repoStyle.Bold(true).Foreground(theme.Current().Warning)
 		}
 
 		line := fmt.Sprintf("%s %s (%d secrets):\n", cursor, repo, len(secrets))
@@ -326,7 +327,7 @@ func (m Model) renderUnusedSecrets() string {
 
 		secretStyle := lipgloss.NewStyle()
 		if m.cursor == i {
-			secretStyle = secretStyle.Bold(true).Foreground(lipgloss.Color("#FFFF00"))
+			secretStyle = secretStyle.Bold(true).Foreground(theme.Current().Warning)
 		}
 
 		line := fmt.Sprintf("%s %s\n", cursor, secret)

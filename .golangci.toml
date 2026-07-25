@@ -173,7 +173,7 @@ disable = ["shadow", "fieldalignment"]
 [linters.settings.ireturn]
 # bubbletea's Elm architecture requires Update-family methods to return tea.Model
 # and command functions to return tea.Msg
-allow = ["error", "empty", "stdlib", "github.com/charmbracelet/bubbletea\\.Model", "github.com/charmbracelet/bubbletea\\.Msg"]
+allow = ["error", "empty", "stdlib", "charm\\.land/bubbletea/v2\\.Model", "charm\\.land/bubbletea/v2\\.Msg"]
 
 [linters.settings.lll]
 line-length = 120

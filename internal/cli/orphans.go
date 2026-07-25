@@ -7,12 +7,13 @@ import (
 	"os"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/spf13/cobra"
 
 	"github.com/KyleKing/gh-sweep/internal/github"
 	"github.com/KyleKing/gh-sweep/internal/orphans"
 	orphanstui "github.com/KyleKing/gh-sweep/internal/tui/components/orphans"
+	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
 var orphansCmd = &cobra.Command{
@@ -57,6 +58,28 @@ func init() {
 	orphansCmd.Flags().StringSlice("exclude", nil, "Branch patterns to exclude")
 	orphansCmd.Flags().StringP("output", "o", "", "Output file path")
 	orphansCmd.Flags().String("format", "table", "Output format: table, json, markdown")
+}
+
+type orphansProgram struct {
+	model orphanstui.Model
+}
+
+func (p orphansProgram) Init() tea.Cmd {
+	return p.model.Init()
+}
+
+func (p orphansProgram) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	model, cmd := p.model.Update(msg)
+	p.model = model
+
+	return p, cmd
+}
+
+func (p orphansProgram) View() tea.View {
+	v := tea.NewView(p.model.View())
+	v.AltScreen = true
+
+	return v
 }
 
 func runOrphans(cmd *cobra.Command, args []string) {
@@ -108,8 +131,10 @@ func runOrphans(cmd *cobra.Command, args []string) {
 	}
 
 	if !listMode && !cleanup && outputPath == "" {
-		m := orphanstui.NewModel(namespace, options)
-		p := tea.NewProgram(m, tea.WithAltScreen())
+		theme.Init(theme.Detect())
+
+		m := orphansProgram{model: orphanstui.NewModel(namespace, options)}
+		p := tea.NewProgram(m)
 
 		if _, err := p.Run(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error running TUI: %v\n", err)

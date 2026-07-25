@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/KyleKing/gh-sweep/internal/github"
+	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
 // Model represents the protection rules TUI state.
@@ -99,7 +100,7 @@ func (m Model) loadRules() tea.Msg {
 }
 
 // Update handles messages.
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -115,7 +116,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, nil
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
@@ -150,7 +151,7 @@ func (m Model) View() string {
 	// Header
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#00FFFF"))
+		Foreground(theme.Current().Primary)
 
 	b.WriteString(titleStyle.Render("🛡️  Branch Protection Rules"))
 	b.WriteString("\n\n")
@@ -174,7 +175,7 @@ func (m Model) View() string {
 
 		statusStyle := lipgloss.NewStyle()
 		if m.cursor == i {
-			statusStyle = statusStyle.Bold(true).Foreground(lipgloss.Color("#FFFF00"))
+			statusStyle = statusStyle.Bold(true).Foreground(theme.Current().Warning)
 		}
 
 		line := fmt.Sprintf("%s %s:\n", cursor, repo)
@@ -203,7 +204,7 @@ func (m Model) View() string {
 
 	// Help
 	b.WriteString("\n")
-	helpStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#777777"))
+	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
 	b.WriteString(helpStyle.Render("↑/↓: navigate | q: quit"))
 
 	return b.String()

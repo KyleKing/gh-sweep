@@ -1,8 +1,10 @@
 package tui
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+
+	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
 // Model represents the main TUI application state.
@@ -34,7 +36,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, nil
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
@@ -45,18 +47,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // View renders the model.
-func (m Model) View() string {
+func (m Model) View() tea.View {
+	return tea.NewView(m.renderContent())
+}
+
+func (m Model) renderContent() string {
 	if !m.ready {
 		return "Initializing..."
 	}
 
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#00FFFF")).
+		Foreground(theme.Current().Primary).
 		Padding(1, 0)
 
 	helpStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#777777"))
+		Foreground(theme.Current().Muted)
 
 	content := titleStyle.Render("🧹 gh-sweep") + "\n\n"
 	content += "Welcome to gh-sweep - GitHub Repository Management TUI\n\n"

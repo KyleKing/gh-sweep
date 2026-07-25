@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/KyleKing/gh-sweep/internal/github"
+	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
 // Model represents the webhook management TUI state.
@@ -97,7 +98,7 @@ func (m Model) loadWebhooks() tea.Msg {
 }
 
 // Update handles messages.
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -113,7 +114,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, nil
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
@@ -148,7 +149,7 @@ func (m Model) View() string {
 	// Header
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#00FFFF"))
+		Foreground(theme.Current().Primary)
 
 	b.WriteString(titleStyle.Render("🔔 Webhooks"))
 	b.WriteString("\n\n")
@@ -165,7 +166,7 @@ func (m Model) View() string {
 
 			repoStyle := lipgloss.NewStyle()
 			if m.cursor == i {
-				repoStyle = repoStyle.Bold(true).Foreground(lipgloss.Color("#FFFF00"))
+				repoStyle = repoStyle.Bold(true).Foreground(theme.Current().Warning)
 			}
 
 			webhooks := m.webhooks[repo]
@@ -185,14 +186,14 @@ func (m Model) View() string {
 				// Add health metrics if available
 				if repoHealth, ok := m.health[repo]; ok {
 					if health, ok := repoHealth[webhook.ID]; ok {
-						statusColor := "#00FF00" // green for healthy
+						statusColor := theme.Current().Success
 						if health.SuccessRate < 80 {
-							statusColor = "#FF0000" // red for unhealthy
+							statusColor = theme.Current().Error
 						} else if health.SuccessRate < 95 {
-							statusColor = "#FFFF00" // yellow for warning
+							statusColor = theme.Current().Warning
 						}
 
-						healthStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(statusColor))
+						healthStyle := lipgloss.NewStyle().Foreground(statusColor)
 						healthLine := fmt.Sprintf("   Health: %.1f%% success | Avg: %dms | Total: %d\n",
 							health.SuccessRate,
 							health.AvgDuration,
@@ -210,7 +211,7 @@ func (m Model) View() string {
 
 	// Help
 	b.WriteString("\n")
-	helpStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#777777"))
+	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
 	b.WriteString(helpStyle.Render("↑/↓: navigate | q: quit"))
 
 	return b.String()

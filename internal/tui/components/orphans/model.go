@@ -6,11 +6,12 @@ import (
 	"sort"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/KyleKing/gh-sweep/internal/github"
 	"github.com/KyleKing/gh-sweep/internal/orphans"
+	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
 type ViewMode string
@@ -86,7 +87,7 @@ func (m Model) startScan() tea.Msg {
 	return scanCompleteMsg{result: result, err: err}
 }
 
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -122,7 +123,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, nil
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		if m.confirmDelete {
 			return m.handleConfirmKeys(msg)
 		}
@@ -142,7 +143,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor++
 			}
 
-		case " ":
+		case "space":
 			filtered := m.getFilteredOrphans()
 			if m.cursor < len(filtered) {
 				key := filtered[m.cursor].Key()
@@ -205,7 +206,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleConfirmKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleConfirmKeys(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	switch msg.String() {
 	case "y", "Y":
 		return m.executeDelete()
@@ -220,7 +221,7 @@ func (m Model) handleConfirmKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleDelete() (tea.Model, tea.Cmd) {
+func (m Model) handleDelete() (Model, tea.Cmd) {
 	filtered := m.getFilteredOrphans()
 	var targets []orphans.OrphanedBranch
 
@@ -247,7 +248,7 @@ func (m Model) handleDelete() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) executeDelete() (tea.Model, tea.Cmd) {
+func (m Model) executeDelete() (Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	for _, orphan := range m.deleteTargets {
@@ -350,7 +351,7 @@ func (m Model) View() string {
 
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#00FFFF"))
+		Foreground(theme.Current().Primary)
 
 	b.WriteString(titleStyle.Render("Orphaned Branches"))
 	b.WriteString("\n")
@@ -362,10 +363,10 @@ func (m Model) View() string {
 
 	activeTab := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#FFFF00"))
+		Foreground(theme.Current().Warning)
 
 	inactiveTab := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#777777"))
+		Foreground(theme.Current().Muted)
 
 	if m.filterType == nil {
 		b.WriteString(activeTab.Render("[1] All"))
@@ -395,7 +396,7 @@ func (m Model) View() string {
 	}
 	b.WriteString("\n\n")
 
-	summaryStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#777777"))
+	summaryStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
 	b.WriteString(summaryStyle.Render(fmt.Sprintf("Repos: %d | Orphans: %d | View: %s\n\n",
 		m.result.TotalRepos, m.result.TotalOrphans, m.viewMode)))
 
@@ -408,7 +409,7 @@ func (m Model) View() string {
 		for i, orphan := range filtered {
 			if m.viewMode == ViewModeByRepo && orphan.Repository != currentRepo {
 				currentRepo = orphan.Repository
-				repoStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00FFFF"))
+				repoStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Primary)
 				b.WriteString("\n")
 				b.WriteString(repoStyle.Render(currentRepo))
 				b.WriteString("\n")
@@ -428,7 +429,7 @@ func (m Model) View() string {
 
 			lineStyle := lipgloss.NewStyle()
 			if m.cursor == i {
-				lineStyle = lineStyle.Bold(true).Foreground(lipgloss.Color("#FFFF00"))
+				lineStyle = lineStyle.Bold(true).Foreground(theme.Current().Warning)
 			}
 
 			prInfo := ""
@@ -445,20 +446,20 @@ func (m Model) View() string {
 
 	if m.statusMsg != "" {
 		b.WriteString("\n")
-		statusStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00FFFF"))
+		statusStyle := lipgloss.NewStyle().Foreground(theme.Current().Primary)
 		b.WriteString(statusStyle.Render(m.statusMsg))
 		b.WriteString("\n")
 	}
 
 	b.WriteString("\n")
-	helpStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#777777"))
+	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
 	b.WriteString(helpStyle.Render("j/k: navigate | space: select | a/n: all/none | d: delete | v: view mode | r: refresh | esc: back"))
 
 	return b.String()
 }
 
 func (m Model) renderConfirmDialog(b *strings.Builder) string {
-	warnStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FF0000"))
+	warnStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Error)
 	b.WriteString(warnStyle.Render("Confirm Delete"))
 	b.WriteString("\n\n")
 
@@ -477,13 +478,13 @@ func (m Model) renderConfirmDialog(b *strings.Builder) string {
 func (m Model) getTypeStyle(t orphans.OrphanType) lipgloss.Style {
 	switch t {
 	case orphans.OrphanTypeMergedPR:
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF00"))
+		return lipgloss.NewStyle().Foreground(theme.Current().Success)
 	case orphans.OrphanTypeClosedPR:
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("#FF0000"))
+		return lipgloss.NewStyle().Foreground(theme.Current().Error)
 	case orphans.OrphanTypeStale:
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFF00"))
+		return lipgloss.NewStyle().Foreground(theme.Current().Warning)
 	case orphans.OrphanTypeRecentNoPR:
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("#777777"))
+		return lipgloss.NewStyle().Foreground(theme.Current().Muted)
 	default:
 		return lipgloss.NewStyle()
 	}

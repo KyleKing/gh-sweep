@@ -9,11 +9,12 @@ import (
 	"strings"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/KyleKing/gh-sweep/internal/cache"
 	"github.com/KyleKing/gh-sweep/internal/github"
+	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
 type viewMode int
@@ -222,7 +223,7 @@ func (m Model) loadData() tea.Msg {
 	}
 }
 
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -247,7 +248,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, nil
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
@@ -322,13 +323,13 @@ func (m Model) View() string {
 
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#00FFFF"))
+		Foreground(theme.Current().Primary)
 
 	b.WriteString(titleStyle.Render("GHA Performance: " + m.repo))
 	b.WriteString("\n")
 
 	subtitleStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#777777"))
+		Foreground(theme.Current().Muted)
 
 	b.WriteString(subtitleStyle.Render(fmt.Sprintf(
 		"Last %d days | %d runs (%d cached, %d new)",
@@ -337,10 +338,10 @@ func (m Model) View() string {
 
 	activeTab := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#FFFF00"))
+		Foreground(theme.Current().Warning)
 
 	inactiveTab := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#777777"))
+		Foreground(theme.Current().Muted)
 
 	tabs := []struct {
 		label string
@@ -374,7 +375,7 @@ func (m Model) View() string {
 	}
 
 	b.WriteString("\n")
-	helpStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#777777"))
+	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
 	b.WriteString(helpStyle.Render("1-4: views | j/k: navigate | r: refresh | esc: back | q: quit"))
 
 	return b.String()
@@ -385,10 +386,10 @@ func (m Model) renderOverview() string {
 
 	sectionStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#FFFFFF"))
+		Foreground(theme.Current().Text)
 
 	valueStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#00FF00"))
+		Foreground(theme.Current().Success)
 
 	b.WriteString(sectionStyle.Render("Summary"))
 	b.WriteString("\n")
@@ -430,8 +431,8 @@ func (m Model) renderOverview() string {
 		displayRuns = displayRuns[:10]
 	}
 
-	successStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF00"))
-	failureStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF0000"))
+	successStyle := lipgloss.NewStyle().Foreground(theme.Current().Success)
+	failureStyle := lipgloss.NewStyle().Foreground(theme.Current().Error)
 
 	for _, r := range displayRuns {
 		status := successStyle.Render("OK")
@@ -459,14 +460,14 @@ func (m Model) renderWorkflows() string {
 
 	sectionStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#FFFFFF"))
+		Foreground(theme.Current().Text)
 
 	b.WriteString(sectionStyle.Render("Workflow Performance"))
 	b.WriteString("\n\n")
 
 	headerStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#777777"))
+		Foreground(theme.Current().Muted)
 
 	b.WriteString(headerStyle.Render(fmt.Sprintf("  %-35s %8s %8s %8s %8s %8s\n",
 		"Workflow", "Runs", "Avg", "Min", "Max", "Success")))
@@ -480,7 +481,7 @@ func (m Model) renderWorkflows() string {
 	})
 
 	selectedStyle := lipgloss.NewStyle().
-		Background(lipgloss.Color("#333333"))
+		Background(theme.Current().Secondary)
 
 	for i, ws := range workflows {
 		if i < m.scrollTop || i >= m.scrollTop+m.maxVisible {
@@ -516,14 +517,14 @@ func (m Model) renderJobs() string {
 
 	sectionStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#FFFFFF"))
+		Foreground(theme.Current().Text)
 
 	b.WriteString(sectionStyle.Render("Job Performance (Top by Avg Duration)"))
 	b.WriteString("\n\n")
 
 	headerStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#777777"))
+		Foreground(theme.Current().Muted)
 
 	b.WriteString(headerStyle.Render(fmt.Sprintf("  %-50s %8s %8s %8s %8s\n",
 		"Job", "Runs", "Avg", "Min", "Max")))
@@ -531,7 +532,7 @@ func (m Model) renderJobs() string {
 	jobs := github.GetTopJobsByDuration(m.jobStats, 0)
 
 	selectedStyle := lipgloss.NewStyle().
-		Background(lipgloss.Color("#333333"))
+		Background(theme.Current().Secondary)
 
 	for i, js := range jobs {
 		if i < m.scrollTop || i >= m.scrollTop+m.maxVisible {
@@ -566,14 +567,14 @@ func (m Model) renderBranches() string {
 
 	sectionStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#FFFFFF"))
+		Foreground(theme.Current().Text)
 
 	b.WriteString(sectionStyle.Render(fmt.Sprintf("Performance by Branch (vs %s)", m.baseBranch)))
 	b.WriteString("\n\n")
 
 	headerStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#777777"))
+		Foreground(theme.Current().Muted)
 
 	b.WriteString(headerStyle.Render(fmt.Sprintf("  %-30s %8s %10s %12s\n",
 		"Branch", "Runs", "Avg", "Delta")))
@@ -595,10 +596,10 @@ func (m Model) renderBranches() string {
 	})
 
 	selectedStyle := lipgloss.NewStyle().
-		Background(lipgloss.Color("#333333"))
+		Background(theme.Current().Secondary)
 
-	fasterStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF00"))
-	slowerStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF0000"))
+	fasterStyle := lipgloss.NewStyle().Foreground(theme.Current().Success)
+	slowerStyle := lipgloss.NewStyle().Foreground(theme.Current().Error)
 
 	for i, bs := range branches {
 		if i < m.scrollTop || i >= m.scrollTop+m.maxVisible {

@@ -6,10 +6,11 @@ import (
 	"strings"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/KyleKing/gh-sweep/internal/github"
+	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
 // Model represents the releases overview TUI state.
@@ -95,7 +96,7 @@ func (m Model) loadReleases() tea.Msg {
 }
 
 // Update handles messages.
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -111,7 +112,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, nil
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
@@ -157,7 +158,7 @@ func (m Model) View() string {
 	// Header
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#00FFFF"))
+		Foreground(theme.Current().Primary)
 
 	b.WriteString(titleStyle.Render("📦 Release Overview"))
 	b.WriteString("\n\n")
@@ -165,10 +166,10 @@ func (m Model) View() string {
 	// View mode tabs
 	activeTab := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#FFFF00"))
+		Foreground(theme.Current().Warning)
 
 	inactiveTab := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#777777"))
+		Foreground(theme.Current().Muted)
 
 	if m.viewMode == "latest" {
 		b.WriteString(activeTab.Render("[1] Latest"))
@@ -201,7 +202,7 @@ func (m Model) View() string {
 
 	// Help
 	b.WriteString("\n")
-	helpStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#777777"))
+	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
 	b.WriteString(helpStyle.Render("↑/↓: navigate | 1/2/3: switch view | q: quit"))
 
 	return b.String()
@@ -227,7 +228,7 @@ func (m Model) renderLatest() string {
 
 		releaseStyle := lipgloss.NewStyle()
 		if m.cursor == i {
-			releaseStyle = releaseStyle.Bold(true).Foreground(lipgloss.Color("#FFFF00"))
+			releaseStyle = releaseStyle.Bold(true).Foreground(theme.Current().Warning)
 		}
 
 		if release == nil {
@@ -239,13 +240,13 @@ func (m Model) renderLatest() string {
 
 		// Calculate days since release
 		daysSince := int(time.Since(release.PublishedAt).Hours() / 24)
-		ageColor := "#00FF00" // green (recent)
+		ageColor := theme.Current().Success
 		if daysSince > 90 {
-			ageColor = "#FF0000" // red (old)
+			ageColor = theme.Current().Error
 		} else if daysSince > 30 {
-			ageColor = "#FFFF00" // yellow (moderate)
+			ageColor = theme.Current().Warning
 		}
-		ageStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(ageColor))
+		ageStyle := lipgloss.NewStyle().Foreground(ageColor)
 
 		line := fmt.Sprintf("%s %s:\n", cursor, repo)
 		line += fmt.Sprintf("   Version: %s\n", release.TagName)
@@ -276,7 +277,7 @@ func (m Model) renderAll() string {
 
 		repoStyle := lipgloss.NewStyle()
 		if m.cursor == i {
-			repoStyle = repoStyle.Bold(true).Foreground(lipgloss.Color("#FFFF00"))
+			repoStyle = repoStyle.Bold(true).Foreground(theme.Current().Warning)
 		}
 
 		line := fmt.Sprintf("%s %s (%d releases):\n", cursor, repo, len(releases))
@@ -326,10 +327,10 @@ func (m Model) renderOutdated() string {
 
 		releaseStyle := lipgloss.NewStyle()
 		if m.cursor == i {
-			releaseStyle = releaseStyle.Bold(true).Foreground(lipgloss.Color("#FFFF00"))
+			releaseStyle = releaseStyle.Bold(true).Foreground(theme.Current().Warning)
 		}
 
-		warningStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF0000"))
+		warningStyle := lipgloss.NewStyle().Foreground(theme.Current().Error)
 
 		line := fmt.Sprintf("%s %s:\n", cursor, repo)
 		line += fmt.Sprintf("   Last Release: %s\n", release.TagName)

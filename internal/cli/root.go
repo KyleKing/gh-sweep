@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"os"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/spf13/cobra"
 
 	"github.com/KyleKing/gh-sweep/internal/config"
 	"github.com/KyleKing/gh-sweep/internal/tui"
+	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
 var rootCmd = &cobra.Command{
@@ -29,8 +30,10 @@ Use 'gh-sweep <command> --help' for more information about a command.`,
 		cfg := loadConfig()
 		opts := resolveMainOptions(cfg, stringFlag(cmd, "repo"), stringFlag(cmd, "org"), stringSliceFlag(cmd, "repos"))
 
+		theme.Init(theme.Detect())
+
 		m := tui.NewMainModel(opts)
-		p := tea.NewProgram(m, tea.WithAltScreen())
+		p := tea.NewProgram(m)
 
 		if _, err := p.Run(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error running TUI: %v\n", err)

@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/KyleKing/gh-sweep/internal/github"
+	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
 // Model represents the collaborator management TUI state.
@@ -79,7 +80,7 @@ func (m Model) loadCollaborators() tea.Msg {
 }
 
 // Update handles messages.
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -94,7 +95,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, nil
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
@@ -152,7 +153,7 @@ func (m Model) View() string {
 	// Header
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#00FFFF"))
+		Foreground(theme.Current().Primary)
 
 	b.WriteString(titleStyle.Render("👥 Collaborator Management"))
 	b.WriteString("\n\n")
@@ -160,10 +161,10 @@ func (m Model) View() string {
 	// View mode tabs
 	activeTab := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#FFFF00"))
+		Foreground(theme.Current().Warning)
 
 	inactiveTab := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#777777"))
+		Foreground(theme.Current().Muted)
 
 	if m.viewMode == "byrepo" {
 		b.WriteString(activeTab.Render("[1] By Repository"))
@@ -188,7 +189,7 @@ func (m Model) View() string {
 
 	// Help
 	b.WriteString("\n")
-	helpStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#777777"))
+	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
 	b.WriteString(helpStyle.Render("↑/↓: navigate | 1/2: switch view | q: quit"))
 
 	return b.String()
@@ -209,7 +210,7 @@ func (m Model) renderByRepo() string {
 
 		statusStyle := lipgloss.NewStyle()
 		if m.cursor == i {
-			statusStyle = statusStyle.Bold(true).Foreground(lipgloss.Color("#FFFF00"))
+			statusStyle = statusStyle.Bold(true).Foreground(theme.Current().Warning)
 		}
 
 		line := fmt.Sprintf("%s %s (%d collaborators):\n", cursor, repo, len(collabs))
@@ -221,14 +222,14 @@ func (m Model) renderByRepo() string {
 				lineSb214.WriteString(fmt.Sprintf("   ... and %d more\n", len(collabs)-3))
 				break
 			}
-			permColor := "#00FF00"
+			permColor := theme.Current().Success
 			switch collab.Permission {
 			case "admin":
-				permColor = "#FF0000"
+				permColor = theme.Current().Error
 			case "write":
-				permColor = "#FFFF00"
+				permColor = theme.Current().Warning
 			}
-			permStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(permColor))
+			permStyle := lipgloss.NewStyle().Foreground(permColor)
 			lineSb214.WriteString(fmt.Sprintf("   - %s ", collab.Login))
 			lineSb214.WriteString(permStyle.Render(fmt.Sprintf("[%s]", collab.Permission)))
 			lineSb214.WriteString("\n")
@@ -271,7 +272,7 @@ func (m Model) renderByUser() string {
 
 		userStyle := lipgloss.NewStyle()
 		if m.cursor == currentIdx {
-			userStyle = userStyle.Bold(true).Foreground(lipgloss.Color("#FFFF00"))
+			userStyle = userStyle.Bold(true).Foreground(theme.Current().Warning)
 		}
 
 		line := fmt.Sprintf("%s %s (access to %d repos):\n", cursor, user, len(repos))
@@ -284,14 +285,14 @@ func (m Model) renderByUser() string {
 				break
 			}
 			perm := userPerms[user][repo]
-			permColor := "#00FF00"
+			permColor := theme.Current().Success
 			switch perm {
 			case "admin":
-				permColor = "#FF0000"
+				permColor = theme.Current().Error
 			case "write":
-				permColor = "#FFFF00"
+				permColor = theme.Current().Warning
 			}
-			permStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(permColor))
+			permStyle := lipgloss.NewStyle().Foreground(permColor)
 			lineSb273.WriteString(fmt.Sprintf("   - %s ", repo))
 			lineSb273.WriteString(permStyle.Render(fmt.Sprintf("[%s]", perm)))
 			lineSb273.WriteString("\n")

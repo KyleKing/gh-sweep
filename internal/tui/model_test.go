@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func TestNewModel(t *testing.T) {
@@ -57,7 +57,7 @@ func TestModelView(t *testing.T) {
 
 	// Test not ready state
 	view := m.View()
-	if !strings.Contains(view, "Initializing") {
+	if !strings.Contains(view.Content, "Initializing") {
 		t.Error("Expected view to show 'Initializing' when not ready")
 	}
 
@@ -67,7 +67,7 @@ func TestModelView(t *testing.T) {
 	m.height = 50
 
 	view = m.View()
-	if !strings.Contains(view, "gh-sweep") {
+	if !strings.Contains(view.Content, "gh-sweep") {
 		t.Error("Expected view to contain 'gh-sweep'")
 	}
 }
