@@ -25,6 +25,7 @@ Shared tasks live in `.config/mise/conf.d/template.toml` (managed by the copier 
 | `mise run format`             | Auto-fix lint and formatting                                          |
 | `mise run hooks`              | Run git hooks                                                         |
 | `mise run lint`               | Run linter                                                            |
+| `mise run run`                | Run from source (`go run`, always reflects current code)              |
 | `mise run test`               | Run tests with coverage                                               |
 | `mise run test:coverage-min`  | Verify the 70% coverage threshold                                     |
 | `mise run test:golden`        | Run golden snapshot tests                                             |
@@ -57,6 +58,8 @@ Run straight from source with `go run`, which always reflects the current code, 
 
 ```bash
 go run ./cmd/gh-sweep [args]
+# or
+mise run run -- [args]
 ```
 
 To test the actual `gh sweep` extension invocation or a Homebrew install, use the released version rather than installing from this checkout:

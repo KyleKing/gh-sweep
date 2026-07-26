@@ -31,6 +31,10 @@ run = "hk fix --quiet"
 description = "Run linter"
 run = "golangci-lint run ./..."
 
+[tasks.run]
+description = "Run from source (always reflects current code, no stale build)"
+run = "go run ./cmd/gh-sweep"
+
 [tasks.test]
 description = "Run tests with coverage"
 run = "go test -coverprofile=coverage.out ./..."
