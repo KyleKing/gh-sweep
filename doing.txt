@@ -5,3 +5,8 @@ See screenshots on desktop:
 1. Are the categories right? There seems to be overlap
 1. Unwatched is misleading because it is the default (I just prefer to have All activity)
 1. Custom isn't supported because I used to have it for Corallium with releases turned off, but that appeared as default
+
+2026-07-26 decisions needed:
+
+- Tags v0.1.0-v0.3.2 have no GitHub releases because goreleaser first succeeded at v0.3.3: backfill or ignore?
+- Adopt .copier-answers.yml so this repo becomes a real copier child?
