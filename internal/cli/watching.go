@@ -47,14 +47,24 @@ Examples:
 		}
 
 		var unwatchedRepos []github.RepoBasic
+		var erroredRepos []github.RepoBasic
 		for _, repo := range repos {
 			sub, err := client.GetRepoSubscription(repo.Owner, repo.Name)
 			if err != nil {
+				erroredRepos = append(erroredRepos, repo)
 				continue
 			}
-			if sub.State == github.WatchStateNotWatching {
+			if sub.State == github.WatchStateDefault {
 				unwatchedRepos = append(unwatchedRepos, repo)
 			}
+		}
+
+		if len(erroredRepos) > 0 {
+			fmt.Printf("Warning: failed to fetch subscription status for %d repositories:\n", len(erroredRepos))
+			for _, repo := range erroredRepos {
+				fmt.Printf("  - %s\n", repo.FullName)
+			}
+			fmt.Println()
 		}
 
 		if unwatched {

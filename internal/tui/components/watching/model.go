@@ -16,6 +16,7 @@ type Model struct {
 	username      string
 	userRepos     []github.RepoBasic
 	subscriptions map[string]*github.Subscription
+	fetchErrors   map[string]error
 	cursor        int
 	width         int
 	height        int
@@ -29,6 +30,7 @@ type Model struct {
 func NewModel() Model {
 	return Model{
 		subscriptions: make(map[string]*github.Subscription),
+		fetchErrors:   make(map[string]error),
 		selected:      make(map[int]bool),
 		loading:       true,
 		viewMode:      "unwatched",
@@ -39,6 +41,7 @@ type dataLoadedMsg struct {
 	username      string
 	userRepos     []github.RepoBasic
 	subscriptions map[string]*github.Subscription
+	fetchErrors   map[string]error
 	err           error
 }
 
@@ -48,6 +51,11 @@ type watchResultMsg struct {
 }
 
 type unwatchResultMsg struct {
+	repo string
+	err  error
+}
+
+type ignoreResultMsg struct {
 	repo string
 	err  error
 }
@@ -74,9 +82,11 @@ func (m Model) loadData() tea.Msg {
 	}
 
 	subscriptions := make(map[string]*github.Subscription)
+	fetchErrors := make(map[string]error)
 	for _, repo := range repos {
 		sub, err := client.GetRepoSubscription(repo.Owner, repo.Name)
 		if err != nil {
+			fetchErrors[repo.FullName] = err
 			continue
 		}
 		subscriptions[repo.FullName] = sub
@@ -86,6 +96,7 @@ func (m Model) loadData() tea.Msg {
 		username:      username,
 		userRepos:     repos,
 		subscriptions: subscriptions,
+		fetchErrors:   fetchErrors,
 		err:           nil,
 	}
 }
@@ -125,6 +136,25 @@ func (m Model) unwatchRepo(repo github.RepoBasic) tea.Cmd {
 	}
 }
 
+func (m Model) ignoreRepo(repo github.RepoBasic) tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+		client, err := github.NewClient(ctx)
+		if err != nil {
+			return ignoreResultMsg{repo: repo.FullName, err: err}
+		}
+
+		sub, err := client.SetRepoSubscription(repo.Owner, repo.Name, false, true)
+		if err != nil {
+			return ignoreResultMsg{repo: repo.FullName, err: err}
+		}
+
+		m.subscriptions[repo.FullName] = sub
+
+		return ignoreResultMsg{repo: repo.FullName, err: nil}
+	}
+}
+
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -138,6 +168,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		m.username = msg.username
 		m.userRepos = msg.userRepos
 		m.subscriptions = msg.subscriptions
+		m.fetchErrors = msg.fetchErrors
 		m.err = msg.err
 
 		return m, nil
@@ -163,7 +194,22 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			m.statusMsg = "Unwatched " + msg.repo
 			if sub, ok := m.subscriptions[msg.repo]; ok {
 				sub.Subscribed = false
-				sub.State = github.WatchStateNotWatching
+				sub.Ignored = false
+				sub.State = github.WatchStateDefault
+			}
+		}
+
+		return m, nil
+
+	case ignoreResultMsg:
+		if msg.err != nil {
+			m.statusMsg = fmt.Sprintf("Failed to ignore %s: %v", msg.repo, msg.err)
+		} else {
+			m.statusMsg = "Ignoring " + msg.repo
+			if sub, ok := m.subscriptions[msg.repo]; ok {
+				sub.Subscribed = false
+				sub.Ignored = true
+				sub.State = github.WatchStateIgnored
 			}
 		}
 
@@ -208,6 +254,9 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 		case "u":
 			return m.handleUnwatch()
+
+		case "i":
+			return m.handleIgnore()
 		}
 	}
 
@@ -217,10 +266,14 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 func (m Model) getFilteredRepos() []github.RepoBasic {
 	var filtered []github.RepoBasic
 	for _, repo := range m.userRepos {
+		if _, failed := m.fetchErrors[repo.FullName]; failed && m.viewMode != "all" {
+			continue
+		}
+
 		sub := m.subscriptions[repo.FullName]
 		switch m.viewMode {
 		case "unwatched":
-			if sub == nil || sub.State == github.WatchStateNotWatching {
+			if sub != nil && sub.State == github.WatchStateDefault {
 				filtered = append(filtered, repo)
 			}
 		case "watched":
@@ -270,6 +323,27 @@ func (m Model) handleUnwatch() (Model, tea.Cmd) {
 
 	if !hasSelection && m.cursor < len(filtered) {
 		cmds = append(cmds, m.unwatchRepo(filtered[m.cursor]))
+	}
+
+	m.selected = make(map[int]bool)
+
+	return m, tea.Batch(cmds...)
+}
+
+func (m Model) handleIgnore() (Model, tea.Cmd) {
+	filtered := m.getFilteredRepos()
+	var cmds []tea.Cmd
+
+	hasSelection := false
+	for idx := range m.selected {
+		if m.selected[idx] && idx < len(filtered) {
+			hasSelection = true
+			cmds = append(cmds, m.ignoreRepo(filtered[idx]))
+		}
+	}
+
+	if !hasSelection && m.cursor < len(filtered) {
+		cmds = append(cmds, m.ignoreRepo(filtered[m.cursor]))
 	}
 
 	m.selected = make(map[int]bool)
@@ -339,12 +413,15 @@ func (m Model) View() string {
 			}
 
 			sub := m.subscriptions[repo.FullName]
-			status := "not watching"
-			statusStyle := lipgloss.NewStyle().Foreground(theme.Current().Error)
-			if sub != nil {
+			status := "default (participating/@mentions)"
+			statusStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
+			if fetchErr, failed := m.fetchErrors[repo.FullName]; failed {
+				status = fmt.Sprintf("error: %v", fetchErr)
+				statusStyle = lipgloss.NewStyle().Foreground(theme.Current().Error)
+			} else if sub != nil {
 				switch sub.State {
 				case github.WatchStateSubscribed:
-					status = "watching"
+					status = "all activity"
 					statusStyle = lipgloss.NewStyle().Foreground(theme.Current().Success)
 				case github.WatchStateIgnored:
 					status = "ignored"
@@ -373,7 +450,9 @@ func (m Model) View() string {
 
 	b.WriteString("\n")
 	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
-	b.WriteString(helpStyle.Render("j/k: navigate | space: select | w: watch | u: unwatch | 1/2/3: view mode | esc: back"))
+	b.WriteString(helpStyle.Render("j/k: navigate | space: select | w: watch all activity | u: unwatch (default) | i: ignore | 1/2/3: view mode | esc: back"))
+	b.WriteString("\n")
+	b.WriteString(helpStyle.Render("GitHub's API doesn't expose per-notification-type custom settings; manage those on github.com."))
 
 	return b.String()
 }

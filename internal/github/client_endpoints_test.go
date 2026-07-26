@@ -328,6 +328,19 @@ func TestSubscriptionLifecycle(t *testing.T) {
 	}
 }
 
+func TestGetRepoSubscriptionDefaultOn404(t *testing.T) {
+	t.Parallel()
+
+	sub, err := newEndpointClient(t).GetRepoSubscription("acme", "gadgets")
+	if err != nil {
+		t.Fatalf("GetRepoSubscription() error = %v", err)
+	}
+
+	if sub.Subscribed || sub.Ignored || sub.State != WatchStateDefault {
+		t.Errorf("subscription = %+v, want default state", sub)
+	}
+}
+
 func TestListNamespaceRepositories(t *testing.T) {
 	t.Parallel()
 

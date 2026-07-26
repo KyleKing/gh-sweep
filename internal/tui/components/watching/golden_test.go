@@ -29,6 +29,14 @@ func TestGoldenLoadedView(t *testing.T) {
 				Subscribed: true,
 				State:      github.WatchStateSubscribed,
 			},
+			"acme/gadgets": {
+				Repository: "acme/gadgets",
+				State:      github.WatchStateDefault,
+			},
+			"tester/dotfiles": {
+				Repository: "tester/dotfiles",
+				State:      github.WatchStateDefault,
+			},
 		},
 	})
 

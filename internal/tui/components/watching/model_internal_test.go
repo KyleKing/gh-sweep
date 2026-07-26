@@ -20,6 +20,7 @@ func loadedWatchingModel() Model {
 		},
 		subscriptions: map[string]*github.Subscription{
 			"acme/widgets": {Repository: "acme/widgets", Subscribed: true, State: github.WatchStateSubscribed},
+			"acme/gadgets": {Repository: "acme/gadgets", State: github.WatchStateDefault},
 		},
 	})
 

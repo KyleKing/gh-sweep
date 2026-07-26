@@ -39,14 +39,6 @@ run = "go run ./cmd/gh-sweep"
 description = "Run tests with coverage"
 run = "go test -coverprofile=coverage.out ./..."
 
-[tasks."test:golden"]
-description = "Run golden snapshot tests"
-run = "go test -tags=golden -run TestGolden ./internal/tui/..."
-
-[tasks."test:golden-update"]
-description = "Regenerate golden snapshots"
-run = "go test -tags=golden -run TestGolden ./internal/tui/... -update"
-
 [tasks."test:coverage-min"]
 description = "Verify minimum coverage threshold (70%)"
 run = '''
@@ -58,6 +50,14 @@ if (( $(awk "BEGIN {print ($coverage < 70)}") )); then
     exit 1
 fi
 '''
+
+[tasks."test:golden"]
+description = "Run golden snapshot tests"
+run = "go test -tags=golden -run TestGolden ./internal/tui/..."
+
+[tasks."test:golden-update"]
+description = "Regenerate golden snapshots"
+run = "go test -tags=golden -run TestGolden ./internal/tui/... -update"
 
 [tasks."test:safety"]
 description = "Check tests for un-faked GitHub client construction"

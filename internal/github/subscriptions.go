@@ -1,17 +1,21 @@
 package github
 
 import (
+	"errors"
 	"fmt"
-	"strings"
 	"time"
+
+	"github.com/cli/go-gh/pkg/api"
 )
 
 type WatchState string
 
 const (
-	WatchStateSubscribed  WatchState = "subscribed"
-	WatchStateIgnored     WatchState = "ignored"
-	WatchStateNotWatching WatchState = ""
+	WatchStateSubscribed WatchState = "subscribed"
+	WatchStateIgnored    WatchState = "ignored"
+	// WatchStateDefault is GitHub's un-set subscription state ("Participating
+	// and @mentions"), not an absence of any relationship to the repo.
+	WatchStateDefault WatchState = ""
 )
 
 type Subscription struct {
@@ -99,12 +103,13 @@ func (c *Client) GetRepoSubscription(owner, repo string) (*Subscription, error) 
 	path := fmt.Sprintf("repos/%s/%s/subscription", owner, repo)
 
 	if err := c.Get(path, &response); err != nil {
-		if strings.Contains(err.Error(), "404") {
+		var httpErr api.HTTPError
+		if errors.As(err, &httpErr) && httpErr.StatusCode == 404 {
 			return &Subscription{
 				Repository: fmt.Sprintf("%s/%s", owner, repo),
 				Subscribed: false,
 				Ignored:    false,
-				State:      WatchStateNotWatching,
+				State:      WatchStateDefault,
 			}, nil
 		}
 
@@ -115,7 +120,7 @@ func (c *Client) GetRepoSubscription(owner, repo string) (*Subscription, error) 
 	if response.Ignored {
 		state = WatchStateIgnored
 	} else if !response.Subscribed {
-		state = WatchStateNotWatching
+		state = WatchStateDefault
 	}
 
 	return &Subscription{
@@ -144,7 +149,7 @@ func (c *Client) SetRepoSubscription(owner, repo string, subscribed, ignored boo
 	if response.Ignored {
 		state = WatchStateIgnored
 	} else if !response.Subscribed {
-		state = WatchStateNotWatching
+		state = WatchStateDefault
 	}
 
 	return &Subscription{

@@ -3,7 +3,8 @@ User: tester
 
 [1;38;2;238;212;159m[1] Unwatched[m  [38;2;147;154;183m[2] Watched[m  [38;2;147;154;183m[3] All[m
 
-[1;38;2;238;212;159m>  acme/gadgets [m[38;2;237;135;150m[not watching][m
-   tester/dotfiles [38;2;237;135;150m[not watching][m
+[1;38;2;238;212;159m>  acme/gadgets [m[38;2;147;154;183m[default (participating/@mentions)][m
+   tester/dotfiles [38;2;147;154;183m[default (participating/@mentions)][m
 
-[38;2;147;154;183mj/k: navigate | space: select | w: watch | u: unwatch | 1/2/3: view mode | esc: back[m
+[38;2;147;154;183mj/k: navigate | space: select | w: watch all activity | u: unwatch (default) | i: ignore | 1/2/3: view mode | esc: back[m
+[38;2;147;154;183mGitHub's API doesn't expose per-notification-type custom settings; manage those on github.com.[m
