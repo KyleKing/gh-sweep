@@ -305,39 +305,17 @@ func TestSubscriptionLifecycle(t *testing.T) {
 
 	client := newEndpointClient(t)
 
-	sub, err := client.GetRepoSubscription("acme", "widgets")
-	if err != nil {
-		t.Fatalf("GetRepoSubscription() error = %v", err)
-	}
-
-	if !sub.Subscribed || sub.State != WatchStateSubscribed {
-		t.Errorf("subscription = %+v", sub)
-	}
-
 	set, err := client.SetRepoSubscription("acme", "widgets", true, false)
 	if err != nil {
 		t.Fatalf("SetRepoSubscription() error = %v", err)
 	}
 
-	if !set.Subscribed {
+	if !set.Subscribed || set.State != WatchStateSubscribed {
 		t.Errorf("set subscription = %+v", set)
 	}
 
 	if err := client.DeleteRepoSubscription("acme", "widgets"); err != nil {
 		t.Errorf("DeleteRepoSubscription() error = %v", err)
-	}
-}
-
-func TestGetRepoSubscriptionDefaultOn404(t *testing.T) {
-	t.Parallel()
-
-	sub, err := newEndpointClient(t).GetRepoSubscription("acme", "gadgets")
-	if err != nil {
-		t.Fatalf("GetRepoSubscription() error = %v", err)
-	}
-
-	if sub.Subscribed || sub.Ignored || sub.State != WatchStateDefault {
-		t.Errorf("subscription = %+v, want default state", sub)
 	}
 }
 

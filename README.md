@@ -136,7 +136,7 @@ Number keys switch tabs; `j`/`k` navigate within a tab.
 
 | View            | Tabs                                                                         |
 | --------------- | ---------------------------------------------------------------------------- |
-| Watching        | `1` Unwatched, `2` Watched, `3` All (`space` select, `w` watch, `u` unwatch) |
+| Watching        | `1` Unwatched, `2` Watched, `3` Ignored, `4` All (`space` select, `w` watch, `u` unwatch, `i` ignore) |
 | Analytics       | `1` Overview, `2` Flaky Tests, `3` Errors (`s` exports errors to markdown)   |
 | GHA performance | `1` Overview, `2` Workflows, `3` Jobs, `4` Branches (`r` refresh)            |
 | Settings        | `1` Overview, `2` Differences                                                |

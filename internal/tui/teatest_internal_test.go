@@ -54,6 +54,14 @@ func routeFakeGitHub(req *http.Request) (*http.Response, error) {
 		return jsonResponse(req, http.StatusOK, `[]`), nil
 	case strings.HasSuffix(path, "/releases"):
 		return jsonResponse(req, http.StatusOK, `[]`), nil
+	case path == "/graphql":
+		return jsonResponse(req, http.StatusOK, `{"data":{"viewer":{"login":"tester","repositories":{
+			"pageInfo":{"hasNextPage":false,"endCursor":""},
+			"nodes":[{"name":"widgets","nameWithOwner":"acme/widgets","owner":{"login":"acme"},
+				"isPrivate":false,"isArchived":false,"isFork":false,"viewerSubscription":"SUBSCRIBED",
+				"viewerCanSubscribe":true,"stargazerCount":0,"pushedAt":"2026-01-10T12:00:00Z",
+				"updatedAt":"2026-01-10T12:00:00Z","watchers":{"totalCount":1}}]
+		}}}}`), nil
 	default:
 		return jsonResponse(req, http.StatusNotFound, `{"message":"Not Found"}`), nil
 	}

@@ -34,37 +34,29 @@ Examples:
 			return
 		}
 
-		username, err := client.GetAuthenticatedUser()
+		gqlClient, err := github.NewGQLClient()
 		if err != nil {
-			fmt.Printf("Error: failed to get authenticated user: %v\n", err)
+			fmt.Printf("Error: failed to create GitHub GraphQL client: %v\n", err)
 			return
 		}
 
-		repos, err := client.ListUserRepos()
+		username, repos, err := gqlClient.ListViewerRepoWatchInfo()
 		if err != nil {
-			fmt.Printf("Error: failed to list user repos: %v\n", err)
+			fmt.Printf("Error: failed to list repo watch info: %v\n", err)
 			return
 		}
 
-		var unwatchedRepos []github.RepoBasic
-		var erroredRepos []github.RepoBasic
+		var unwatchedRepos []github.RepoWatchInfo
+		var ignoredCount, watchedCount int
 		for _, repo := range repos {
-			sub, err := client.GetRepoSubscription(repo.Owner, repo.Name)
-			if err != nil {
-				erroredRepos = append(erroredRepos, repo)
-				continue
-			}
-			if sub.State == github.WatchStateDefault {
+			switch repo.State {
+			case github.WatchStateDefault:
 				unwatchedRepos = append(unwatchedRepos, repo)
+			case github.WatchStateIgnored:
+				ignoredCount++
+			case github.WatchStateSubscribed:
+				watchedCount++
 			}
-		}
-
-		if len(erroredRepos) > 0 {
-			fmt.Printf("Warning: failed to fetch subscription status for %d repositories:\n", len(erroredRepos))
-			for _, repo := range erroredRepos {
-				fmt.Printf("  - %s\n", repo.FullName)
-			}
-			fmt.Println()
 		}
 
 		if unwatched {
@@ -74,7 +66,8 @@ Examples:
 				return
 			}
 			for _, repo := range unwatchedRepos {
-				fmt.Printf("  - %s\n", repo.FullName)
+				fmt.Printf("  - %s (stars %d, watchers %d, pushed %s)\n",
+					repo.FullName, repo.StargazerCount, repo.WatcherCount, formatPushedAt(repo))
 			}
 			fmt.Printf("\nTotal: %d unwatched repositories\n", len(unwatchedRepos))
 
@@ -102,11 +95,24 @@ Examples:
 
 		fmt.Printf("Watch Status Audit for: %s\n\n", username)
 		fmt.Printf("Total repositories: %d\n", len(repos))
-		fmt.Printf("Unwatched repositories: %d\n\n", len(unwatchedRepos))
+		fmt.Printf("All activity: %d\n", watchedCount)
+		fmt.Printf("Ignored: %d\n", ignoredCount)
+		fmt.Printf("Unwatched (default): %d\n\n", len(unwatchedRepos))
+		fmt.Println("Note: GitHub's API can't see or set \"Custom\" per-notification-type settings; a repo shown here as")
+		fmt.Println("default/unwatched may actually have Custom notifications configured on github.com.")
+		fmt.Println()
 		fmt.Println("Use --unwatched to list unwatched repos")
 		fmt.Println("Use --watch-all to watch all unwatched repos")
 		fmt.Println("\nOr launch the full TUI with: gh-sweep (then press 0)")
 	},
+}
+
+func formatPushedAt(repo github.RepoWatchInfo) string {
+	if repo.PushedAt.IsZero() {
+		return "unknown"
+	}
+
+	return repo.PushedAt.Format("2006-01-02")
 }
 
 func init() {

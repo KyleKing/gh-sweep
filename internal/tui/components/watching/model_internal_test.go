@@ -14,13 +14,15 @@ func loadedWatchingModel() Model {
 	m := NewModel()
 	m, _ = m.Update(dataLoadedMsg{
 		username: "tester",
-		userRepos: []github.RepoBasic{
-			{Name: "widgets", FullName: "acme/widgets", Owner: "acme"},
-			{Name: "gadgets", FullName: "acme/gadgets", Owner: "acme"},
-		},
-		subscriptions: map[string]*github.Subscription{
-			"acme/widgets": {Repository: "acme/widgets", Subscribed: true, State: github.WatchStateSubscribed},
-			"acme/gadgets": {Repository: "acme/gadgets", State: github.WatchStateDefault},
+		repos: []github.RepoWatchInfo{
+			{
+				RepoBasic: github.RepoBasic{Name: "widgets", FullName: "acme/widgets", Owner: "acme"},
+				State:     github.WatchStateSubscribed,
+			},
+			{
+				RepoBasic: github.RepoBasic{Name: "gadgets", FullName: "acme/gadgets", Owner: "acme"},
+				State:     github.WatchStateDefault,
+			},
 		},
 	})
 
@@ -52,9 +54,9 @@ func TestWatchingViewModeSwitches(t *testing.T) {
 		t.Errorf("viewMode = %q after 2, view = %q", m.viewMode, m.View())
 	}
 
-	m, _ = m.Update(tea.KeyPressMsg{Code: '3', Text: "3"})
+	m, _ = m.Update(tea.KeyPressMsg{Code: '4', Text: "4"})
 	if m.viewMode != "all" {
-		t.Errorf("viewMode = %q after 3", m.viewMode)
+		t.Errorf("viewMode = %q after 4", m.viewMode)
 	}
 
 	view := m.View()
@@ -81,6 +83,22 @@ func TestWatchResultUpdatesStatus(t *testing.T) {
 	m, _ = m.Update(unwatchResultMsg{repo: "acme/widgets", err: errors.New("boom")})
 	if !strings.Contains(m.statusMsg, "boom") && !strings.Contains(m.statusMsg, "Failed") {
 		t.Errorf("statusMsg = %q", m.statusMsg)
+	}
+}
+
+func TestIgnoreResultUpdatesStatus(t *testing.T) {
+	t.Parallel()
+
+	m := loadedWatchingModel()
+
+	m, _ = m.Update(ignoreResultMsg{repo: "acme/gadgets"})
+	if !strings.Contains(m.statusMsg, "acme/gadgets") {
+		t.Errorf("statusMsg = %q", m.statusMsg)
+	}
+
+	m, _ = m.Update(tea.KeyPressMsg{Code: '3', Text: "3"})
+	if m.viewMode != "ignored" || !strings.Contains(m.View(), "acme/gadgets") {
+		t.Errorf("ignored view = %q", m.View())
 	}
 }
 

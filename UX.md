@@ -78,11 +78,13 @@ Global: `q` or `ctrl+c` quits from any view, `esc` returns to the home menu.
 
 ### Watching
 
-| Key         | Action                                     |
-| ----------- | ------------------------------------------ |
-| `1`/`2`/`3` | Tab: Unwatched / Watched / All             |
-| `space`     | Toggle selection                           |
-| `w` / `u`   | Watch / unwatch selected (no confirm step) |
+| Key             | Action                                                     |
+| --------------- | ----------------------------------------------------------- |
+| `1`/`2`/`3`/`4` | Tab: Unwatched / Watched / Ignored / All                    |
+| `space`         | Toggle selection                                             |
+| `w` / `u` / `i` | Watch (all activity) / unwatch (default) / ignore selected (no confirm step) |
+
+Each row also shows stars, total watcher count, archived/fork flags, and last-pushed date, all sourced from a single GraphQL query per page rather than one REST call per repo. GitHub's API has no representation of the "Custom" per-notification-type watch setting, so a repo configured that way on github.com shows here as its nearest visible state (usually "default"); see DESIGN.md.
 
 ### Comments
 
