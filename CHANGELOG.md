@@ -1,3 +1,9 @@
+## v0.3.1 (2026-07-26)
+
+### Fix
+
+- **release**: ignore the commitizen body.md so goreleaser's dirty check passes
+
 ## v0.3.0 (2026-07-26)
 
 ### Feat
