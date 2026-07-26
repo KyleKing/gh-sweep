@@ -53,26 +53,18 @@ Git hooks run automatically via hk on commit and push.
 
 ## Development Install
 
-For GH CLI extensions, install locally during development:
+Run straight from source with `go run`, which always reflects the current code, so there's no built binary or installed extension to go stale between edits:
 
 ```bash
-mise run build
-gh extension install .
+go run ./cmd/gh-sweep [args]
 ```
 
-After code changes, rebuild and reinstall:
+To test the actual `gh sweep` extension invocation or a Homebrew install, use the released version rather than installing from this checkout:
 
 ```bash
-gh extension remove gh-sweep
-mise run build
-gh extension install .
-```
-
-Or test directly without installing:
-
-```bash
-mise run build
-./gh-sweep [args]
+gh extension install kyleking/gh-sweep
+# or
+brew install --formula https://github.com/KyleKing/gh-sweep/raw/main/Formula/gh-sweep.rb
 ```
 
 ## Releases
