@@ -1,10 +1,11 @@
 // Install with `hk install --mise` to ensure local tools are available
-// The hk version is pinned by hk_version in copier.yml
+// hk_version below must match this pin: amends/import can't interpolate a
+// local since pkl requires them before any other module member
+
+amends "package://github.com/jdx/hk/releases/download/v1.32.0/hk@1.32.0#/Config.pkl"
+import "package://github.com/jdx/hk/releases/download/v1.32.0/hk@1.32.0#/Builtins.pkl"
 
 local hk_version = "1.32.0"
-
-amends "package://github.com/jdx/hk/releases/download/v\(hk_version)/hk@\(hk_version)#/Config.pkl"
-import "package://github.com/jdx/hk/releases/download/v\(hk_version)/hk@\(hk_version)#/Builtins.pkl"
 
 min_hk_version = hk_version
 
