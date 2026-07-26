@@ -1,3 +1,13 @@
+## v0.2.0 (2026-07-26)
+
+### Feat
+
+- switch to filtered menu
+
+### Fix
+
+- drop MISE_ENV gating for hk tool pins
+
 ## v0.1.0 (2026-07-25)
 
 ### Feat
