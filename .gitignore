@@ -46,7 +46,9 @@ Thumbs.db
 # Temporary files
 tmp/
 temp/
-gh-sweep
+
+# Built binary (root only; a bare pattern would also ignore cmd/gh-sweep/)
+/gh-sweep
 
 # Changelog scratch file written by the commitizen action; goreleaser's dirty
 # check must not see it as untracked
