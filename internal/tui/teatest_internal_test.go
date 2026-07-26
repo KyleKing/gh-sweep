@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"bytes"
 	"io"
 	"net/http"
 	"os"
@@ -10,6 +9,7 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/charmbracelet/x/exp/teatest/v2"
 
 	"github.com/KyleKing/gh-sweep/internal/github"
@@ -91,7 +91,7 @@ func waitForOutput(t *testing.T, tm *teatest.TestModel, want string) {
 	t.Helper()
 
 	teatest.WaitFor(t, tm.Output(), func(bts []byte) bool {
-		return bytes.Contains(bts, []byte(want))
+		return strings.Contains(ansi.Strip(string(bts)), want)
 	}, teatest.WithDuration(3*time.Second))
 }
 
@@ -105,8 +105,9 @@ func TestTUIBootAndQuit(t *testing.T) {
 	tm := teatest.NewTestModel(t, newTeatestModel(), teatest.WithInitialTermSize(120, 40))
 
 	teatest.WaitFor(t, tm.Output(), func(bts []byte) bool {
-		return bytes.Contains(bts, []byte("gh-sweep")) &&
-			bytes.Contains(bts, []byte("Namespace Audit"))
+		plain := ansi.Strip(string(bts))
+		return strings.Contains(plain, "gh-sweep") &&
+			strings.Contains(plain, "Namespace Audit")
 	}, teatest.WithDuration(3*time.Second))
 
 	pressKey(tm, 'q')
