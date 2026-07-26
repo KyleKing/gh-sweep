@@ -1,3 +1,9 @@
+## v0.3.3 (2026-07-26)
+
+### Fix
+
+- track cmd/gh-sweep, which a bare gh-sweep gitignore entry had excluded
+
 ## v0.3.2 (2026-07-26)
 
 ### Fix
