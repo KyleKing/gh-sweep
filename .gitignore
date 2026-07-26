@@ -47,3 +47,7 @@ Thumbs.db
 tmp/
 temp/
 gh-sweep
+
+# Changelog scratch file written by the commitizen action; goreleaser's dirty
+# check must not see it as untracked
+body.md
