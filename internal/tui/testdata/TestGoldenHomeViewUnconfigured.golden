@@ -5,26 +5,27 @@
 [1;38;2;198;160;246mGitHub Repository Management TUI[m
                                 
 
+
 [1;38;2;238;212;159mNamespace Audit[m
-  [38;2;202;211;245m[0] 👁️  Watch Status[m   - Audit and manage repo watching
-  [38;2;202;211;245m[o] 🌿 Orphan Branches[m   - Detect and clean up orphaned branches
+[1;38;2;238;212;159m> [0] 👁️  Watch Status[m[38;2;147;154;183m - Audit and manage repo watching[m
+[38;2;202;211;245m  [o] 🌿 Orphan Branches[m[38;2;147;154;183m - Detect and clean up orphaned branches[m
 
 [1;38;2;238;212;159mPhase 1: Core Management[m
-  [38;2;202;211;245m[1] 🌳 Branch Management[m   - Interactive branch operations
-  [38;2;202;211;245m[2] 🛡️  Branch Protection[m   - Compare and sync protection rules
-  [38;2;202;211;245m[3] 💬 PR Comments[m   - Review unresolved comments
-  [38;2;202;211;245m[4] 📊 Analytics[m   - CI/CD and repository statistics
-  [38;2;202;211;245m[p] ⏱️  GHA Performance[m   - Workflow timing analysis
+[38;2;147;154;183m  [1] 🌳 Branch Management[m[38;2;147;154;183m - Interactive branch operations[m[38;2;147;154;183m (unavailable)[m
+[38;2;147;154;183m  [2] 🛡️  Branch Protection[m[38;2;147;154;183m - Compare and sync protection rules[m[38;2;147;154;183m (unavailable)[m
+[38;2;147;154;183m  [3] 💬 PR Comments[m[38;2;147;154;183m - Review unresolved comments[m[38;2;147;154;183m (unavailable)[m
+[38;2;147;154;183m  [4] 📊 Analytics[m[38;2;147;154;183m - CI/CD and repository statistics[m[38;2;147;154;183m (unavailable)[m
+[38;2;147;154;183m  [p] ⏱️  GHA Performance[m[38;2;147;154;183m - Workflow timing analysis[m[38;2;147;154;183m (unavailable)[m
 
 [1;38;2;238;212;159mPhase 2: Analytics & Settings[m
-  [38;2;202;211;245m[5] ⚙️  Settings Comparison[m   - Cross-repo settings diff
-  [38;2;202;211;245m[6] 🔔 Webhooks[m   - Webhook health monitoring
+[38;2;147;154;183m  [5] ⚙️  Settings Comparison[m[38;2;147;154;183m - Cross-repo settings diff[m[38;2;147;154;183m (unavailable)[m
+[38;2;147;154;183m  [6] 🔔 Webhooks[m[38;2;147;154;183m - Webhook health monitoring[m[38;2;147;154;183m (unavailable)[m
 
 [1;38;2;238;212;159mPhase 3: Access & Releases[m
-  [38;2;202;211;245m[7] 👥 Collaborators[m   - Manage repository access
-  [38;2;202;211;245m[8] 🔐 Secrets Audit[m   - Review secrets usage (read-only)
-  [38;2;202;211;245m[9] 📦 Releases[m   - Release version overview
+[38;2;147;154;183m  [7] 👥 Collaborators[m[38;2;147;154;183m - Manage repository access[m[38;2;147;154;183m (unavailable)[m
+[38;2;147;154;183m  [8] 🔐 Secrets Audit[m[38;2;147;154;183m - Review secrets usage (read-only)[m[38;2;147;154;183m (unavailable)[m
+[38;2;147;154;183m  [9] 📦 Releases[m[38;2;147;154;183m - Release version overview[m[38;2;147;154;183m (unavailable)[m
 
 [38;2;147;154;183m💡 Configure with --repo flag or .gh-sweep.yaml[m
-[38;2;147;154;183m[m                                               
-[38;2;147;154;183m[m                                               [38;2;147;154;183mPress 0-9/o/p to select a view | q to quit[m
+
+[38;2;147;154;183mj/k or ↑/↓: move | enter: select | /: filter | 0-9/o/p: quick jump | q: quit[m

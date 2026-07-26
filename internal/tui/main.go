@@ -1,6 +1,9 @@
 package tui
 
 import (
+	"fmt"
+	"strings"
+
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
@@ -39,12 +42,28 @@ const (
 	ViewOrphans
 )
 
+// menuItem describes one selectable entry in the home menu list.
+type menuItem struct {
+	key     string
+	icon    string
+	label   string
+	desc    string
+	section string
+	view    ViewMode
+	enabled bool
+}
+
 // MainModel represents the main TUI application state with navigation.
 type MainModel struct {
 	width  int
 	height int
 	ready  bool
 	mode   ViewMode
+
+	// Home menu list state
+	menuCursor    int
+	menuFilter    string
+	menuFiltering bool
 
 	// Sub-models for each view
 	analyticsModel     analytics.Model
@@ -117,114 +136,273 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyPressMsg:
-		// Handle navigation in home view
 		if m.mode == ViewHome {
-			switch msg.String() {
-			case "ctrl+c", "q":
-				return m, tea.Quit
-
-			case "0":
-				m.mode = ViewWatching
-				m.watchingModel = watching.NewModel()
-
-				return m, m.watchingModel.Init()
-
-			case "1":
-				m.mode = ViewBranches
-				if m.repo != "" {
-					m.branchesModel = branches.NewModel(m.repo, "")
-					return m, m.branchesModel.Init()
-				}
-
-			case "2":
-				m.mode = ViewProtection
-				if len(m.repos) > 0 {
-					m.protectionModel = protection.NewModel(m.repos, m.baseline)
-					return m, m.protectionModel.Init()
-				}
-
-			case "3":
-				m.mode = ViewComments
-				if m.repo != "" {
-					m.commentsModel = comments.NewModel(m.repo)
-					return m, m.commentsModel.Init()
-				}
-
-			case "4":
-				m.mode = ViewAnalytics
-				if m.repo != "" {
-					m.analyticsModel = analytics.NewModel(m.repo)
-					return m, m.analyticsModel.Init()
-				}
-
-			case "p":
-				m.mode = ViewGHAPerf
-				if m.repo != "" {
-					m.ghaPerfModel = ghaperf.NewModel(m.repo)
-					return m, m.ghaPerfModel.Init()
-				}
-
-			case "5":
-				m.mode = ViewSettings
-				if len(m.repos) > 0 {
-					m.settingsModel = settings.NewModel(m.repos, m.baseline)
-					return m, m.settingsModel.Init()
-				}
-
-			case "6":
-				m.mode = ViewWebhooks
-				if len(m.repos) > 0 {
-					m.webhooksModel = webhooks.NewModel(m.repos)
-					return m, m.webhooksModel.Init()
-				}
-
-			case "7":
-				m.mode = ViewCollaborators
-				if len(m.repos) > 0 {
-					m.collaboratorsModel = collaborators.NewModel(m.repos)
-					return m, m.collaboratorsModel.Init()
-				}
-
-			case "8":
-				m.mode = ViewSecrets
-				if m.org != "" && len(m.repos) > 0 {
-					m.secretsModel = secrets.NewModel(m.org, m.repos)
-					return m, m.secretsModel.Init()
-				}
-
-			case "9":
-				m.mode = ViewReleases
-				if len(m.repos) > 0 {
-					m.releasesModel = releases.NewModel(m.repos)
-					return m, m.releasesModel.Init()
-				}
-
-			case "o":
-				m.mode = ViewOrphans
-				namespace := m.org
-				if namespace == "" {
-					namespace = ""
-				}
-				m.orphansModel = orphanstui.NewModel(namespace, orphans.DefaultScanOptions())
-
-				return m, m.orphansModel.Init()
-			}
-		} else {
-			// Handle back navigation
-			if msg.String() == "esc" {
-				m.mode = ViewHome
-				return m, nil
-			}
-
-			return m.updateActive(msg)
+			return m.updateHome(msg)
 		}
 
-		return m, nil
+		// Handle back navigation
+		if msg.String() == "esc" {
+			m.mode = ViewHome
+			return m, nil
+		}
+
+		return m.updateActive(msg)
 	}
 
 	// Forward async messages (e.g. component load results) to the active sub-model.
 	if m.mode != ViewHome {
 		return m.updateActive(msg)
+	}
+
+	return m, nil
+}
+
+// buildMenuItems returns the full home menu, marking items whose repo/org
+// preconditions aren't met as disabled.
+func (m MainModel) buildMenuItems() []menuItem {
+	hasRepo := m.repo != ""
+	hasRepos := len(m.repos) > 0
+	hasOrgAndRepos := m.org != "" && hasRepos
+
+	return []menuItem{
+		{key: "0", icon: "👁️ ", label: "Watch Status", desc: "Audit and manage repo watching", section: "Namespace Audit", view: ViewWatching, enabled: true},
+		{key: "o", icon: "🌿", label: "Orphan Branches", desc: "Detect and clean up orphaned branches", section: "Namespace Audit", view: ViewOrphans, enabled: true},
+		{key: "1", icon: "🌳", label: "Branch Management", desc: "Interactive branch operations", section: "Phase 1: Core Management", view: ViewBranches, enabled: hasRepo},
+		{key: "2", icon: "🛡️ ", label: "Branch Protection", desc: "Compare and sync protection rules", section: "Phase 1: Core Management", view: ViewProtection, enabled: hasRepos},
+		{key: "3", icon: "💬", label: "PR Comments", desc: "Review unresolved comments", section: "Phase 1: Core Management", view: ViewComments, enabled: hasRepo},
+		{key: "4", icon: "📊", label: "Analytics", desc: "CI/CD and repository statistics", section: "Phase 1: Core Management", view: ViewAnalytics, enabled: hasRepo},
+		{key: "p", icon: "⏱️ ", label: "GHA Performance", desc: "Workflow timing analysis", section: "Phase 1: Core Management", view: ViewGHAPerf, enabled: hasRepo},
+		{key: "5", icon: "⚙️ ", label: "Settings Comparison", desc: "Cross-repo settings diff", section: "Phase 2: Analytics & Settings", view: ViewSettings, enabled: hasRepos},
+		{key: "6", icon: "🔔", label: "Webhooks", desc: "Webhook health monitoring", section: "Phase 2: Analytics & Settings", view: ViewWebhooks, enabled: hasRepos},
+		{key: "7", icon: "👥", label: "Collaborators", desc: "Manage repository access", section: "Phase 3: Access & Releases", view: ViewCollaborators, enabled: hasRepos},
+		{key: "8", icon: "🔐", label: "Secrets Audit", desc: "Review secrets usage (read-only)", section: "Phase 3: Access & Releases", view: ViewSecrets, enabled: hasOrgAndRepos},
+		{key: "9", icon: "📦", label: "Releases", desc: "Release version overview", section: "Phase 3: Access & Releases", view: ViewReleases, enabled: hasRepos},
+	}
+}
+
+// fuzzyMatch reports whether query's characters appear in target, in order,
+// case-insensitively (a subsequence match, as in fzf-style pickers).
+func fuzzyMatch(query, target string) bool {
+	if query == "" {
+		return true
+	}
+
+	query = strings.ToLower(query)
+	target = strings.ToLower(target)
+
+	qi := 0
+	for i := 0; i < len(target) && qi < len(query); i++ {
+		if target[i] == query[qi] {
+			qi++
+		}
+	}
+
+	return qi == len(query)
+}
+
+func (m MainModel) filteredMenuItems() []menuItem {
+	items := m.buildMenuItems()
+	if m.menuFilter == "" {
+		return items
+	}
+
+	filtered := make([]menuItem, 0, len(items))
+	for _, item := range items {
+		if fuzzyMatch(m.menuFilter, item.label) || fuzzyMatch(m.menuFilter, item.key) {
+			filtered = append(filtered, item)
+		}
+	}
+
+	return filtered
+}
+
+func (m *MainModel) moveMenuCursor(delta int) {
+	items := m.filteredMenuItems()
+	if len(items) == 0 {
+		m.menuCursor = 0
+		return
+	}
+
+	m.menuCursor += delta
+
+	if m.menuCursor < 0 {
+		m.menuCursor = 0
+	}
+	if m.menuCursor > len(items)-1 {
+		m.menuCursor = len(items) - 1
+	}
+}
+
+func (m MainModel) menuItemIndexForKey(key string) int {
+	items := m.filteredMenuItems()
+	for i, item := range items {
+		if item.key == key {
+			return i
+		}
+	}
+
+	return -1
+}
+
+// updateHome handles key presses while the home menu list is shown, both in
+// normal navigation mode (j/k, arrows, direct shortcuts) and while typing a
+// fuzzy filter (entered with "/").
+func (m MainModel) updateHome(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	key := msg.String()
+
+	if m.menuFiltering {
+		switch key {
+		case "ctrl+c":
+			return m, tea.Quit
+
+		case "esc":
+			m.menuFiltering = false
+			m.menuFilter = ""
+			m.menuCursor = 0
+
+		case "enter":
+			m.menuFiltering = false
+			return m.activateSelected()
+
+		case "backspace":
+			if len(m.menuFilter) > 0 {
+				runes := []rune(m.menuFilter)
+				m.menuFilter = string(runes[:len(runes)-1])
+				m.menuCursor = 0
+			}
+
+		case "up", "ctrl+p":
+			m.moveMenuCursor(-1)
+
+		case "down", "ctrl+n":
+			m.moveMenuCursor(1)
+
+		default:
+			if runes := []rune(key); len(runes) == 1 {
+				m.menuFilter += key
+				m.menuCursor = 0
+			}
+		}
+
+		return m, nil
+	}
+
+	switch key {
+	case "ctrl+c", "q":
+		return m, tea.Quit
+
+	case "/":
+		m.menuFiltering = true
+		m.menuFilter = ""
+		m.menuCursor = 0
+
+	case "up", "k":
+		m.moveMenuCursor(-1)
+
+	case "down", "j":
+		m.moveMenuCursor(1)
+
+	case "enter":
+		return m.activateSelected()
+
+	default:
+		if idx := m.menuItemIndexForKey(key); idx >= 0 {
+			m.menuCursor = idx
+			return m.activateSelected()
+		}
+	}
+
+	return m, nil
+}
+
+func (m MainModel) activateSelected() (tea.Model, tea.Cmd) {
+	items := m.filteredMenuItems()
+	if m.menuCursor < 0 || m.menuCursor >= len(items) {
+		return m, nil
+	}
+
+	item := items[m.menuCursor]
+
+	m.menuFilter = ""
+	m.menuFiltering = false
+	m.menuCursor = 0
+
+	return m.activateItem(item)
+}
+
+// activateItem switches to the view backing item and initializes its
+// sub-model, mirroring each view's repo/repos/org precondition.
+func (m MainModel) activateItem(item menuItem) (tea.Model, tea.Cmd) {
+	m.mode = item.view
+
+	switch item.view {
+	case ViewWatching:
+		m.watchingModel = watching.NewModel()
+		return m, m.watchingModel.Init()
+
+	case ViewBranches:
+		if m.repo != "" {
+			m.branchesModel = branches.NewModel(m.repo, "")
+			return m, m.branchesModel.Init()
+		}
+
+	case ViewProtection:
+		if len(m.repos) > 0 {
+			m.protectionModel = protection.NewModel(m.repos, m.baseline)
+			return m, m.protectionModel.Init()
+		}
+
+	case ViewComments:
+		if m.repo != "" {
+			m.commentsModel = comments.NewModel(m.repo)
+			return m, m.commentsModel.Init()
+		}
+
+	case ViewAnalytics:
+		if m.repo != "" {
+			m.analyticsModel = analytics.NewModel(m.repo)
+			return m, m.analyticsModel.Init()
+		}
+
+	case ViewGHAPerf:
+		if m.repo != "" {
+			m.ghaPerfModel = ghaperf.NewModel(m.repo)
+			return m, m.ghaPerfModel.Init()
+		}
+
+	case ViewSettings:
+		if len(m.repos) > 0 {
+			m.settingsModel = settings.NewModel(m.repos, m.baseline)
+			return m, m.settingsModel.Init()
+		}
+
+	case ViewWebhooks:
+		if len(m.repos) > 0 {
+			m.webhooksModel = webhooks.NewModel(m.repos)
+			return m, m.webhooksModel.Init()
+		}
+
+	case ViewCollaborators:
+		if len(m.repos) > 0 {
+			m.collaboratorsModel = collaborators.NewModel(m.repos)
+			return m, m.collaboratorsModel.Init()
+		}
+
+	case ViewSecrets:
+		if m.org != "" && len(m.repos) > 0 {
+			m.secretsModel = secrets.NewModel(m.org, m.repos)
+			return m, m.secretsModel.Init()
+		}
+
+	case ViewReleases:
+		if len(m.repos) > 0 {
+			m.releasesModel = releases.NewModel(m.repos)
+			return m, m.releasesModel.Init()
+		}
+
+	case ViewOrphans:
+		m.orphansModel = orphanstui.NewModel(m.org, orphans.DefaultScanOptions())
+		return m, m.orphansModel.Init()
 	}
 
 	return m, nil
@@ -326,12 +504,24 @@ func (m MainModel) renderHome() string {
 
 	sectionStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(theme.Current().Warning).
-		Padding(0, 0)
+		Foreground(theme.Current().Warning)
 
 	menuItemStyle := lipgloss.NewStyle().
-		Foreground(theme.Current().Text).
-		Padding(0, 2)
+		Foreground(theme.Current().Text)
+
+	selectedStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(theme.Current().Warning)
+
+	disabledStyle := lipgloss.NewStyle().
+		Foreground(theme.Current().Muted)
+
+	descStyle := lipgloss.NewStyle().
+		Foreground(theme.Current().Muted)
+
+	filterStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(theme.Current().Accent)
 
 	helpStyle := lipgloss.NewStyle().
 		Foreground(theme.Current().Muted)
@@ -339,47 +529,55 @@ func (m MainModel) renderHome() string {
 	content := titleStyle.Render("🧹 gh-sweep") + "\n"
 	content += titleStyle.Render("GitHub Repository Management TUI") + "\n\n"
 
-	// Namespace Audit
-	content += sectionStyle.Render("Namespace Audit") + "\n"
-	content += menuItemStyle.Render("[0] 👁️  Watch Status")
-	content += " - Audit and manage repo watching\n"
-	content += menuItemStyle.Render("[o] 🌿 Orphan Branches")
-	content += " - Detect and clean up orphaned branches\n\n"
-
-	// Phase 1: Core Management
-	content += sectionStyle.Render("Phase 1: Core Management") + "\n"
-	content += menuItemStyle.Render("[1] 🌳 Branch Management")
-	content += " - Interactive branch operations\n"
-	content += menuItemStyle.Render("[2] 🛡️  Branch Protection")
-	content += " - Compare and sync protection rules\n"
-	content += menuItemStyle.Render("[3] 💬 PR Comments")
-	content += " - Review unresolved comments\n"
-	content += menuItemStyle.Render("[4] 📊 Analytics")
-	content += " - CI/CD and repository statistics\n"
-	content += menuItemStyle.Render("[p] ⏱️  GHA Performance")
-	content += " - Workflow timing analysis\n\n"
-
-	// Phase 2: Analytics & Settings
-	content += sectionStyle.Render("Phase 2: Analytics & Settings") + "\n"
-	content += menuItemStyle.Render("[5] ⚙️  Settings Comparison")
-	content += " - Cross-repo settings diff\n"
-	content += menuItemStyle.Render("[6] 🔔 Webhooks")
-	content += " - Webhook health monitoring\n\n"
-
-	// Phase 3: Access & Releases
-	content += sectionStyle.Render("Phase 3: Access & Releases") + "\n"
-	content += menuItemStyle.Render("[7] 👥 Collaborators")
-	content += " - Manage repository access\n"
-	content += menuItemStyle.Render("[8] 🔐 Secrets Audit")
-	content += " - Review secrets usage (read-only)\n"
-	content += menuItemStyle.Render("[9] 📦 Releases")
-	content += " - Release version overview\n\n"
-
-	if m.repo == "" && len(m.repos) == 0 {
-		content += helpStyle.Render("💡 Configure with --repo flag or .gh-sweep.yaml\n\n")
+	if m.menuFiltering || m.menuFilter != "" {
+		content += filterStyle.Render("/ "+m.menuFilter) + "\n\n"
 	}
 
-	content += helpStyle.Render("Press 0-9/o/p to select a view | q to quit")
+	items := m.filteredMenuItems()
+	if len(items) == 0 {
+		content += helpStyle.Render("No views match filter") + "\n"
+	} else {
+		currentSection := ""
+		for i, item := range items {
+			if item.section != currentSection {
+				currentSection = item.section
+				content += "\n" + sectionStyle.Render(currentSection) + "\n"
+			}
+
+			cursor := "  "
+			if i == m.menuCursor {
+				cursor = "> "
+			}
+
+			label := fmt.Sprintf("[%s] %s %s", item.key, item.icon, item.label)
+
+			lineStyle := menuItemStyle
+			switch {
+			case i == m.menuCursor:
+				lineStyle = selectedStyle
+			case !item.enabled:
+				lineStyle = disabledStyle
+			}
+
+			content += lineStyle.Render(cursor + label)
+			content += descStyle.Render(" - " + item.desc)
+			if !item.enabled {
+				content += descStyle.Render(" (unavailable)")
+			}
+			content += "\n"
+		}
+		content += "\n"
+	}
+
+	if m.repo == "" && len(m.repos) == 0 {
+		content += helpStyle.Render("💡 Configure with --repo flag or .gh-sweep.yaml") + "\n\n"
+	}
+
+	if m.menuFiltering {
+		content += helpStyle.Render("↑/↓ or ctrl+p/n: move | enter: select | esc: clear filter")
+	} else {
+		content += helpStyle.Render("j/k or ↑/↓: move | enter: select | /: filter | 0-9/o/p: quick jump | q: quit")
+	}
 
 	return content
 }

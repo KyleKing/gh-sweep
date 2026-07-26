@@ -54,8 +54,9 @@ func NewModel(namespace string, options orphans.ScanOptions) Model {
 }
 
 type scanCompleteMsg struct {
-	result *orphans.NamespaceScanResult
-	err    error
+	namespace string
+	result    *orphans.NamespaceScanResult
+	err       error
 }
 
 type scanProgressMsg struct {
@@ -81,10 +82,18 @@ func (m Model) startScan() tea.Msg {
 		return scanCompleteMsg{err: fmt.Errorf("failed to create GitHub client: %w", err)}
 	}
 
-	scanner := orphans.NewNamespaceScanner(client, m.options)
-	result, err := scanner.ScanNamespace(ctx, m.namespace)
+	namespace := m.namespace
+	if namespace == "" {
+		namespace, err = client.GetAuthenticatedUser()
+		if err != nil {
+			return scanCompleteMsg{err: fmt.Errorf("failed to get authenticated user: %w", err)}
+		}
+	}
 
-	return scanCompleteMsg{result: result, err: err}
+	scanner := orphans.NewNamespaceScanner(client, m.options)
+	result, err := scanner.ScanNamespace(ctx, namespace)
+
+	return scanCompleteMsg{namespace: namespace, result: result, err: err}
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
@@ -97,6 +106,9 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 	case scanCompleteMsg:
 		m.loading = false
+		if msg.namespace != "" {
+			m.namespace = msg.namespace
+		}
 		m.result = msg.result
 		m.err = msg.err
 
