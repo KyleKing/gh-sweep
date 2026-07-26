@@ -165,7 +165,7 @@ func (m Model) View() string {
 	b.WriteString("\n\n")
 
 	if m.baseline != "" {
-		b.WriteString(fmt.Sprintf("Baseline: %s\n\n", m.baseline))
+		fmt.Fprintf(&b, "Baseline: %s\n\n", m.baseline)
 	}
 
 	// View mode tabs
@@ -218,7 +218,7 @@ func (m Model) renderOverview() string {
 
 		settings := m.settings[repo]
 		if settings == nil {
-			b.WriteString(fmt.Sprintf("%s %s: No settings loaded\n", cursor, repo))
+			fmt.Fprintf(&b, "%s %s: No settings loaded\n", cursor, repo)
 			continue
 		}
 
@@ -252,7 +252,7 @@ func (m Model) renderDiff() string {
 	b.WriteString("⚠️  Differences from Baseline\n\n")
 
 	for repo, diffs := range m.diffs {
-		b.WriteString(fmt.Sprintf("📦 %s:\n", repo))
+		fmt.Fprintf(&b, "📦 %s:\n", repo)
 		for _, diff := range diffs {
 			severityColor := theme.Current().Warning
 			switch diff.Severity {

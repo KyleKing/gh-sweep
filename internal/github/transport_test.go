@@ -37,7 +37,10 @@ func TestNewClientWithTransportServesFakes(t *testing.T) {
 	t.Parallel()
 
 	var paths []string
-	client, err := NewClientWithTransport(context.Background(), recordingTransport(`{"login":"tester"}`, &paths))
+	client, err := NewClientWithTransport(
+		context.Background(),
+		recordingTransport(`{"login":"tester"}`, &paths),
+	)
 	if err != nil {
 		t.Fatalf("NewClientWithTransport() error = %v", err)
 	}
@@ -105,7 +108,11 @@ func TestSafetyTransportPanicsOnMutation(t *testing.T) {
 
 			guard := safetyTransport{base: recordingTransport(`{}`, nil)}
 			req, err := http.NewRequestWithContext(
-				context.Background(), method, "https://api.github.com/repos/acme/widgets/git/refs/heads/x", nil)
+				context.Background(),
+				method,
+				"https://api.github.com/repos/acme/widgets/git/refs/heads/x",
+				nil,
+			)
 			if err != nil {
 				t.Fatalf("NewRequestWithContext() error = %v", err)
 			}
@@ -116,7 +123,8 @@ func TestSafetyTransportPanicsOnMutation(t *testing.T) {
 				}
 			}()
 
-			resp, err := guard.RoundTrip(req) //nolint:bodyclose // the guard panics before a response exists
+			//nolint:bodyclose // the guard panics before a response exists
+			resp, err := guard.RoundTrip(req)
 			t.Fatalf("RoundTrip returned without panic: resp=%v err=%v", resp, err)
 		})
 	}
@@ -126,7 +134,12 @@ func TestSafetyTransportAllowsReads(t *testing.T) {
 	t.Parallel()
 
 	guard := safetyTransport{base: recordingTransport(`{"ok":true}`, nil)}
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "https://api.github.com/user", nil)
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodGet,
+		"https://api.github.com/user",
+		nil,
+	)
 	if err != nil {
 		t.Fatalf("NewRequestWithContext() error = %v", err)
 	}

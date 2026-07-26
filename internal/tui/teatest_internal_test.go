@@ -55,13 +55,17 @@ func routeFakeGitHub(req *http.Request) (*http.Response, error) {
 	case strings.HasSuffix(path, "/releases"):
 		return jsonResponse(req, http.StatusOK, `[]`), nil
 	case path == "/graphql":
-		return jsonResponse(req, http.StatusOK, `{"data":{"viewer":{"login":"tester","repositories":{
+		return jsonResponse(
+			req,
+			http.StatusOK,
+			`{"data":{"viewer":{"login":"tester","repositories":{
 			"pageInfo":{"hasNextPage":false,"endCursor":""},
 			"nodes":[{"name":"widgets","nameWithOwner":"acme/widgets","owner":{"login":"acme"},
 				"isPrivate":false,"isArchived":false,"isFork":false,"viewerSubscription":"SUBSCRIBED",
 				"viewerCanSubscribe":true,"stargazerCount":0,"pushedAt":"2026-01-10T12:00:00Z",
 				"updatedAt":"2026-01-10T12:00:00Z","watchers":{"totalCount":1}}]
-		}}}}`), nil
+		}}}}`,
+		), nil
 	default:
 		return jsonResponse(req, http.StatusNotFound, `{"message":"Not Found"}`), nil
 	}
@@ -101,7 +105,8 @@ func TestTUIBootAndQuit(t *testing.T) {
 	tm := teatest.NewTestModel(t, newTeatestModel(), teatest.WithInitialTermSize(120, 40))
 
 	teatest.WaitFor(t, tm.Output(), func(bts []byte) bool {
-		return bytes.Contains(bts, []byte("gh-sweep")) && bytes.Contains(bts, []byte("Namespace Audit"))
+		return bytes.Contains(bts, []byte("gh-sweep")) &&
+			bytes.Contains(bts, []byte("Namespace Audit"))
 	}, teatest.WithDuration(3*time.Second))
 
 	pressKey(tm, 'q')

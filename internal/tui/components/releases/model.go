@@ -286,12 +286,12 @@ func (m Model) renderAll() string {
 		var lineSb281 strings.Builder
 		for j, release := range releases {
 			if j >= 5 {
-				lineSb281.WriteString(fmt.Sprintf("   ... and %d more\n", len(releases)-5))
+				fmt.Fprintf(&lineSb281, "   ... and %d more\n", len(releases)-5)
 				break
 			}
-			lineSb281.WriteString(fmt.Sprintf("   - %s (%s)\n",
+			fmt.Fprintf(&lineSb281, "   - %s (%s)\n",
 				release.TagName,
-				release.PublishedAt.Format("2006-01-02")))
+				release.PublishedAt.Format("2006-01-02"))
 		}
 		line += lineSb281.String()
 
@@ -345,7 +345,7 @@ func (m Model) renderOutdated() string {
 	if outdatedCount == 0 {
 		b.WriteString("✅ All repositories have recent releases!\n")
 	} else {
-		b.WriteString(fmt.Sprintf("\nFound %d repositories with outdated releases.\n", outdatedCount))
+		fmt.Fprintf(&b, "\nFound %d repositories with outdated releases.\n", outdatedCount)
 	}
 
 	return b.String()

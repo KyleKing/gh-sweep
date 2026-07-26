@@ -16,11 +16,19 @@ func loadedWebhooksModel() Model {
 	m, _ = m.Update(webhooksLoadedMsg{
 		webhooks: map[string][]github.Webhook{
 			"acme/widgets": {
-				{ID: 7, Repository: "acme/widgets", URL: "https://ci.example.com/hook", Events: []string{"push", "pull_request"}, Active: true},
+				{
+					ID:         7,
+					Repository: "acme/widgets",
+					URL:        "https://ci.example.com/hook",
+					Events:     []string{"push", "pull_request"},
+					Active:     true,
+				},
 			},
 		},
 		health: map[string]map[int]github.WebhookHealth{
-			"acme/widgets": {7: {WebhookID: 7, SuccessRate: 0.95, TotalDeliveries: 20, Failures: 1}},
+			"acme/widgets": {
+				7: {WebhookID: 7, SuccessRate: 0.95, TotalDeliveries: 20, Failures: 1},
+			},
 		},
 	})
 

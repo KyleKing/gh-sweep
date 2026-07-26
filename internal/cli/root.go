@@ -28,7 +28,12 @@ It provides interactive tools for:
 Use 'gh-sweep <command> --help' for more information about a command.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg := loadConfig()
-		opts := resolveMainOptions(cfg, stringFlag(cmd, "repo"), stringFlag(cmd, "org"), stringSliceFlag(cmd, "repos"))
+		opts := resolveMainOptions(
+			cfg,
+			stringFlag(cmd, "repo"),
+			stringFlag(cmd, "org"),
+			stringSliceFlag(cmd, "repos"),
+		)
 
 		theme.Init(theme.Detect())
 
@@ -82,6 +87,8 @@ func Execute(version string) {
 
 func init() {
 	rootCmd.Flags().String("repo", "", "Repository (owner/repo)")
-	rootCmd.PersistentFlags().String("org", "", "GitHub organization (overrides config default_org)")
-	rootCmd.PersistentFlags().StringSlice("repos", nil, "Repositories to manage, owner/repo (overrides config repositories)")
+	rootCmd.PersistentFlags().
+		String("org", "", "GitHub organization (overrides config default_org)")
+	rootCmd.PersistentFlags().
+		StringSlice("repos", nil, "Repositories to manage, owner/repo (overrides config repositories)")
 }

@@ -51,7 +51,8 @@ func init() {
 	commentsCmd.Flags().Bool("list", false, "CLI list mode (no TUI)")
 	commentsCmd.Flags().String("author", "", "Filter by comment author")
 	commentsCmd.Flags().String("since", "", "Filter by activity date (YYYY-MM-DD)")
-	commentsCmd.Flags().String("search", "", "Case-insensitive substring search in path or comment text")
+	commentsCmd.Flags().
+		String("search", "", "Case-insensitive substring search in path or comment text")
 }
 
 type commentsProgram struct {
@@ -124,7 +125,13 @@ func runComments(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	threads, err := gql.ListRepoReviewThreads(client, owner, name, prNumber, github.DefaultOpenPRCap)
+	threads, err := gql.ListRepoReviewThreads(
+		client,
+		owner,
+		name,
+		prNumber,
+		github.DefaultOpenPRCap,
+	)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
@@ -173,7 +180,12 @@ func printThreads(repo string, threads []github.ReviewThread) {
 		fmt.Printf("  %s%s\n", thread.Path, outdated)
 
 		if first, ok := thread.FirstComment(); ok {
-			fmt.Printf("    @%s (%s): %s\n", first.Author, first.CreatedAt.Format("2006-01-02"), summarize(first.Body))
+			fmt.Printf(
+				"    @%s (%s): %s\n",
+				first.Author,
+				first.CreatedAt.Format("2006-01-02"),
+				summarize(first.Body),
+			)
 			if replies := len(thread.Comments) - 1; replies > 0 {
 				fmt.Printf("    %d replies\n", replies)
 			}

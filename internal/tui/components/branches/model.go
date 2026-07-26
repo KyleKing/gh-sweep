@@ -324,7 +324,11 @@ func (m Model) View() string {
 
 	b.WriteString("\n")
 	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
-	b.WriteString(helpStyle.Render("j/k: navigate | space: select | a/n: all/none | d: delete | r: refresh | q: quit"))
+	b.WriteString(
+		helpStyle.Render(
+			"j/k: navigate | space: select | a/n: all/none | d: delete | r: refresh | q: quit",
+		),
+	)
 
 	return b.String()
 }
@@ -340,7 +344,14 @@ func (m Model) renderBranchLine(b *strings.Builder, i int, branch github.BranchS
 		checkbox = "[x]"
 	}
 
-	line := fmt.Sprintf("%s %s %s ↑%d ↓%d", cursor, checkbox, branch.Name, branch.Ahead, branch.Behind)
+	line := fmt.Sprintf(
+		"%s %s %s ↑%d ↓%d",
+		cursor,
+		checkbox,
+		branch.Name,
+		branch.Ahead,
+		branch.Behind,
+	)
 
 	if m.cursor == i {
 		selectedStyle := lipgloss.NewStyle().

@@ -226,14 +226,14 @@ func (m Model) View() string {
 func (m Model) renderOrgSecrets() string {
 	var b strings.Builder
 
-	b.WriteString(fmt.Sprintf("🏢 Organization Secrets: %s\n\n", m.org))
+	fmt.Fprintf(&b, "🏢 Organization Secrets: %s\n\n", m.org)
 
 	if len(m.orgSecrets) == 0 {
 		b.WriteString("No organization secrets found.\n")
 		return b.String()
 	}
 
-	b.WriteString(fmt.Sprintf("Total: %d secrets\n\n", len(m.orgSecrets)))
+	fmt.Fprintf(&b, "Total: %d secrets\n\n", len(m.orgSecrets))
 
 	for i, secret := range m.orgSecrets {
 		if i >= m.height-10 {
@@ -293,10 +293,10 @@ func (m Model) renderRepoSecrets() string {
 		var lineSb288 strings.Builder
 		for j, secret := range secrets {
 			if j >= 3 {
-				lineSb288.WriteString(fmt.Sprintf("   ... and %d more\n", len(secrets)-3))
+				fmt.Fprintf(&lineSb288, "   ... and %d more\n", len(secrets)-3)
 				break
 			}
-			lineSb288.WriteString(fmt.Sprintf("   - %s\n", secret.Name))
+			fmt.Fprintf(&lineSb288, "   - %s\n", secret.Name)
 		}
 		line += lineSb288.String()
 

@@ -102,11 +102,36 @@ func TestDetectFlakyTests(t *testing.T) {
 		{
 			name: "intermittent failures",
 			runs: []TestRun{
-				{Name: "TestBar", Status: "success", CommitSHA: "a", Timestamp: now.Add(-5 * time.Hour)},
-				{Name: "TestBar", Status: "failure", CommitSHA: "b", Timestamp: now.Add(-4 * time.Hour)},
-				{Name: "TestBar", Status: "success", CommitSHA: "c", Timestamp: now.Add(-3 * time.Hour)},
-				{Name: "TestBar", Status: "failure", CommitSHA: "d", Timestamp: now.Add(-2 * time.Hour)},
-				{Name: "TestBar", Status: "success", CommitSHA: "e", Timestamp: now.Add(-1 * time.Hour)},
+				{
+					Name:      "TestBar",
+					Status:    "success",
+					CommitSHA: "a",
+					Timestamp: now.Add(-5 * time.Hour),
+				},
+				{
+					Name:      "TestBar",
+					Status:    "failure",
+					CommitSHA: "b",
+					Timestamp: now.Add(-4 * time.Hour),
+				},
+				{
+					Name:      "TestBar",
+					Status:    "success",
+					CommitSHA: "c",
+					Timestamp: now.Add(-3 * time.Hour),
+				},
+				{
+					Name:      "TestBar",
+					Status:    "failure",
+					CommitSHA: "d",
+					Timestamp: now.Add(-2 * time.Hour),
+				},
+				{
+					Name:      "TestBar",
+					Status:    "success",
+					CommitSHA: "e",
+					Timestamp: now.Add(-1 * time.Hour),
+				},
 			},
 			config:          DefaultFlakyConfig(),
 			expectFlaky:     true,
@@ -115,9 +140,24 @@ func TestDetectFlakyTests(t *testing.T) {
 		{
 			name: "consistent failure",
 			runs: []TestRun{
-				{Name: "TestBaz", Status: "failure", CommitSHA: "a", Timestamp: now.Add(-3 * time.Hour)},
-				{Name: "TestBaz", Status: "failure", CommitSHA: "b", Timestamp: now.Add(-2 * time.Hour)},
-				{Name: "TestBaz", Status: "failure", CommitSHA: "c", Timestamp: now.Add(-1 * time.Hour)},
+				{
+					Name:      "TestBaz",
+					Status:    "failure",
+					CommitSHA: "a",
+					Timestamp: now.Add(-3 * time.Hour),
+				},
+				{
+					Name:      "TestBaz",
+					Status:    "failure",
+					CommitSHA: "b",
+					Timestamp: now.Add(-2 * time.Hour),
+				},
+				{
+					Name:      "TestBaz",
+					Status:    "failure",
+					CommitSHA: "c",
+					Timestamp: now.Add(-1 * time.Hour),
+				},
 			},
 			config:      DefaultFlakyConfig(),
 			expectFlaky: false, // Too consistent, not flaky
@@ -125,8 +165,18 @@ func TestDetectFlakyTests(t *testing.T) {
 		{
 			name: "not enough flips",
 			runs: []TestRun{
-				{Name: "TestQux", Status: "success", CommitSHA: "a", Timestamp: now.Add(-2 * time.Hour)},
-				{Name: "TestQux", Status: "failure", CommitSHA: "b", Timestamp: now.Add(-1 * time.Hour)},
+				{
+					Name:      "TestQux",
+					Status:    "success",
+					CommitSHA: "a",
+					Timestamp: now.Add(-2 * time.Hour),
+				},
+				{
+					Name:      "TestQux",
+					Status:    "failure",
+					CommitSHA: "b",
+					Timestamp: now.Add(-1 * time.Hour),
+				},
 			},
 			config: FlakyDetectionConfig{
 				MinFlips:       2,

@@ -51,7 +51,10 @@ func (c *Client) GetAuthenticatedUser() (string, error) {
 	return response.Login, nil
 }
 
-func (c *Client) SetRepoSubscription(owner, repo string, subscribed, ignored bool) (*Subscription, error) {
+func (c *Client) SetRepoSubscription(
+	owner, repo string,
+	subscribed, ignored bool,
+) (*Subscription, error) {
 	path := fmt.Sprintf("repos/%s/%s/subscription", owner, repo)
 	body := map[string]bool{
 		"subscribed": subscribed,

@@ -339,7 +339,7 @@ func repoMetadata(repo github.RepoWatchInfo) string {
 	tags = append(tags,
 		fmt.Sprintf("stars %d", repo.StargazerCount),
 		fmt.Sprintf("watchers %d", repo.WatcherCount),
-		fmt.Sprintf("pushed %s", formatDate(repo.PushedAt)),
+		"pushed "+formatDate(repo.PushedAt),
 	)
 
 	return strings.Join(tags, " | ")
@@ -362,7 +362,7 @@ func (m Model) View() string {
 
 	b.WriteString(titleStyle.Render("Watch Status Audit"))
 	b.WriteString("\n")
-	b.WriteString(fmt.Sprintf("User: %s\n\n", m.username))
+	fmt.Fprintf(&b, "User: %s\n\n", m.username)
 
 	activeTab := lipgloss.NewStyle().
 		Bold(true).
@@ -371,7 +371,7 @@ func (m Model) View() string {
 	inactiveTab := lipgloss.NewStyle().
 		Foreground(theme.Current().Muted)
 
-	tab := func(label string, mode string) string {
+	tab := func(label, mode string) string {
 		if m.viewMode == mode {
 			return activeTab.Render(label)
 		}
@@ -440,9 +440,17 @@ func (m Model) View() string {
 
 	b.WriteString("\n")
 	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
-	b.WriteString(helpStyle.Render("j/k: navigate | space: select | w: watch all activity | u: unwatch (default) | i: ignore | 1/2/3/4: view mode | esc: back"))
+	b.WriteString(
+		helpStyle.Render(
+			"j/k: navigate | space: select | w: watch all activity | u: unwatch (default) | i: ignore | 1/2/3/4: view mode | esc: back",
+		),
+	)
 	b.WriteString("\n")
-	b.WriteString(helpStyle.Render("GitHub's API can't see or set \"Custom\" per-notification-type settings; manage those on github.com."))
+	b.WriteString(
+		helpStyle.Render(
+			"GitHub's API can't see or set \"Custom\" per-notification-type settings; manage those on github.com.",
+		),
+	)
 
 	return b.String()
 }

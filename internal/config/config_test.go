@@ -89,12 +89,20 @@ func TestLoadProjectOverridesHome(t *testing.T) {
 	homeDir := t.TempDir()
 
 	projectConfig := "default_org: project-org\n"
-	if err := os.WriteFile(filepath.Join(projectDir, ".gh-sweep.yaml"), []byte(projectConfig), 0o644); err != nil {
+	if err := os.WriteFile(
+		filepath.Join(projectDir, ".gh-sweep.yaml"),
+		[]byte(projectConfig),
+		0o644,
+	); err != nil {
 		t.Fatalf("Failed to write project config: %v", err)
 	}
 
 	homeConfig := "default_org: home-org\n"
-	if err := os.WriteFile(filepath.Join(homeDir, ".gh-sweep.yaml"), []byte(homeConfig), 0o644); err != nil {
+	if err := os.WriteFile(
+		filepath.Join(homeDir, ".gh-sweep.yaml"),
+		[]byte(homeConfig),
+		0o644,
+	); err != nil {
 		t.Fatalf("Failed to write home config: %v", err)
 	}
 
@@ -116,7 +124,11 @@ func TestLoadHomeFallback(t *testing.T) {
 	homeDir := t.TempDir()
 
 	homeConfig := "default_org: home-org\n"
-	if err := os.WriteFile(filepath.Join(homeDir, ".gh-sweep.yaml"), []byte(homeConfig), 0o644); err != nil {
+	if err := os.WriteFile(
+		filepath.Join(homeDir, ".gh-sweep.yaml"),
+		[]byte(homeConfig),
+		0o644,
+	); err != nil {
 		t.Fatalf("Failed to write home config: %v", err)
 	}
 
@@ -152,7 +164,10 @@ func TestExampleFileMatchesStruct(t *testing.T) {
 	}
 
 	if cfg.GHAPerf.DefaultLookbackDays != 30 {
-		t.Errorf("Expected gha_perf.default_lookback_days 30, got %d", cfg.GHAPerf.DefaultLookbackDays)
+		t.Errorf(
+			"Expected gha_perf.default_lookback_days 30, got %d",
+			cfg.GHAPerf.DefaultLookbackDays,
+		)
 	}
 
 	if cfg.Orphans.StaleDaysThreshold != 7 {

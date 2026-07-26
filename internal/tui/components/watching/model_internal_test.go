@@ -16,12 +16,20 @@ func loadedWatchingModel() Model {
 		username: "tester",
 		repos: []github.RepoWatchInfo{
 			{
-				RepoBasic: github.RepoBasic{Name: "widgets", FullName: "acme/widgets", Owner: "acme"},
-				State:     github.WatchStateSubscribed,
+				RepoBasic: github.RepoBasic{
+					Name:     "widgets",
+					FullName: "acme/widgets",
+					Owner:    "acme",
+				},
+				State: github.WatchStateSubscribed,
 			},
 			{
-				RepoBasic: github.RepoBasic{Name: "gadgets", FullName: "acme/gadgets", Owner: "acme"},
-				State:     github.WatchStateDefault,
+				RepoBasic: github.RepoBasic{
+					Name:     "gadgets",
+					FullName: "acme/gadgets",
+					Owner:    "acme",
+				},
+				State: github.WatchStateDefault,
 			},
 		},
 	})

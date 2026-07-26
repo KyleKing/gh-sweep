@@ -16,12 +16,27 @@ func loadedReleasesModel() Model {
 	m, _ = m.Update(releasesLoadedMsg{
 		releases: map[string][]github.Release{
 			"acme/widgets": {
-				{ID: 2, TagName: "v1.2.0", Author: "alice", PublishedAt: time.Now().Add(-48 * time.Hour)},
-				{ID: 1, TagName: "v1.1.0", Author: "alice", PublishedAt: time.Now().Add(-30 * 24 * time.Hour)},
+				{
+					ID:          2,
+					TagName:     "v1.2.0",
+					Author:      "alice",
+					PublishedAt: time.Now().Add(-48 * time.Hour),
+				},
+				{
+					ID:          1,
+					TagName:     "v1.1.0",
+					Author:      "alice",
+					PublishedAt: time.Now().Add(-30 * 24 * time.Hour),
+				},
 			},
 		},
 		latest: map[string]*github.Release{
-			"acme/widgets": {ID: 2, TagName: "v1.2.0", Author: "alice", PublishedAt: time.Now().Add(-48 * time.Hour)},
+			"acme/widgets": {
+				ID:          2,
+				TagName:     "v1.2.0",
+				Author:      "alice",
+				PublishedAt: time.Now().Add(-48 * time.Hour),
+			},
 		},
 	})
 

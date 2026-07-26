@@ -37,7 +37,8 @@ func init() {
 	rootCmd.AddCommand(branchesCmd)
 
 	branchesCmd.Flags().String("repo", "", "Repository (owner/repo)")
-	branchesCmd.Flags().String("base", "", "Base branch for ahead/behind comparison (default: repository default branch)")
+	branchesCmd.Flags().
+		String("base", "", "Base branch for ahead/behind comparison (default: repository default branch)")
 	branchesCmd.Flags().Bool("list", false, "CLI list mode (no TUI)")
 }
 

@@ -53,7 +53,8 @@ func init() {
 	orphansCmd.Flags().Bool("list", false, "CLI list mode (no TUI)")
 	orphansCmd.Flags().Bool("cleanup", false, "Delete orphaned branches")
 	orphansCmd.Flags().Bool("dry-run", false, "Preview deletions without executing")
-	orphansCmd.Flags().Int("stale-days", 7, "Days of inactivity before a branch is considered stale")
+	orphansCmd.Flags().
+		Int("stale-days", 7, "Days of inactivity before a branch is considered stale")
 	orphansCmd.Flags().Bool("include-recent", false, "Include recent branches without PRs")
 	orphansCmd.Flags().StringSlice("exclude", nil, "Branch patterns to exclude")
 	orphansCmd.Flags().StringP("output", "o", "", "Output file path")
@@ -165,7 +166,12 @@ func runOrphans(cmd *cobra.Command, args []string) {
 	printTable(result)
 }
 
-func runCleanup(ctx context.Context, client *github.Client, result *orphans.NamespaceScanResult, dryRun bool) {
+func runCleanup(
+	ctx context.Context,
+	client *github.Client,
+	result *orphans.NamespaceScanResult,
+	dryRun bool,
+) {
 	allOrphans := result.AllOrphans()
 
 	if len(allOrphans) == 0 {
@@ -245,17 +251,21 @@ func outputResult(result *orphans.NamespaceScanResult, outputPath, format string
 func formatMarkdown(result *orphans.NamespaceScanResult) string {
 	var b strings.Builder
 
-	b.WriteString(fmt.Sprintf("# Orphaned Branches Report: %s\n\n", result.Namespace))
-	b.WriteString(fmt.Sprintf("**Total Repositories:** %d\n", result.TotalRepos))
-	b.WriteString(fmt.Sprintf("**Total Orphaned Branches:** %d\n\n", result.TotalOrphans))
+	fmt.Fprintf(&b, "# Orphaned Branches Report: %s\n\n", result.Namespace)
+	fmt.Fprintf(&b, "**Total Repositories:** %d\n", result.TotalRepos)
+	fmt.Fprintf(&b, "**Total Orphaned Branches:** %d\n\n", result.TotalOrphans)
 
 	b.WriteString("## Summary by Type\n\n")
 	b.WriteString("| Type | Count |\n")
 	b.WriteString("|------|-------|\n")
-	b.WriteString(fmt.Sprintf("| Merged PR | %d |\n", len(result.OrphansByType(orphans.OrphanTypeMergedPR))))
-	b.WriteString(fmt.Sprintf("| Closed PR | %d |\n", len(result.OrphansByType(orphans.OrphanTypeClosedPR))))
-	b.WriteString(fmt.Sprintf("| Stale | %d |\n", len(result.OrphansByType(orphans.OrphanTypeStale))))
-	b.WriteString(fmt.Sprintf("| Recent (no PR) | %d |\n\n", len(result.OrphansByType(orphans.OrphanTypeRecentNoPR))))
+	fmt.Fprintf(&b, "| Merged PR | %d |\n", len(result.OrphansByType(orphans.OrphanTypeMergedPR)))
+	fmt.Fprintf(&b, "| Closed PR | %d |\n", len(result.OrphansByType(orphans.OrphanTypeClosedPR)))
+	fmt.Fprintf(&b, "| Stale | %d |\n", len(result.OrphansByType(orphans.OrphanTypeStale)))
+	fmt.Fprintf(
+		&b,
+		"| Recent (no PR) | %d |\n\n",
+		len(result.OrphansByType(orphans.OrphanTypeRecentNoPR)),
+	)
 
 	b.WriteString("## Orphaned Branches\n\n")
 	b.WriteString("| Repository | Branch | Type | Days Inactive | PR |\n")
@@ -266,9 +276,9 @@ func formatMarkdown(result *orphans.NamespaceScanResult) string {
 		if orphan.PRNumber != nil {
 			prInfo = fmt.Sprintf("#%d", *orphan.PRNumber)
 		}
-		b.WriteString(fmt.Sprintf("| %s | %s | %s | %d | %s |\n",
+		fmt.Fprintf(&b, "| %s | %s | %s | %d | %s |\n",
 			orphan.Repository, orphan.BranchName, orphan.Type.Label(),
-			orphan.DaysSinceActivity, prInfo))
+			orphan.DaysSinceActivity, prInfo)
 	}
 
 	return b.String()
@@ -294,7 +304,11 @@ func printTableTo(b *strings.Builder, result *orphans.NamespaceScanResult) {
 	fmt.Fprintf(b, "  Merged PR:      %d\n", len(result.OrphansByType(orphans.OrphanTypeMergedPR)))
 	fmt.Fprintf(b, "  Closed PR:      %d\n", len(result.OrphansByType(orphans.OrphanTypeClosedPR)))
 	fmt.Fprintf(b, "  Stale:          %d\n", len(result.OrphansByType(orphans.OrphanTypeStale)))
-	fmt.Fprintf(b, "  Recent (no PR): %d\n\n", len(result.OrphansByType(orphans.OrphanTypeRecentNoPR)))
+	fmt.Fprintf(
+		b,
+		"  Recent (no PR): %d\n\n",
+		len(result.OrphansByType(orphans.OrphanTypeRecentNoPR)),
+	)
 
 	b.WriteString("Orphaned Branches:\n\n")
 
@@ -303,7 +317,12 @@ func printTableTo(b *strings.Builder, result *orphans.NamespaceScanResult) {
 			continue
 		}
 
-		fmt.Fprintf(b, "  %s (%d orphans)\n", scanResult.Repository.FullName, len(scanResult.Orphans))
+		fmt.Fprintf(
+			b,
+			"  %s (%d orphans)\n",
+			scanResult.Repository.FullName,
+			len(scanResult.Orphans),
+		)
 
 		for _, orphan := range scanResult.Orphans {
 			prInfo := ""

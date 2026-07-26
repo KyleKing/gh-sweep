@@ -8,7 +8,14 @@ import (
 func TestWorkflowRunsToTestRuns(t *testing.T) {
 	now := time.Now()
 	runs := []WorkflowRun{
-		{ID: 1, Name: "CI", Conclusion: "success", HeadSHA: "abc", CreatedAt: now, Duration: time.Minute},
+		{
+			ID:         1,
+			Name:       "CI",
+			Conclusion: "success",
+			HeadSHA:    "abc",
+			CreatedAt:  now,
+			Duration:   time.Minute,
+		},
 		{ID: 2, Name: "CI", Conclusion: "failure", HeadSHA: "abc", CreatedAt: now.Add(time.Hour)},
 		{ID: 3, Name: "Deploy", Conclusion: "skipped", HeadSHA: "def", CreatedAt: now},
 		{ID: 4, Name: "CI", Conclusion: "timed_out", HeadSHA: "def", CreatedAt: now},

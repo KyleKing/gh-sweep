@@ -176,12 +176,12 @@ func (m Model) View() string {
 			var lineSb172 strings.Builder
 			for j, webhook := range webhooks {
 				if j >= 3 {
-					lineSb172.WriteString(fmt.Sprintf("   ... and %d more\n", len(webhooks)-3))
+					fmt.Fprintf(&lineSb172, "   ... and %d more\n", len(webhooks)-3)
 					break
 				}
 
-				lineSb172.WriteString(fmt.Sprintf("   ID: %d | %s\n", webhook.ID, webhook.URL))
-				lineSb172.WriteString(fmt.Sprintf("   Events: %s\n", strings.Join(webhook.Events, ", ")))
+				fmt.Fprintf(&lineSb172, "   ID: %d | %s\n", webhook.ID, webhook.URL)
+				fmt.Fprintf(&lineSb172, "   Events: %s\n", strings.Join(webhook.Events, ", "))
 
 				// Add health metrics if available
 				if repoHealth, ok := m.health[repo]; ok {
@@ -194,10 +194,12 @@ func (m Model) View() string {
 						}
 
 						healthStyle := lipgloss.NewStyle().Foreground(statusColor)
-						healthLine := fmt.Sprintf("   Health: %.1f%% success | Avg: %dms | Total: %d\n",
+						healthLine := fmt.Sprintf(
+							"   Health: %.1f%% success | Avg: %dms | Total: %d\n",
 							health.SuccessRate,
 							health.AvgDuration,
-							health.TotalDeliveries)
+							health.TotalDeliveries,
+						)
 						lineSb172.WriteString(healthStyle.Render(healthLine))
 					}
 				}

@@ -39,7 +39,11 @@ func TestFormatBranchPR(t *testing.T) {
 	}{
 		{name: "no PR", pr: nil, want: "-"},
 		{name: "open PR", pr: &github.PullRequest{Number: 12, State: "open"}, want: "#12 (open)"},
-		{name: "closed PR", pr: &github.PullRequest{Number: 4, State: "closed"}, want: "#4 (closed)"},
+		{
+			name: "closed PR",
+			pr:   &github.PullRequest{Number: 4, State: "closed"},
+			want: "#4 (closed)",
+		},
 	}
 
 	for _, tt := range tests {

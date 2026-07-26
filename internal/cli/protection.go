@@ -41,7 +41,8 @@ Examples:
 func init() {
 	rootCmd.AddCommand(protectionCmd)
 
-	protectionCmd.Flags().StringSlice("repos", nil, "Comma-separated list of repos (owner/repo1,owner/repo2)")
+	protectionCmd.Flags().
+		StringSlice("repos", nil, "Comma-separated list of repos (owner/repo1,owner/repo2)")
 	protectionCmd.Flags().String("baseline", "", "Baseline repository to compare against")
 	protectionCmd.Flags().Bool("list", false, "CLI table mode (no TUI)")
 }
@@ -113,7 +114,11 @@ func fetchProtectionRules(client *github.Client, repos []string) map[string]*git
 	for _, repoStr := range repos {
 		parts := strings.SplitN(repoStr, "/", 2)
 		if len(parts) != 2 {
-			fmt.Fprintf(os.Stderr, "Warning: skipping invalid repo %q (expected owner/repo)\n", repoStr)
+			fmt.Fprintf(
+				os.Stderr,
+				"Warning: skipping invalid repo %q (expected owner/repo)\n",
+				repoStr,
+			)
 			continue
 		}
 
@@ -128,7 +133,11 @@ func fetchProtectionRules(client *github.Client, repos []string) map[string]*git
 	return rules
 }
 
-func formatProtectionTable(repos []string, rules map[string]*github.ProtectionRule, baseline string) string {
+func formatProtectionTable(
+	repos []string,
+	rules map[string]*github.ProtectionRule,
+	baseline string,
+) string {
 	var b strings.Builder
 
 	b.WriteString("Branch Protection Comparison\n")
@@ -138,7 +147,9 @@ func formatProtectionTable(repos []string, rules map[string]*github.ProtectionRu
 	b.WriteString("\n")
 
 	w := tabwriter.NewWriter(&b, 0, 4, 2, ' ', 0)
-	rows := []string{"REPO\tBRANCH\tREVIEWS\tCODEOWNERS\tADMINS\tLINEAR\tFORCE-PUSH\tDELETIONS\tSTATUS CHECKS"}
+	rows := []string{
+		"REPO\tBRANCH\tREVIEWS\tCODEOWNERS\tADMINS\tLINEAR\tFORCE-PUSH\tDELETIONS\tSTATUS CHECKS",
+	}
 
 	base := rules[baseline]
 	for _, repo := range repos {
@@ -166,13 +177,34 @@ func protectionRow(repo string, rule, base *github.ProtectionRule) string {
 	fields := []string{
 		repo,
 		rule.Branch,
-		markDrift(strconv.Itoa(rule.RequiredReviews), base != nil && rule.RequiredReviews != base.RequiredReviews),
-		markDrift(strconv.FormatBool(rule.RequireCodeOwnerReviews), base != nil && rule.RequireCodeOwnerReviews != base.RequireCodeOwnerReviews),
-		markDrift(strconv.FormatBool(rule.EnforceAdmins), base != nil && rule.EnforceAdmins != base.EnforceAdmins),
-		markDrift(strconv.FormatBool(rule.RequireLinearHistory), base != nil && rule.RequireLinearHistory != base.RequireLinearHistory),
-		markDrift(strconv.FormatBool(rule.AllowForcePushes), base != nil && rule.AllowForcePushes != base.AllowForcePushes),
-		markDrift(strconv.FormatBool(rule.AllowDeletions), base != nil && rule.AllowDeletions != base.AllowDeletions),
-		markDrift(formatChecks(rule.RequireStatusChecks), base != nil && !equalStringSets(rule.RequireStatusChecks, base.RequireStatusChecks)),
+		markDrift(
+			strconv.Itoa(rule.RequiredReviews),
+			base != nil && rule.RequiredReviews != base.RequiredReviews,
+		),
+		markDrift(
+			strconv.FormatBool(rule.RequireCodeOwnerReviews),
+			base != nil && rule.RequireCodeOwnerReviews != base.RequireCodeOwnerReviews,
+		),
+		markDrift(
+			strconv.FormatBool(rule.EnforceAdmins),
+			base != nil && rule.EnforceAdmins != base.EnforceAdmins,
+		),
+		markDrift(
+			strconv.FormatBool(rule.RequireLinearHistory),
+			base != nil && rule.RequireLinearHistory != base.RequireLinearHistory,
+		),
+		markDrift(
+			strconv.FormatBool(rule.AllowForcePushes),
+			base != nil && rule.AllowForcePushes != base.AllowForcePushes,
+		),
+		markDrift(
+			strconv.FormatBool(rule.AllowDeletions),
+			base != nil && rule.AllowDeletions != base.AllowDeletions,
+		),
+		markDrift(
+			formatChecks(rule.RequireStatusChecks),
+			base != nil && !equalStringSets(rule.RequireStatusChecks, base.RequireStatusChecks),
+		),
 	}
 
 	return strings.Join(fields, "\t")

@@ -57,12 +57,21 @@ func endpointFake() roundTripFunc {
 				 "published_at":"2025-11-02T12:00:00Z"}
 			]`), nil
 		case method == http.MethodGet && path == "/repos/acme/widgets/releases/latest":
-			return okJSON(req, `{"id":2,"tag_name":"v1.2.0","name":"v1.2.0","author":{"login":"alice"},
-				"published_at":"2026-01-10T12:00:00Z"}`), nil
+			return okJSON(
+				req,
+				`{"id":2,"tag_name":"v1.2.0","name":"v1.2.0","author":{"login":"alice"},
+				"published_at":"2026-01-10T12:00:00Z"}`,
+			), nil
 		case method == http.MethodGet && path == "/orgs/acme/actions/secrets":
-			return okJSON(req, `{"secrets":[{"name":"DEPLOY_KEY","created_at":"a","updated_at":"b"}]}`), nil
+			return okJSON(
+				req,
+				`{"secrets":[{"name":"DEPLOY_KEY","created_at":"a","updated_at":"b"}]}`,
+			), nil
 		case method == http.MethodGet && path == "/repos/acme/widgets/actions/secrets":
-			return okJSON(req, `{"secrets":[{"name":"CODECOV_TOKEN","created_at":"a","updated_at":"b"}]}`), nil
+			return okJSON(
+				req,
+				`{"secrets":[{"name":"CODECOV_TOKEN","created_at":"a","updated_at":"b"}]}`,
+			), nil
 		case method == http.MethodGet && path == "/repos/acme/widgets/branches/main/protection":
 			return okJSON(req, `{
 				"required_pull_request_reviews":{"required_approving_review_count":2,"require_code_owner_reviews":true},
@@ -94,16 +103,25 @@ func endpointFake() roundTripFunc {
 				return okJSON(req, `[]`), nil
 			}
 
-			return okJSON(req, `[{"name":"dotfiles","full_name":"tester/dotfiles","owner":{"login":"tester"},"default_branch":"main"}]`), nil
+			return okJSON(
+				req,
+				`[{"name":"dotfiles","full_name":"tester/dotfiles","owner":{"login":"tester"},"default_branch":"main"}]`,
+			), nil
 		case method == http.MethodGet && path == "/repos/acme/widgets/hooks":
-			return okJSON(req, `[{"id":7,"config":{"url":"https://ci.example.com/hook"},"events":["push"],"active":true}]`), nil
+			return okJSON(
+				req,
+				`[{"id":7,"config":{"url":"https://ci.example.com/hook"},"events":["push"],"active":true}]`,
+			), nil
 		case method == http.MethodGet && path == "/repos/acme/widgets/hooks/7/deliveries":
 			return okJSON(req, `[
 				{"id":1,"event":"push","status_code":200,"duration":100,"delivered_at":"2026-01-10T12:00:00Z"},
 				{"id":2,"event":"push","status_code":502,"duration":300,"delivered_at":"2026-01-11T12:00:00Z"}
 			]`), nil
 		case method == http.MethodGet && path == "/repos/acme/widgets/actions/workflows":
-			return okJSON(req, `{"workflows":[{"id":11,"name":"ci","path":".github/workflows/ci.yml","state":"active"}]}`), nil
+			return okJSON(
+				req,
+				`{"workflows":[{"id":11,"name":"ci","path":".github/workflows/ci.yml","state":"active"}]}`,
+			), nil
 		case method == http.MethodGet && path == "/repos/acme/widgets/actions/runs":
 			return okJSON(req, `{"workflow_runs":[
 				{"id":101,"name":"ci","status":"completed","conclusion":"success","head_branch":"main","head_sha":"abc123",
@@ -170,7 +188,9 @@ func TestListBranchStatuses(t *testing.T) {
 func TestCreatePullRequest(t *testing.T) {
 	t.Parallel()
 
-	number, err := newEndpointClient(t).CreatePullRequest("acme", "widgets", "title", "body", "feature", "main")
+	number, err := newEndpointClient(
+		t,
+	).CreatePullRequest("acme", "widgets", "title", "body", "feature", "main")
 	if err != nil {
 		t.Fatalf("CreatePullRequest() error = %v", err)
 	}
@@ -195,7 +215,12 @@ func TestListCollaborators(t *testing.T) {
 
 	for _, collaborator := range collaborators {
 		if want[collaborator.Login] != collaborator.Permission {
-			t.Errorf("%s permission = %q, want %q", collaborator.Login, collaborator.Permission, want[collaborator.Login])
+			t.Errorf(
+				"%s permission = %q, want %q",
+				collaborator.Login,
+				collaborator.Permission,
+				want[collaborator.Login],
+			)
 		}
 	}
 }
@@ -257,7 +282,8 @@ func TestListSecrets(t *testing.T) {
 		t.Fatalf("ListRepoSecrets() error = %v", err)
 	}
 
-	if len(repoSecrets) != 1 || repoSecrets[0].Name != "CODECOV_TOKEN" || repoSecrets[0].Scope != "repo" {
+	if len(repoSecrets) != 1 || repoSecrets[0].Name != "CODECOV_TOKEN" ||
+		repoSecrets[0].Scope != "repo" {
 		t.Errorf("repo secrets = %+v", repoSecrets)
 	}
 }
@@ -295,7 +321,8 @@ func TestGetDefaultBranchProtection(t *testing.T) {
 		t.Errorf("status checks = %v", rule.RequireStatusChecks)
 	}
 
-	if !rule.EnforceAdmins || !rule.RequireLinearHistory || rule.AllowForcePushes || rule.AllowDeletions {
+	if !rule.EnforceAdmins || !rule.RequireLinearHistory || rule.AllowForcePushes ||
+		rule.AllowDeletions {
 		t.Errorf("rule flags = %+v", rule)
 	}
 }
@@ -353,7 +380,8 @@ func TestListWebhooksAndDeliveries(t *testing.T) {
 		t.Fatalf("ListWebhooks() error = %v", err)
 	}
 
-	if len(webhooks) != 1 || webhooks[0].URL != "https://ci.example.com/hook" || !webhooks[0].Active {
+	if len(webhooks) != 1 || webhooks[0].URL != "https://ci.example.com/hook" ||
+		!webhooks[0].Active {
 		t.Errorf("webhooks = %+v", webhooks)
 	}
 

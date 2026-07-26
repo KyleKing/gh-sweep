@@ -224,7 +224,12 @@ func TestCompareProtectionRules(t *testing.T) {
 
 	rules := []*ProtectionRule{
 		{Repository: "acme/widgets", RequiredReviews: 2, EnforceAdmins: true},
-		{Repository: "acme/gadgets", RequiredReviews: 0, EnforceAdmins: true, RequireCodeOwnerReviews: true},
+		{
+			Repository:              "acme/gadgets",
+			RequiredReviews:         0,
+			EnforceAdmins:           true,
+			RequireCodeOwnerReviews: true,
+		},
 	}
 
 	diffs := CompareProtectionRules(rules)

@@ -26,7 +26,10 @@ type ScanProgress struct {
 	Orphans     int
 }
 
-func (s *NamespaceScanner) ScanNamespace(ctx context.Context, namespace string) (*NamespaceScanResult, error) {
+func (s *NamespaceScanner) ScanNamespace(
+	ctx context.Context,
+	namespace string,
+) (*NamespaceScanResult, error) {
 	return s.ScanNamespaceWithProgress(ctx, namespace, nil)
 }
 

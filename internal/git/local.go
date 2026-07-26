@@ -92,7 +92,13 @@ func (r *LocalRepo) GetCurrentBranch() (string, error) {
 // CompareBranches compares two branches and returns ahead/behind counts.
 func (r *LocalRepo) CompareBranches(base, head string) (ahead, behind int, err error) {
 	// Run: git rev-list --left-right --count base...head
-	cmd := exec.Command("git", "rev-list", "--left-right", "--count", fmt.Sprintf("%s...%s", base, head))
+	cmd := exec.Command(
+		"git",
+		"rev-list",
+		"--left-right",
+		"--count",
+		fmt.Sprintf("%s...%s", base, head),
+	)
 	cmd.Dir = r.Path
 
 	var out bytes.Buffer

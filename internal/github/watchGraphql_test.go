@@ -108,7 +108,8 @@ func TestListViewerRepoWatchInfoPagination(t *testing.T) {
 	}
 
 	gadgets := infos[1]
-	if !gadgets.Private || !gadgets.IsArchived || !gadgets.IsFork || gadgets.State != WatchStateIgnored {
+	if !gadgets.Private || !gadgets.IsArchived || !gadgets.IsFork ||
+		gadgets.State != WatchStateIgnored {
 		t.Errorf("gadgets = %+v", gadgets)
 	}
 

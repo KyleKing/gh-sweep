@@ -30,7 +30,13 @@ func TestGoldenLoadedView(t *testing.T) {
 		},
 		health: map[string]map[int]github.WebhookHealth{
 			"acme/widgets": {
-				7: {WebhookID: 7, SuccessRate: 98.5, TotalDeliveries: 200, Failures: 3, AvgDuration: 120},
+				7: {
+					WebhookID:       7,
+					SuccessRate:     98.5,
+					TotalDeliveries: 200,
+					Failures:        3,
+					AvgDuration:     120,
+				},
 			},
 		},
 	})

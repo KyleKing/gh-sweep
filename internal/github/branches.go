@@ -152,7 +152,9 @@ type BranchWithComparison struct {
 }
 
 // GetBranchesWithComparison fetches branches and compares them to a base branch.
-func (c *Client) GetBranchesWithComparison(owner, repo, baseBranch string) ([]BranchWithComparison, error) {
+func (c *Client) GetBranchesWithComparison(
+	owner, repo, baseBranch string,
+) ([]BranchWithComparison, error) {
 	branches, err := c.ListBranches(owner, repo)
 	if err != nil {
 		return nil, err

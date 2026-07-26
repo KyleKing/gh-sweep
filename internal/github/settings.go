@@ -83,9 +83,19 @@ func CompareSettings(baseline, current *RepoSettings) []SettingsDiff {
 		baseline.AllowSquashMerge != current.AllowSquashMerge ||
 		baseline.AllowRebaseMerge != current.AllowRebaseMerge {
 		diffs = append(diffs, SettingsDiff{
-			Field:    "MergeStrategies",
-			Baseline: fmt.Sprintf("merge:%v squash:%v rebase:%v", baseline.AllowMergeCommit, baseline.AllowSquashMerge, baseline.AllowRebaseMerge),
-			Current:  fmt.Sprintf("merge:%v squash:%v rebase:%v", current.AllowMergeCommit, current.AllowSquashMerge, current.AllowRebaseMerge),
+			Field: "MergeStrategies",
+			Baseline: fmt.Sprintf(
+				"merge:%v squash:%v rebase:%v",
+				baseline.AllowMergeCommit,
+				baseline.AllowSquashMerge,
+				baseline.AllowRebaseMerge,
+			),
+			Current: fmt.Sprintf(
+				"merge:%v squash:%v rebase:%v",
+				current.AllowMergeCommit,
+				current.AllowSquashMerge,
+				current.AllowRebaseMerge,
+			),
 			Severity: "info",
 		})
 	}

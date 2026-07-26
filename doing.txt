@@ -1,0 +1,7 @@
+See screenshots on desktop:
+
+1. I want to 'open' the repo and make edits
+1. Remove excess metadata (fork is useful, but star/follower not)
+1. Are the categories right? There seems to be overlap
+1. Unwatched is misleading because it is the default (I just prefer to have All activity)
+1. Custom isn't supported because I used to have it for Corallium with releases turned off, but that appeared as default

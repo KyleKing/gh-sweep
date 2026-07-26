@@ -75,7 +75,13 @@ func (m Model) loadThreads() tea.Msg {
 		return threadsLoadedMsg{err: err}
 	}
 
-	threads, err := gql.ListRepoReviewThreads(client, owner, repo, m.prNumber, github.DefaultOpenPRCap)
+	threads, err := gql.ListRepoReviewThreads(
+		client,
+		owner,
+		repo,
+		m.prNumber,
+		github.DefaultOpenPRCap,
+	)
 	if err != nil {
 		return threadsLoadedMsg{err: err}
 	}
@@ -156,7 +162,7 @@ func (m Model) View() string {
 	} else {
 		b.WriteString("Showing: Unresolved only\n")
 	}
-	b.WriteString(fmt.Sprintf("Total: %d | Unresolved: %d\n\n", len(m.threads), len(m.unresolved)))
+	fmt.Fprintf(&b, "Total: %d | Unresolved: %d\n\n", len(m.threads), len(m.unresolved))
 
 	visible := m.visibleThreads()
 	if len(visible) == 0 {
@@ -183,7 +189,9 @@ func (m Model) renderThreads(b *strings.Builder, visible []github.ReviewThread) 
 		}
 
 		if thread.PRNumber != lastPR {
-			b.WriteString(headerStyle.Render(fmt.Sprintf("PR #%d: %s", thread.PRNumber, thread.PRTitle)))
+			b.WriteString(
+				headerStyle.Render(fmt.Sprintf("PR #%d: %s", thread.PRNumber, thread.PRTitle)),
+			)
 			b.WriteString("\n")
 			lastPR = thread.PRNumber
 		}

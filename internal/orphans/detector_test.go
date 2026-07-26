@@ -378,6 +378,10 @@ func TestDefaultScanOptions(t *testing.T) {
 
 	expectedExcludes := []string{"main", "master", "develop", "release/*", "hotfix/*"}
 	if len(opts.ExcludePatterns) != len(expectedExcludes) {
-		t.Errorf("ExcludePatterns length = %d, want %d", len(opts.ExcludePatterns), len(expectedExcludes))
+		t.Errorf(
+			"ExcludePatterns length = %d, want %d",
+			len(opts.ExcludePatterns),
+			len(expectedExcludes),
+		)
 	}
 }

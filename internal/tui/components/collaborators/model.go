@@ -219,7 +219,7 @@ func (m Model) renderByRepo() string {
 		var lineSb214 strings.Builder
 		for j, collab := range collabs {
 			if j >= 3 {
-				lineSb214.WriteString(fmt.Sprintf("   ... and %d more\n", len(collabs)-3))
+				fmt.Fprintf(&lineSb214, "   ... and %d more\n", len(collabs)-3)
 				break
 			}
 			permColor := theme.Current().Success
@@ -230,7 +230,7 @@ func (m Model) renderByRepo() string {
 				permColor = theme.Current().Warning
 			}
 			permStyle := lipgloss.NewStyle().Foreground(permColor)
-			lineSb214.WriteString(fmt.Sprintf("   - %s ", collab.Login))
+			fmt.Fprintf(&lineSb214, "   - %s ", collab.Login)
 			lineSb214.WriteString(permStyle.Render(fmt.Sprintf("[%s]", collab.Permission)))
 			lineSb214.WriteString("\n")
 		}
@@ -281,7 +281,7 @@ func (m Model) renderByUser() string {
 		var lineSb273 strings.Builder
 		for j, repo := range repos {
 			if j >= 3 {
-				lineSb273.WriteString(fmt.Sprintf("   ... and %d more\n", len(repos)-3))
+				fmt.Fprintf(&lineSb273, "   ... and %d more\n", len(repos)-3)
 				break
 			}
 			perm := userPerms[user][repo]
@@ -293,7 +293,7 @@ func (m Model) renderByUser() string {
 				permColor = theme.Current().Warning
 			}
 			permStyle := lipgloss.NewStyle().Foreground(permColor)
-			lineSb273.WriteString(fmt.Sprintf("   - %s ", repo))
+			fmt.Fprintf(&lineSb273, "   - %s ", repo)
 			lineSb273.WriteString(permStyle.Render(fmt.Sprintf("[%s]", perm)))
 			lineSb273.WriteString("\n")
 		}

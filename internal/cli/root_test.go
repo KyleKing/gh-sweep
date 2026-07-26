@@ -48,7 +48,12 @@ func TestResolveMainOptionsFlagsOverrideConfig(t *testing.T) {
 		Repositories: []string{"config-org/repo1"},
 	}
 
-	opts := resolveMainOptions(cfg, "flag-org/flag-repo", "flag-org", []string{"flag-org/flag-repo"})
+	opts := resolveMainOptions(
+		cfg,
+		"flag-org/flag-repo",
+		"flag-org",
+		[]string{"flag-org/flag-repo"},
+	)
 
 	if opts.Org != "flag-org" {
 		t.Errorf("Expected flag org to win, got '%s'", opts.Org)

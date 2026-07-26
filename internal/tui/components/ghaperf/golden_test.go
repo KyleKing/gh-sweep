@@ -19,9 +19,27 @@ func TestGoldenLoadedView(t *testing.T) {
 	m, _ = m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	m, _ = m.Update(dataLoadedMsg{
 		runs: []github.RunTiming{
-			{RunID: 101, Workflow: "ci", Branch: "main", Conclusion: "success", Duration: 5 * time.Minute},
-			{RunID: 102, Workflow: "ci", Branch: "feature/login", Conclusion: "failure", Duration: 7 * time.Minute},
-			{RunID: 103, Workflow: "release", Branch: "main", Conclusion: "success", Duration: 12 * time.Minute},
+			{
+				RunID:      101,
+				Workflow:   "ci",
+				Branch:     "main",
+				Conclusion: "success",
+				Duration:   5 * time.Minute,
+			},
+			{
+				RunID:      102,
+				Workflow:   "ci",
+				Branch:     "feature/login",
+				Conclusion: "failure",
+				Duration:   7 * time.Minute,
+			},
+			{
+				RunID:      103,
+				Workflow:   "release",
+				Branch:     "main",
+				Conclusion: "success",
+				Duration:   12 * time.Minute,
+			},
 		},
 		workflows: []github.WorkflowFile{
 			{ID: 1, Name: "ci", Path: ".github/workflows/ci.yml", State: "active"},

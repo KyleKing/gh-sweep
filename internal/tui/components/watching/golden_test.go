@@ -23,7 +23,11 @@ func TestGoldenLoadedView(t *testing.T) {
 		username: "tester",
 		repos: []github.RepoWatchInfo{
 			{
-				RepoBasic:          github.RepoBasic{Name: "widgets", FullName: "acme/widgets", Owner: "acme"},
+				RepoBasic: github.RepoBasic{
+					Name:     "widgets",
+					FullName: "acme/widgets",
+					Owner:    "acme",
+				},
 				State:              github.WatchStateSubscribed,
 				StargazerCount:     4,
 				WatcherCount:       2,
@@ -31,7 +35,12 @@ func TestGoldenLoadedView(t *testing.T) {
 				ViewerCanSubscribe: true,
 			},
 			{
-				RepoBasic:          github.RepoBasic{Name: "gadgets", FullName: "acme/gadgets", Owner: "acme", Private: true},
+				RepoBasic: github.RepoBasic{
+					Name:     "gadgets",
+					FullName: "acme/gadgets",
+					Owner:    "acme",
+					Private:  true,
+				},
 				State:              github.WatchStateDefault,
 				StargazerCount:     0,
 				WatcherCount:       1,
@@ -39,7 +48,11 @@ func TestGoldenLoadedView(t *testing.T) {
 				ViewerCanSubscribe: true,
 			},
 			{
-				RepoBasic:          github.RepoBasic{Name: "dotfiles", FullName: "tester/dotfiles", Owner: "tester"},
+				RepoBasic: github.RepoBasic{
+					Name:     "dotfiles",
+					FullName: "tester/dotfiles",
+					Owner:    "tester",
+				},
 				State:              github.WatchStateDefault,
 				StargazerCount:     1,
 				WatcherCount:       1,

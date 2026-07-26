@@ -95,7 +95,12 @@ type reviewCommentNode struct {
 	URL       string    `json:"url"`
 }
 
-func mapReviewThreads(owner, repo string, prNumber int, prTitle string, nodes []reviewThreadNode) []ReviewThread {
+func mapReviewThreads(
+	owner, repo string,
+	prNumber int,
+	prTitle string,
+	nodes []reviewThreadNode,
+) []ReviewThread {
 	threads := make([]ReviewThread, len(nodes))
 	for i, node := range nodes {
 		comments := make([]ReviewComment, len(node.Comments.Nodes))
@@ -140,7 +145,9 @@ func (g *GQLClient) ListPRReviewThreads(owner, repo string, prNumber int) ([]Rev
 		}
 
 		pr := response.Repository.PullRequest
-		threads = append(threads, mapReviewThreads(owner, repo, prNumber, pr.Title, pr.ReviewThreads.Nodes)...)
+		threads = append(
+			threads,
+			mapReviewThreads(owner, repo, prNumber, pr.Title, pr.ReviewThreads.Nodes)...)
 
 		if !pr.ReviewThreads.PageInfo.HasNextPage {
 			break
@@ -152,7 +159,11 @@ func (g *GQLClient) ListPRReviewThreads(owner, repo string, prNumber int) ([]Rev
 }
 
 // ListOpenPRReviewThreads fetches review threads across the newest open PRs, capped at maxPRs.
-func (g *GQLClient) ListOpenPRReviewThreads(client *Client, owner, repo string, maxPRs int) ([]ReviewThread, error) {
+func (g *GQLClient) ListOpenPRReviewThreads(
+	client *Client,
+	owner, repo string,
+	maxPRs int,
+) ([]ReviewThread, error) {
 	prs, err := client.ListPullRequests(owner, repo, "open")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list open pull requests: %w", err)
@@ -191,7 +202,11 @@ func (g *GQLClient) ListOpenPRReviewThreads(client *Client, owner, repo string, 
 }
 
 // ListRepoReviewThreads fetches threads for one PR when prNumber > 0, otherwise across open PRs.
-func (g *GQLClient) ListRepoReviewThreads(client *Client, owner, repo string, prNumber, maxPRs int) ([]ReviewThread, error) {
+func (g *GQLClient) ListRepoReviewThreads(
+	client *Client,
+	owner, repo string,
+	prNumber, maxPRs int,
+) ([]ReviewThread, error) {
 	if prNumber > 0 {
 		return g.ListPRReviewThreads(owner, repo, prNumber)
 	}

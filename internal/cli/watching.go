@@ -98,8 +98,12 @@ Examples:
 		fmt.Printf("All activity: %d\n", watchedCount)
 		fmt.Printf("Ignored: %d\n", ignoredCount)
 		fmt.Printf("Unwatched (default): %d\n\n", len(unwatchedRepos))
-		fmt.Println("Note: GitHub's API can't see or set \"Custom\" per-notification-type settings; a repo shown here as")
-		fmt.Println("default/unwatched may actually have Custom notifications configured on github.com.")
+		fmt.Println(
+			"Note: GitHub's API can't see or set \"Custom\" per-notification-type settings; a repo shown here as",
+		)
+		fmt.Println(
+			"default/unwatched may actually have Custom notifications configured on github.com.",
+		)
 		fmt.Println()
 		fmt.Println("Use --unwatched to list unwatched repos")
 		fmt.Println("Use --watch-all to watch all unwatched repos")

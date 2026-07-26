@@ -169,7 +169,12 @@ func TestListPRReviewThreadsPagination(t *testing.T) {
 	}
 }
 
-func makeThread(pr int, path, author, body string, createdAt time.Time, resolved bool) ReviewThread {
+func makeThread(
+	pr int,
+	path, author, body string,
+	createdAt time.Time,
+	resolved bool,
+) ReviewThread {
 	return ReviewThread{
 		Repository: "o/r",
 		PRNumber:   pr,

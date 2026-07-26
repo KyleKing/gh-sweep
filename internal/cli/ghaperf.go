@@ -475,16 +475,36 @@ func printComparison(runsA, runsB []github.RunTiming, labelA, labelB string) {
 				sign = ""
 			}
 
-			fmt.Printf("  %s: %s avg (%d runs)\n", labelA, github.FormatDuration(sA.AvgDuration), sA.TotalRuns)
-			fmt.Printf("  %s: %s avg (%d runs)\n", labelB, github.FormatDuration(sB.AvgDuration), sB.TotalRuns)
+			fmt.Printf(
+				"  %s: %s avg (%d runs)\n",
+				labelA,
+				github.FormatDuration(sA.AvgDuration),
+				sA.TotalRuns,
+			)
+			fmt.Printf(
+				"  %s: %s avg (%d runs)\n",
+				labelB,
+				github.FormatDuration(sB.AvgDuration),
+				sB.TotalRuns,
+			)
 			fmt.Printf("  Delta: %s%s (%s%.1f%%) - %s\n",
 				sign, github.FormatDuration(abs(diff)), sign, pct, indicator)
 		} else if okA {
-			fmt.Printf("  %s: %s avg (%d runs)\n", labelA, github.FormatDuration(sA.AvgDuration), sA.TotalRuns)
+			fmt.Printf(
+				"  %s: %s avg (%d runs)\n",
+				labelA,
+				github.FormatDuration(sA.AvgDuration),
+				sA.TotalRuns,
+			)
 			fmt.Printf("  %s: No data\n", labelB)
 		} else {
 			fmt.Printf("  %s: No data\n", labelA)
-			fmt.Printf("  %s: %s avg (%d runs)\n", labelB, github.FormatDuration(sB.AvgDuration), sB.TotalRuns)
+			fmt.Printf(
+				"  %s: %s avg (%d runs)\n",
+				labelB,
+				github.FormatDuration(sB.AvgDuration),
+				sB.TotalRuns,
+			)
 		}
 	}
 }

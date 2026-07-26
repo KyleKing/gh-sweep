@@ -415,12 +415,12 @@ func (m Model) renderOverview() string {
 		avgDuration = totalDuration / time.Duration(totalRuns)
 	}
 
-	b.WriteString(fmt.Sprintf("  Total Runs:     %s\n", valueStyle.Render(strconv.Itoa(totalRuns))))
-	b.WriteString(fmt.Sprintf("  Success Rate:   %s\n", valueStyle.Render(fmt.Sprintf("%.1f%%", successRate))))
-	b.WriteString(fmt.Sprintf("  Failures:       %s\n", valueStyle.Render(strconv.Itoa(failureCount))))
-	b.WriteString(fmt.Sprintf("  Avg Duration:   %s\n", valueStyle.Render(github.FormatDuration(avgDuration))))
-	b.WriteString(fmt.Sprintf("  Workflows:      %s\n", valueStyle.Render(strconv.Itoa(len(m.workflowStats)))))
-	b.WriteString(fmt.Sprintf("  Branches:       %s\n", valueStyle.Render(strconv.Itoa(len(m.branchStats)))))
+	fmt.Fprintf(&b, "  Total Runs:     %s\n", valueStyle.Render(strconv.Itoa(totalRuns)))
+	fmt.Fprintf(&b, "  Success Rate:   %s\n", valueStyle.Render(fmt.Sprintf("%.1f%%", successRate)))
+	fmt.Fprintf(&b, "  Failures:       %s\n", valueStyle.Render(strconv.Itoa(failureCount)))
+	fmt.Fprintf(&b, "  Avg Duration:   %s\n", valueStyle.Render(github.FormatDuration(avgDuration)))
+	fmt.Fprintf(&b, "  Workflows:      %s\n", valueStyle.Render(strconv.Itoa(len(m.workflowStats))))
+	fmt.Fprintf(&b, "  Branches:       %s\n", valueStyle.Render(strconv.Itoa(len(m.branchStats))))
 
 	b.WriteString("\n")
 	b.WriteString(sectionStyle.Render("Recent Runs"))
@@ -445,11 +445,11 @@ func (m Model) renderOverview() string {
 			workflow = workflow[:27] + "..."
 		}
 
-		b.WriteString(fmt.Sprintf("  %s %-30s %-15s %s\n",
+		fmt.Fprintf(&b, "  %s %-30s %-15s %s\n",
 			status,
 			workflow,
 			r.Branch,
-			github.FormatDuration(r.Duration)))
+			github.FormatDuration(r.Duration))
 	}
 
 	return b.String()

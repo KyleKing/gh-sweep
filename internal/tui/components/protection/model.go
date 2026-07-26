@@ -153,7 +153,7 @@ func (m Model) View() string {
 	b.WriteString("\n\n")
 
 	if m.baseline != "" {
-		b.WriteString(fmt.Sprintf("Baseline: %s\n\n", m.baseline))
+		fmt.Fprintf(&b, "Baseline: %s\n\n", m.baseline)
 	}
 
 	// Repository list with rules
@@ -165,7 +165,7 @@ func (m Model) View() string {
 
 		rule := m.rules[repo]
 		if rule == nil {
-			b.WriteString(fmt.Sprintf("%s %s: No protection\n", cursor, repo))
+			fmt.Fprintf(&b, "%s %s: No protection\n", cursor, repo)
 			continue
 		}
 
@@ -193,7 +193,7 @@ func (m Model) View() string {
 		for field, differences := range m.diffs {
 			b.WriteString(field + ":\n")
 			for _, diff := range differences {
-				b.WriteString(fmt.Sprintf("  - %s\n", diff))
+				fmt.Fprintf(&b, "  - %s\n", diff)
 			}
 		}
 	}

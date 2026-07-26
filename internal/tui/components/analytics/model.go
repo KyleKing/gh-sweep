@@ -297,17 +297,17 @@ func (m Model) renderOverview() string {
 	var b strings.Builder
 
 	b.WriteString("📈 CI/CD Statistics\n\n")
-	b.WriteString(fmt.Sprintf("Total Runs:     %d\n", m.stats.TotalRuns))
-	b.WriteString(fmt.Sprintf("Success Rate:   %.1f%%\n", m.stats.SuccessRate))
-	b.WriteString(fmt.Sprintf("Failures:       %d\n", m.stats.FailureCount))
-	b.WriteString(fmt.Sprintf("Avg Duration:   %s\n", m.stats.AvgDuration.Round(time.Second)))
+	fmt.Fprintf(&b, "Total Runs:     %d\n", m.stats.TotalRuns)
+	fmt.Fprintf(&b, "Success Rate:   %.1f%%\n", m.stats.SuccessRate)
+	fmt.Fprintf(&b, "Failures:       %d\n", m.stats.FailureCount)
+	fmt.Fprintf(&b, "Avg Duration:   %s\n", m.stats.AvgDuration.Round(time.Second))
 
 	b.WriteString("\nSuccess/Failure Distribution:\n")
 	successCount := m.stats.TotalRuns - m.stats.FailureCount
-	b.WriteString(fmt.Sprintf("✓ Success: %s (%d)\n",
-		strings.Repeat("█", successCount*50/m.stats.TotalRuns), successCount))
-	b.WriteString(fmt.Sprintf("✗ Failure: %s (%d)\n",
-		strings.Repeat("█", m.stats.FailureCount*50/m.stats.TotalRuns), m.stats.FailureCount))
+	fmt.Fprintf(&b, "✓ Success: %s (%d)\n",
+		strings.Repeat("█", successCount*50/m.stats.TotalRuns), successCount)
+	fmt.Fprintf(&b, "✗ Failure: %s (%d)\n",
+		strings.Repeat("█", m.stats.FailureCount*50/m.stats.TotalRuns), m.stats.FailureCount)
 
 	return b.String()
 }
@@ -319,18 +319,18 @@ func (m Model) renderFlaky() string {
 	b.WriteString("Pattern-based detection over workflow conclusions (fail → pass flips)\n\n")
 
 	if len(m.flaky) == 0 {
-		b.WriteString(fmt.Sprintf("No flaky tests detected in last %d runs\n", len(m.runs)))
+		fmt.Fprintf(&b, "No flaky tests detected in last %d runs\n", len(m.runs))
 		return b.String()
 	}
 
-	b.WriteString(fmt.Sprintf("Found %d potentially flaky workflow(s):\n\n", len(m.flaky)))
+	fmt.Fprintf(&b, "Found %d potentially flaky workflow(s):\n\n", len(m.flaky))
 	for i, test := range m.flaky {
-		b.WriteString(fmt.Sprintf("%d. %s\n", i+1, test.Name))
-		b.WriteString(fmt.Sprintf("   Failure rate: %.0f%% (%d/%d runs)\n",
-			test.FailureRate*100, test.FailureCount, test.TotalRuns))
-		b.WriteString(fmt.Sprintf("   Pattern: %s | Flips: %d\n", test.Pattern, test.FlipCount))
+		fmt.Fprintf(&b, "%d. %s\n", i+1, test.Name)
+		fmt.Fprintf(&b, "   Failure rate: %.0f%% (%d/%d runs)\n",
+			test.FailureRate*100, test.FailureCount, test.TotalRuns)
+		fmt.Fprintf(&b, "   Pattern: %s | Flips: %d\n", test.Pattern, test.FlipCount)
 		if !test.LastFlip.IsZero() {
-			b.WriteString(fmt.Sprintf("   Last flip: %s\n", test.LastFlip.Format("2006-01-02 15:04")))
+			fmt.Fprintf(&b, "   Last flip: %s\n", test.LastFlip.Format("2006-01-02 15:04"))
 		}
 		b.WriteString("\n")
 	}
@@ -349,24 +349,24 @@ func (m Model) renderErrors() string {
 	}
 
 	if m.errorsErr != nil {
-		b.WriteString(fmt.Sprintf("Error: %v\n", m.errorsErr))
+		fmt.Fprintf(&b, "Error: %v\n", m.errorsErr)
 		return b.String()
 	}
 
 	if len(m.errorContexts) == 0 {
-		b.WriteString(fmt.Sprintf("No errors extracted from the last %d failed runs\n",
-			min(maxFailedRunsToExtract, countFailedRuns(m.runs))))
+		fmt.Fprintf(&b, "No errors extracted from the last %d failed runs\n",
+			min(maxFailedRunsToExtract, countFailedRuns(m.runs)))
 		return b.String()
 	}
 
 	for i, ctx := range m.errorContexts {
-		b.WriteString(fmt.Sprintf("%d. %s\n", i+1, ctx.Summary))
-		b.WriteString(fmt.Sprintf("   Workflow: %s | Type: %s | %s\n",
-			ctx.WorkflowName, ctx.ErrorType, ctx.Timestamp.Format("2006-01-02 15:04")))
+		fmt.Fprintf(&b, "%d. %s\n", i+1, ctx.Summary)
+		fmt.Fprintf(&b, "   Workflow: %s | Type: %s | %s\n",
+			ctx.WorkflowName, ctx.ErrorType, ctx.Timestamp.Format("2006-01-02 15:04"))
 
 		for j, line := range ctx.ErrorLines {
 			if j >= 5 {
-				b.WriteString(fmt.Sprintf("   ... %d more error line(s)\n", len(ctx.ErrorLines)-j))
+				fmt.Fprintf(&b, "   ... %d more error line(s)\n", len(ctx.ErrorLines)-j)
 				break
 			}
 			b.WriteString("   | " + line + "\n")
@@ -375,9 +375,9 @@ func (m Model) renderErrors() string {
 	}
 
 	if m.exportErr != nil {
-		b.WriteString(fmt.Sprintf("Export failed: %v\n", m.exportErr))
+		fmt.Fprintf(&b, "Export failed: %v\n", m.exportErr)
 	} else if m.exportPath != "" {
-		b.WriteString(fmt.Sprintf("Exported markdown report to %s\n", m.exportPath))
+		fmt.Fprintf(&b, "Exported markdown report to %s\n", m.exportPath)
 	}
 
 	return b.String()

@@ -18,7 +18,12 @@ func TestGoldenLoadedView(t *testing.T) {
 	m, _ = m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	m, _ = m.Update(secretsLoadedMsg{
 		orgSecrets: []github.Secret{
-			{Name: "DEPLOY_KEY", Scope: "org", CreatedAt: "2025-06-01T00:00:00Z", UpdatedAt: "2026-01-05T00:00:00Z"},
+			{
+				Name:      "DEPLOY_KEY",
+				Scope:     "org",
+				CreatedAt: "2025-06-01T00:00:00Z",
+				UpdatedAt: "2026-01-05T00:00:00Z",
+			},
 		},
 		repoSecrets: map[string][]github.Secret{
 			"acme/widgets": {

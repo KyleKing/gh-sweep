@@ -165,18 +165,114 @@ func (m MainModel) buildMenuItems() []menuItem {
 	hasOrgAndRepos := m.org != "" && hasRepos
 
 	return []menuItem{
-		{key: "0", icon: "👁️ ", label: "Watch Status", desc: "Audit and manage repo watching", section: "Namespace Audit", view: ViewWatching, enabled: true},
-		{key: "o", icon: "🌿", label: "Orphan Branches", desc: "Detect and clean up orphaned branches", section: "Namespace Audit", view: ViewOrphans, enabled: true},
-		{key: "1", icon: "🌳", label: "Branch Management", desc: "Interactive branch operations", section: "Phase 1: Core Management", view: ViewBranches, enabled: hasRepo},
-		{key: "2", icon: "🛡️ ", label: "Branch Protection", desc: "Compare and sync protection rules", section: "Phase 1: Core Management", view: ViewProtection, enabled: hasRepos},
-		{key: "3", icon: "💬", label: "PR Comments", desc: "Review unresolved comments", section: "Phase 1: Core Management", view: ViewComments, enabled: hasRepo},
-		{key: "4", icon: "📊", label: "Analytics", desc: "CI/CD and repository statistics", section: "Phase 1: Core Management", view: ViewAnalytics, enabled: hasRepo},
-		{key: "p", icon: "⏱️ ", label: "GHA Performance", desc: "Workflow timing analysis", section: "Phase 1: Core Management", view: ViewGHAPerf, enabled: hasRepo},
-		{key: "5", icon: "⚙️ ", label: "Settings Comparison", desc: "Cross-repo settings diff", section: "Phase 2: Analytics & Settings", view: ViewSettings, enabled: hasRepos},
-		{key: "6", icon: "🔔", label: "Webhooks", desc: "Webhook health monitoring", section: "Phase 2: Analytics & Settings", view: ViewWebhooks, enabled: hasRepos},
-		{key: "7", icon: "👥", label: "Collaborators", desc: "Manage repository access", section: "Phase 3: Access & Releases", view: ViewCollaborators, enabled: hasRepos},
-		{key: "8", icon: "🔐", label: "Secrets Audit", desc: "Review secrets usage (read-only)", section: "Phase 3: Access & Releases", view: ViewSecrets, enabled: hasOrgAndRepos},
-		{key: "9", icon: "📦", label: "Releases", desc: "Release version overview", section: "Phase 3: Access & Releases", view: ViewReleases, enabled: hasRepos},
+		{
+			key:     "0",
+			icon:    "👁️ ",
+			label:   "Watch Status",
+			desc:    "Audit and manage repo watching",
+			section: "Namespace Audit",
+			view:    ViewWatching,
+			enabled: true,
+		},
+		{
+			key:     "o",
+			icon:    "🌿",
+			label:   "Orphan Branches",
+			desc:    "Detect and clean up orphaned branches",
+			section: "Namespace Audit",
+			view:    ViewOrphans,
+			enabled: true,
+		},
+		{
+			key:     "1",
+			icon:    "🌳",
+			label:   "Branch Management",
+			desc:    "Interactive branch operations",
+			section: "Phase 1: Core Management",
+			view:    ViewBranches,
+			enabled: hasRepo,
+		},
+		{
+			key:     "2",
+			icon:    "🛡️ ",
+			label:   "Branch Protection",
+			desc:    "Compare and sync protection rules",
+			section: "Phase 1: Core Management",
+			view:    ViewProtection,
+			enabled: hasRepos,
+		},
+		{
+			key:     "3",
+			icon:    "💬",
+			label:   "PR Comments",
+			desc:    "Review unresolved comments",
+			section: "Phase 1: Core Management",
+			view:    ViewComments,
+			enabled: hasRepo,
+		},
+		{
+			key:     "4",
+			icon:    "📊",
+			label:   "Analytics",
+			desc:    "CI/CD and repository statistics",
+			section: "Phase 1: Core Management",
+			view:    ViewAnalytics,
+			enabled: hasRepo,
+		},
+		{
+			key:     "p",
+			icon:    "⏱️ ",
+			label:   "GHA Performance",
+			desc:    "Workflow timing analysis",
+			section: "Phase 1: Core Management",
+			view:    ViewGHAPerf,
+			enabled: hasRepo,
+		},
+		{
+			key:     "5",
+			icon:    "⚙️ ",
+			label:   "Settings Comparison",
+			desc:    "Cross-repo settings diff",
+			section: "Phase 2: Analytics & Settings",
+			view:    ViewSettings,
+			enabled: hasRepos,
+		},
+		{
+			key:     "6",
+			icon:    "🔔",
+			label:   "Webhooks",
+			desc:    "Webhook health monitoring",
+			section: "Phase 2: Analytics & Settings",
+			view:    ViewWebhooks,
+			enabled: hasRepos,
+		},
+		{
+			key:     "7",
+			icon:    "👥",
+			label:   "Collaborators",
+			desc:    "Manage repository access",
+			section: "Phase 3: Access & Releases",
+			view:    ViewCollaborators,
+			enabled: hasRepos,
+		},
+		{
+			key:     "8",
+			icon:    "🔐",
+			label:   "Secrets Audit",
+			desc:    "Review secrets usage (read-only)",
+			section: "Phase 3: Access & Releases",
+			view:    ViewSecrets,
+			enabled: hasOrgAndRepos,
+		},
+		{
+			key:     "9",
+			icon:    "📦",
+			label:   "Releases",
+			desc:    "Release version overview",
+			section: "Phase 3: Access & Releases",
+			view:    ViewReleases,
+			enabled: hasRepos,
+		},
 	}
 }
 
@@ -538,10 +634,11 @@ func (m MainModel) renderHome() string {
 		content += helpStyle.Render("No views match filter") + "\n"
 	} else {
 		currentSection := ""
+		var contentSb541 strings.Builder
 		for i, item := range items {
 			if item.section != currentSection {
 				currentSection = item.section
-				content += "\n" + sectionStyle.Render(currentSection) + "\n"
+				contentSb541.WriteString("\n" + sectionStyle.Render(currentSection) + "\n")
 			}
 
 			cursor := "  "
@@ -559,13 +656,14 @@ func (m MainModel) renderHome() string {
 				lineStyle = disabledStyle
 			}
 
-			content += lineStyle.Render(cursor + label)
-			content += descStyle.Render(" - " + item.desc)
+			contentSb541.WriteString(lineStyle.Render(cursor + label))
+			contentSb541.WriteString(descStyle.Render(" - " + item.desc))
 			if !item.enabled {
-				content += descStyle.Render(" (unavailable)")
+				contentSb541.WriteString(descStyle.Render(" (unavailable)"))
 			}
-			content += "\n"
+			contentSb541.WriteString("\n")
 		}
+		content += contentSb541.String()
 		content += "\n"
 	}
 
@@ -576,7 +674,9 @@ func (m MainModel) renderHome() string {
 	if m.menuFiltering {
 		content += helpStyle.Render("↑/↓ or ctrl+p/n: move | enter: select | esc: clear filter")
 	} else {
-		content += helpStyle.Render("j/k or ↑/↓: move | enter: select | /: filter | 0-9/o/p: quick jump | q: quit")
+		content += helpStyle.Render(
+			"j/k or ↑/↓: move | enter: select | /: filter | 0-9/o/p: quick jump | q: quit",
+		)
 	}
 
 	return content

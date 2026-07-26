@@ -13,8 +13,20 @@ import (
 func loadedFixture() dataLoadedMsg {
 	return dataLoadedMsg{
 		runs: []github.RunTiming{
-			{RunID: 101, Workflow: "ci", Branch: "main", Conclusion: "success", Duration: 5 * time.Minute},
-			{RunID: 102, Workflow: "ci", Branch: "feature", Conclusion: "failure", Duration: 7 * time.Minute},
+			{
+				RunID:      101,
+				Workflow:   "ci",
+				Branch:     "main",
+				Conclusion: "success",
+				Duration:   5 * time.Minute,
+			},
+			{
+				RunID:      102,
+				Workflow:   "ci",
+				Branch:     "feature",
+				Conclusion: "failure",
+				Duration:   7 * time.Minute,
+			},
 		},
 		workflowStats: map[string]*github.WorkflowStats{
 			"ci": {Workflow: "ci", TotalRuns: 2},
@@ -53,7 +65,13 @@ func TestNewModelParsesRepo(t *testing.T) {
 			m := NewModel(tt.repo)
 
 			if m.owner != tt.wantOwner || m.repoName != tt.wantName {
-				t.Errorf("owner/name = %q/%q, want %q/%q", m.owner, m.repoName, tt.wantOwner, tt.wantName)
+				t.Errorf(
+					"owner/name = %q/%q, want %q/%q",
+					m.owner,
+					m.repoName,
+					tt.wantOwner,
+					tt.wantName,
+				)
 			}
 		})
 	}

@@ -19,7 +19,11 @@ func threadsFixture() []github.ReviewThread {
 			PRTitle:    "Add login flow",
 			Path:       "internal/auth/session.go",
 			Comments: []github.ReviewComment{
-				{Author: "alice", Body: "Extract a helper here.", CreatedAt: time.Now().Add(-3 * time.Hour)},
+				{
+					Author:    "alice",
+					Body:      "Extract a helper here.",
+					CreatedAt: time.Now().Add(-3 * time.Hour),
+				},
 			},
 		},
 		{

@@ -14,8 +14,16 @@ func loadedSettingsModel() Model {
 	m := NewModel([]string{"acme/widgets", "acme/gadgets"}, "acme/widgets")
 	m, _ = m.Update(settingsLoadedMsg{
 		settings: map[string]*github.RepoSettings{
-			"acme/widgets": {Repository: "acme/widgets", DefaultBranch: "main", AllowSquashMerge: true},
-			"acme/gadgets": {Repository: "acme/gadgets", DefaultBranch: "master", AllowMergeCommit: true},
+			"acme/widgets": {
+				Repository:       "acme/widgets",
+				DefaultBranch:    "main",
+				AllowSquashMerge: true,
+			},
+			"acme/gadgets": {
+				Repository:       "acme/gadgets",
+				DefaultBranch:    "master",
+				AllowMergeCommit: true,
+			},
 		},
 		diffs: map[string][]github.SettingsDiff{
 			"acme/gadgets": {

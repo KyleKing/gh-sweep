@@ -49,8 +49,8 @@ jobs:
 
       - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
-          # Keep in sync with the golangci-lint pin in .config/mise.hk.toml
-          version: v2.8.0
+          # Keep in sync with the golangci-lint pin in .config/mise.toml
+          version: v2.12.2
 
   benchmark:
     runs-on: ubuntu-latest

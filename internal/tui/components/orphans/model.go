@@ -273,7 +273,10 @@ func (m Model) executeDelete() (Model, tea.Cmd) {
 
 			parts := strings.SplitN(orphan.Repository, "/", 2)
 			if len(parts) != 2 {
-				return deleteResultMsg{branch: orphan.Key(), err: fmt.Errorf("invalid repository: %s", orphan.Repository)}
+				return deleteResultMsg{
+					branch: orphan.Key(),
+					err:    fmt.Errorf("invalid repository: %s", orphan.Repository),
+				}
 			}
 
 			err = client.DeleteBranch(parts[0], parts[1], orphan.BranchName)
@@ -348,8 +351,13 @@ func (m Model) getFilteredOrphans() []orphans.OrphanedBranch {
 func (m Model) View() string {
 	if m.loading {
 		if m.total > 0 {
-			return fmt.Sprintf("Scanning repositories...\nProgress: %d/%d repos\nCurrently: %s\nOrphans found: %d\n",
-				m.progress, m.total, m.scanning, m.orphansFound)
+			return fmt.Sprintf(
+				"Scanning repositories...\nProgress: %d/%d repos\nCurrently: %s\nOrphans found: %d\n",
+				m.progress,
+				m.total,
+				m.scanning,
+				m.orphansFound,
+			)
 		}
 
 		return "Loading repositories...\n"
@@ -367,7 +375,7 @@ func (m Model) View() string {
 
 	b.WriteString(titleStyle.Render("Orphaned Branches"))
 	b.WriteString("\n")
-	b.WriteString(fmt.Sprintf("Namespace: %s\n\n", m.namespace))
+	fmt.Fprintf(&b, "Namespace: %s\n\n", m.namespace)
 
 	if m.confirmDelete {
 		return m.renderConfirmDialog(&b)
@@ -452,7 +460,7 @@ func (m Model) View() string {
 			line := fmt.Sprintf("%s%s %s ", cursor, selectMark, orphan.BranchName)
 			b.WriteString(lineStyle.Render(line))
 			b.WriteString(typeStyle.Render(fmt.Sprintf("[%s]", orphan.Type.Label())))
-			b.WriteString(fmt.Sprintf(" %dd%s\n", orphan.DaysSinceActivity, prInfo))
+			fmt.Fprintf(&b, " %dd%s\n", orphan.DaysSinceActivity, prInfo)
 		}
 	}
 
@@ -465,7 +473,11 @@ func (m Model) View() string {
 
 	b.WriteString("\n")
 	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
-	b.WriteString(helpStyle.Render("j/k: navigate | space: select | a/n: all/none | d: delete | v: view mode | r: refresh | esc: back"))
+	b.WriteString(
+		helpStyle.Render(
+			"j/k: navigate | space: select | a/n: all/none | d: delete | v: view mode | r: refresh | esc: back",
+		),
+	)
 
 	return b.String()
 }

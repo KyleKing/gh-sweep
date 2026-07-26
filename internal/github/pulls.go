@@ -50,7 +50,14 @@ func (c *Client) ListPullRequests(owner, repo, state string) ([]PullRequest, err
 
 	for {
 		var response []prResponse
-		path := fmt.Sprintf("repos/%s/%s/pulls?state=%s&per_page=%d&page=%d", owner, repo, state, perPage, page)
+		path := fmt.Sprintf(
+			"repos/%s/%s/pulls?state=%s&per_page=%d&page=%d",
+			owner,
+			repo,
+			state,
+			perPage,
+			page,
+		)
 
 		if err := c.Get(path, &response); err != nil {
 			return nil, fmt.Errorf("failed to list pull requests: %w", err)
@@ -105,7 +112,15 @@ func (c *Client) GetPullRequestsForBranch(owner, repo, branch string) ([]PullReq
 
 	for {
 		var response []prResponse
-		path := fmt.Sprintf("repos/%s/%s/pulls?state=all&head=%s:%s&per_page=%d&page=%d", owner, repo, owner, branch, perPage, page)
+		path := fmt.Sprintf(
+			"repos/%s/%s/pulls?state=all&head=%s:%s&per_page=%d&page=%d",
+			owner,
+			repo,
+			owner,
+			branch,
+			perPage,
+			page,
+		)
 
 		if err := c.Get(path, &response); err != nil {
 			return nil, fmt.Errorf("failed to get pull requests for branch: %w", err)

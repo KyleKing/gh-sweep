@@ -10,7 +10,10 @@ func branchStatuses() []github.BranchStatus {
 	return []github.BranchStatus{
 		{Branch: github.Branch{Name: "main"}, IsDefault: true},
 		{Branch: github.Branch{Name: "feature-a"}},
-		{Branch: github.Branch{Name: "feature-b"}, PR: &github.PullRequest{Number: 9, State: "open"}},
+		{
+			Branch: github.Branch{Name: "feature-b"},
+			PR:     &github.PullRequest{Number: 9, State: "open"},
+		},
 		{Branch: github.Branch{Name: "release", Protected: true}},
 	}
 }
@@ -115,7 +118,13 @@ func TestSplitRepo(t *testing.T) {
 		wantName  string
 		wantOK    bool
 	}{
-		{name: "valid repo", repo: "owner/repo", wantOwner: "owner", wantName: "repo", wantOK: true},
+		{
+			name:      "valid repo",
+			repo:      "owner/repo",
+			wantOwner: "owner",
+			wantName:  "repo",
+			wantOK:    true,
+		},
 		{name: "missing slash", repo: "owner", wantOK: false},
 		{name: "empty owner", repo: "/repo", wantOK: false},
 		{name: "empty name", repo: "owner/", wantOK: false},

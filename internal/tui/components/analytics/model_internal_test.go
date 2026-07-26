@@ -25,7 +25,13 @@ func loadedAnalyticsModel() Model {
 			{ID: 2, Name: "ci", Conclusion: "failure"},
 		},
 		flaky: []github.FlakyTest{
-			{Name: "ci", FailureRate: 0.15, FailureCount: 3, TotalRuns: 20, Pattern: "intermittent"},
+			{
+				Name:         "ci",
+				FailureRate:  0.15,
+				FailureCount: 3,
+				TotalRuns:    20,
+				Pattern:      "intermittent",
+			},
 		},
 	})
 

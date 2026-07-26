@@ -73,7 +73,12 @@ func (c *Client) FetchFailedJobLogs(owner, repo string, runID int) ([]JobLog, er
 }
 
 func (c *Client) fetchJobLogLines(owner, repo string, jobID int) ([]string, error) {
-	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/actions/jobs/%d/logs", owner, repo, jobID)
+	url := fmt.Sprintf(
+		"https://api.github.com/repos/%s/%s/actions/jobs/%d/logs",
+		owner,
+		repo,
+		jobID,
+	)
 
 	req, err := http.NewRequestWithContext(c.ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -294,7 +299,14 @@ func classifyError(errorLines []string) string {
 		return "timeout"
 	}
 
-	if containsAny(allErrors, "dependency", "module not found", "modulenotfounderror", "import error", "cannot find") {
+	if containsAny(
+		allErrors,
+		"dependency",
+		"module not found",
+		"modulenotfounderror",
+		"import error",
+		"cannot find",
+	) {
 		return "dependency"
 	}
 
@@ -357,20 +369,20 @@ func FormatAsMarkdown(contexts []*ErrorContext) string {
 	var sb strings.Builder
 
 	sb.WriteString("# GitHub Actions Error Report\n\n")
-	sb.WriteString(fmt.Sprintf("Generated: %s\n\n", time.Now().Format(time.RFC3339)))
+	fmt.Fprintf(&sb, "Generated: %s\n\n", time.Now().Format(time.RFC3339))
 
 	for i, ctx := range contexts {
-		sb.WriteString(fmt.Sprintf("## %d. %s\n\n", i+1, ctx.Summary))
+		fmt.Fprintf(&sb, "## %d. %s\n\n", i+1, ctx.Summary)
 
 		sb.WriteString("**Details:**\n")
-		sb.WriteString(fmt.Sprintf("- Repository: `%s`\n", ctx.Repository))
-		sb.WriteString(fmt.Sprintf("- Workflow: `%s`\n", ctx.WorkflowName))
-		sb.WriteString(fmt.Sprintf("- Job: `%s`\n", ctx.JobName))
+		fmt.Fprintf(&sb, "- Repository: `%s`\n", ctx.Repository)
+		fmt.Fprintf(&sb, "- Workflow: `%s`\n", ctx.WorkflowName)
+		fmt.Fprintf(&sb, "- Job: `%s`\n", ctx.JobName)
 		if ctx.StepName != "" {
-			sb.WriteString(fmt.Sprintf("- Step: `%s`\n", ctx.StepName))
+			fmt.Fprintf(&sb, "- Step: `%s`\n", ctx.StepName)
 		}
-		sb.WriteString(fmt.Sprintf("- Error Type: `%s`\n", ctx.ErrorType))
-		sb.WriteString(fmt.Sprintf("- Timestamp: `%s`\n", ctx.Timestamp.Format(time.RFC3339)))
+		fmt.Fprintf(&sb, "- Error Type: `%s`\n", ctx.ErrorType)
+		fmt.Fprintf(&sb, "- Timestamp: `%s`\n", ctx.Timestamp.Format(time.RFC3339))
 		sb.WriteString("\n")
 
 		if len(ctx.ErrorLines) > 0 {
@@ -397,7 +409,11 @@ func FormatAsMarkdown(contexts []*ErrorContext) string {
 
 // BatchExtractErrors extracts errors from multiple logs
 // Pure function: maps over logs.
-func BatchExtractErrors(logs []JobLog, workflow string, config LogExtractionConfig) []*ErrorContext {
+func BatchExtractErrors(
+	logs []JobLog,
+	workflow string,
+	config LogExtractionConfig,
+) []*ErrorContext {
 	contexts := make([]*ErrorContext, 0, len(logs))
 
 	for _, log := range logs {

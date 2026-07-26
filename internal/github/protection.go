@@ -91,18 +91,39 @@ func CompareProtectionRules(rules []*ProtectionRule) map[string][]string {
 		rule := rules[i]
 
 		if rule.RequiredReviews != baseline.RequiredReviews {
-			differences["RequiredReviews"] = append(differences["RequiredReviews"],
-				fmt.Sprintf("%s: %d (baseline: %d)", rule.Repository, rule.RequiredReviews, baseline.RequiredReviews))
+			differences["RequiredReviews"] = append(
+				differences["RequiredReviews"],
+				fmt.Sprintf(
+					"%s: %d (baseline: %d)",
+					rule.Repository,
+					rule.RequiredReviews,
+					baseline.RequiredReviews,
+				),
+			)
 		}
 
 		if rule.RequireCodeOwnerReviews != baseline.RequireCodeOwnerReviews {
-			differences["RequireCodeOwnerReviews"] = append(differences["RequireCodeOwnerReviews"],
-				fmt.Sprintf("%s: %v (baseline: %v)", rule.Repository, rule.RequireCodeOwnerReviews, baseline.RequireCodeOwnerReviews))
+			differences["RequireCodeOwnerReviews"] = append(
+				differences["RequireCodeOwnerReviews"],
+				fmt.Sprintf(
+					"%s: %v (baseline: %v)",
+					rule.Repository,
+					rule.RequireCodeOwnerReviews,
+					baseline.RequireCodeOwnerReviews,
+				),
+			)
 		}
 
 		if rule.EnforceAdmins != baseline.EnforceAdmins {
-			differences["EnforceAdmins"] = append(differences["EnforceAdmins"],
-				fmt.Sprintf("%s: %v (baseline: %v)", rule.Repository, rule.EnforceAdmins, baseline.EnforceAdmins))
+			differences["EnforceAdmins"] = append(
+				differences["EnforceAdmins"],
+				fmt.Sprintf(
+					"%s: %v (baseline: %v)",
+					rule.Repository,
+					rule.EnforceAdmins,
+					baseline.EnforceAdmins,
+				),
+			)
 		}
 	}
 

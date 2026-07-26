@@ -147,7 +147,10 @@ type FetchWorkflowRunsOptions struct {
 	CreatedAfter time.Time
 }
 
-func (c *Client) FetchWorkflowRuns(owner, repo string, opts FetchWorkflowRunsOptions) ([]RunTiming, error) {
+func (c *Client) FetchWorkflowRuns(
+	owner, repo string,
+	opts FetchWorkflowRunsOptions,
+) ([]RunTiming, error) {
 	limit := opts.Limit
 	if limit <= 0 {
 		limit = 30
@@ -254,7 +257,10 @@ func (c *Client) FetchRunDetails(owner, repo string, runID int) (*RunTiming, err
 	return &RunTiming{Jobs: jobs}, nil
 }
 
-func (c *Client) FetchWorkflowRunsWithDetails(owner, repo string, opts FetchWorkflowRunsOptions) ([]RunTiming, error) {
+func (c *Client) FetchWorkflowRunsWithDetails(
+	owner, repo string,
+	opts FetchWorkflowRunsOptions,
+) ([]RunTiming, error) {
 	runs, err := c.FetchWorkflowRuns(owner, repo, opts)
 	if err != nil {
 		return nil, err
@@ -403,7 +409,11 @@ func ComputeBranchStats(runs []RunTiming, baseBranch string) map[string]*BranchS
 			}
 			if baseStats.AvgDuration > 0 {
 				s.DeltaVsBase = float64(s.AvgDuration-baseStats.AvgDuration) / float64(time.Second)
-				s.DeltaVsBasePct = float64(s.AvgDuration-baseStats.AvgDuration) / float64(baseStats.AvgDuration) * 100
+				s.DeltaVsBasePct = float64(
+					s.AvgDuration-baseStats.AvgDuration,
+				) / float64(
+					baseStats.AvgDuration,
+				) * 100
 			}
 		}
 	}
