@@ -1,3 +1,9 @@
+## v0.3.2 (2026-07-26)
+
+### Fix
+
+- **ci**: strip ANSI before teatest output matching and stop mise auto-installing unused tools
+
 ## v0.3.1 (2026-07-26)
 
 ### Fix
