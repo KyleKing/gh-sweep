@@ -9,7 +9,7 @@ require (
 	github.com/charmbracelet/x/exp/golden v0.0.0-20260629091435-9c70f75e26a4
 	github.com/charmbracelet/x/exp/teatest/v2 v2.0.0-20260629091435-9c70f75e26a4
 	github.com/cli/go-gh v1.2.1
-	github.com/spf13/cobra v1.10.1
+	github.com/spf13/cobra v1.10.2
 	gopkg.in/yaml.v3 v3.0.1
 )
 
