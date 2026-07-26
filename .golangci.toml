@@ -61,7 +61,6 @@ enable = [
   "godot",
   "godox",
   "gomoddirectives",
-  "gomodguard",
   "goprintffuncname",
   "gosec",
   "gosmopolitan",
@@ -200,9 +199,6 @@ min-complexity = 15
 [linters.settings.godot]
 scope = "declarations"
 capital = true
-
-[linters.settings.gomodguard]
-blocked.modules = []
 
 [linters.settings.govet]
 enable-all = true
