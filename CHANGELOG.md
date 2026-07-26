@@ -1,3 +1,10 @@
+## v0.4.1 (2026-07-26)
+
+### Fix
+
+- **deps**: migrate to go-gh v2.11.1 for GHSA-55v3-xh23-96gh
+- **deps**: bump golang.org/x/net to 0.55.0 for GHSA-4374-p667-p6c8 and six more advisories
+
 ## v0.4.0 (2026-07-26)
 
 ### Feat
