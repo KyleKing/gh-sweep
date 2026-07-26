@@ -122,6 +122,44 @@ enable = [
   "zerologlint"
 ]
 
+# TODO(v1): remove after component refactor. The pre-lint codebase violates these
+# style/complexity linters throughout; correctness linters (errcheck, unused,
+# ineffassign, forcetypeassert, govet, staticcheck) stay enforced everywhere.
+[[linters.exclusions.rules]]
+path = "internal/(cache|cli|config|git|github|models|orphans|tui)/"
+linters = [
+  "containedctx",
+  "cyclop",
+  "dupl",
+  "err113",
+  "exhaustive",
+  "funlen",
+  "gochecknoinits",
+  "gocognit",
+  "goconst",
+  "gocritic",
+  "gocyclo",
+  "godox",
+  "gosec",
+  "lll",
+  "maintidx",
+  "mnd",
+  "musttag",
+  "nestif",
+  "nilnil",
+  "nlreturn",
+  "noctx",
+  "nonamedreturns",
+  "paralleltest",
+  "prealloc",
+  "revive",
+  "tagliatelle",
+  "testpackage",
+  "thelper",
+  "unparam",
+  "wrapcheck"
+]
+
 [linters.settings.cyclop]
 max-complexity = 15
 skip-tests = true
@@ -256,45 +294,6 @@ checks = ["all", "-ST1000"]
 [linters.settings.tagliatelle]
 case.rules.json = "snake"
 case.rules.yaml = "kebab"
-
-
-# TODO(v1): remove after component refactor. The pre-lint codebase violates these
-# style/complexity linters throughout; correctness linters (errcheck, unused,
-# ineffassign, forcetypeassert, govet, staticcheck) stay enforced everywhere.
-[[linters.exclusions.rules]]
-path = "internal/(cache|cli|config|git|github|models|orphans|tui)/"
-linters = [
-  "containedctx",
-  "cyclop",
-  "dupl",
-  "err113",
-  "exhaustive",
-  "funlen",
-  "gochecknoinits",
-  "gocognit",
-  "goconst",
-  "gocritic",
-  "gocyclo",
-  "godox",
-  "gosec",
-  "lll",
-  "maintidx",
-  "mnd",
-  "musttag",
-  "nestif",
-  "nilnil",
-  "nlreturn",
-  "noctx",
-  "nonamedreturns",
-  "paralleltest",
-  "prealloc",
-  "revive",
-  "tagliatelle",
-  "testpackage",
-  "thelper",
-  "unparam",
-  "wrapcheck"
-]
 
 [linters.settings.testifylint]
 enable-all = true
