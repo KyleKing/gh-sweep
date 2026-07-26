@@ -12,7 +12,7 @@ mise run ci
 
 ## Tasks
 
-Shared tasks live in `.config/mise/conf.d/template.toml` (managed by the copier template). Project-specific tasks go in additional `.config/mise/conf.d/*.toml` files, which mise always loads regardless of `MISE_ENV`.
+Shared tasks live in `.config/mise/conf.d/template.toml` (managed by the copier template). Project-specific tasks go in additional `.config/mise/conf.d/*.toml` files.
 
 | Command                       | Description                                                           |
 | ----------------------------- | --------------------------------------------------------------------- |
