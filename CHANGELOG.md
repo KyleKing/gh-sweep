@@ -1,3 +1,18 @@
+## v0.4.0 (2026-07-26)
+
+### Feat
+
+- **tasks**: rename the run task to dev so the mise shorthand works
+
+### Fix
+
+- **lint**: drop the deprecated gomodguard linter, whose blocked list was empty
+- **format**: pin golines and wrap at 120 to match the lll limit
+
+### Refactor
+
+- **mise**: move template-managed tool pins into conf.d
+
 ## v0.3.3 (2026-07-26)
 
 ### Fix
