@@ -1,3 +1,13 @@
+## v0.3.0 (2026-07-26)
+
+### Feat
+
+- **watching**: add Ignored tab and GraphQL-backed repo metadata
+
+### Fix
+
+- **ci**: repair golangci config for the v2 schema and bump the lint pin to 2.12.2
+
 ## v0.2.0 (2026-07-26)
 
 ### Feat
