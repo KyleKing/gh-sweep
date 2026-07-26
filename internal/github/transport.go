@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/cli/go-gh/pkg/api"
+	"github.com/cli/go-gh/v2/pkg/api"
 )
 
 const (

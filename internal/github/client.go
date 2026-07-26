@@ -7,14 +7,13 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/cli/go-gh"
-	"github.com/cli/go-gh/pkg/api"
+	"github.com/cli/go-gh/v2/pkg/api"
 )
 
 // Client wraps the GitHub API client.
 type Client struct {
 	httpClient *http.Client
-	apiClient  api.RESTClient
+	apiClient  *api.RESTClient
 	ctx        context.Context
 }
 
@@ -24,13 +23,13 @@ func NewClient(ctx context.Context) (*Client, error) {
 	opts := clientOptions()
 
 	// Create REST client (will use gh CLI auth or GITHUB_TOKEN)
-	restClient, err := gh.RESTClient(opts)
+	restClient, err := api.NewRESTClient(*opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create GitHub client: %w", err)
 	}
 
 	// Create HTTP client
-	httpClient, err := gh.HTTPClient(opts)
+	httpClient, err := api.NewHTTPClient(*opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP client: %w", err)
 	}
@@ -46,18 +45,18 @@ func NewClient(ctx context.Context) (*Client, error) {
 // bypassing gh CLI auth resolution. Intended for tests using httptest or
 // in-memory round-trip fakes; no network is reached.
 func NewClientWithTransport(ctx context.Context, rt http.RoundTripper) (*Client, error) {
-	opts := &api.ClientOptions{
+	opts := api.ClientOptions{
 		Host:      testAPIHost,
 		AuthToken: testAuthToken,
 		Transport: rt,
 	}
 
-	restClient, err := gh.RESTClient(opts)
+	restClient, err := api.NewRESTClient(opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create GitHub client: %w", err)
 	}
 
-	httpClient, err := gh.HTTPClient(opts)
+	httpClient, err := api.NewHTTPClient(opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP client: %w", err)
 	}
@@ -71,16 +70,16 @@ func NewClientWithTransport(ctx context.Context, rt http.RoundTripper) (*Client,
 
 // NewClientWithToken creates a new GitHub API client with an explicit token.
 func NewClientWithToken(ctx context.Context, token string) (*Client, error) {
-	opts := &api.ClientOptions{
+	opts := api.ClientOptions{
 		AuthToken: token,
 	}
 
-	restClient, err := gh.RESTClient(opts)
+	restClient, err := api.NewRESTClient(opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create GitHub client: %w", err)
 	}
 
-	httpClient, err := gh.HTTPClient(opts)
+	httpClient, err := api.NewHTTPClient(opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP client: %w", err)
 	}
