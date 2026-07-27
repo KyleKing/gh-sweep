@@ -1,3 +1,9 @@
+## v0.4.2 (2026-07-27)
+
+### Fix
+
+- **ci**: skip the release step when commitizen cut no new tag
+
 ## v0.4.1 (2026-07-26)
 
 ### Fix
