@@ -15,12 +15,10 @@ See screenshots on desktop:
 
 - Formula/gh-sweep.rb still pins version "0.1.0" with REPLACE_WITH_SHA256 placeholders, so its download URLs 404; update it to 0.4.2 with real sums from `mise run brew:sha` or drop the formula
 
-2026-07-27 back-ports for my_go_template (another agent owns that checkout; route these rather than editing it here):
+2026-07-27 back-ports for my_go_template: all seven landed in template v0.6.3 and arrived here via copier update
 
-- bump_version.yml should run goreleaser inline instead of softprops/action-gh-release. Tags pushed with GITHUB_TOKEN do not trigger release.yml, so template children get a release with notes and no binaries. gh-sweep's version is the working one
-- release.yml is unreachable for bot-pushed tags; either drop it or document it as the manual-tag fallback only
-- .goreleaser.yml uses two keys goreleaser v2 deprecated: `format: binary` should be `formats: [binary]`, and `snapshot.name_template` should be `snapshot.version_template`
-- the child render of .pre-commit-config.yaml installs the copier-template-tester hook; children are not templates and have nothing for ctt to test
-- hk.pkl dropped check-yaml and check-vcs-permalinks when it moved to 1.53.0 builtins, with no replacement
-- hk.pkl needs a global `exclude` (or per-step exclude) for byte-exact snapshot files; the newlines and trailing-whitespace builtins rewrite .golden fixtures and break golden tests
-- release.yml pins checkout and setup-go a major behind what gh-sweep carries (checkout v7.0.1, setup-go v7.0.0)
+2026-07-27 remaining back-ports for my_go_template (another agent owns that checkout; route these rather than editing it here):
+
+- CONTRIBUTING.md renders "gh gh-sweep ..." for the extension invocation, but a `gh-<name>` extension is invoked as `gh <name>`; the template should strip the `gh-` prefix in that sentence
+- CONTRIBUTING.md dropped the `mise dev -- [args]` alternative next to `go run ./cmd/...`, though conf.d/template.toml still defines the `dev` task
+- CONTRIBUTING.md troubleshooting could carry the golden-refresh command (`go test -tags=golden -run TestGolden ./... -update`) behind the same flag that gates the golden test task; re-applied by hand here
