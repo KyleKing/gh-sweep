@@ -8,7 +8,11 @@ run = "go build -v -o gh-sweep ./cmd/gh-sweep"
 
 [tasks.ci]
 description = "Run all checks (used in GitHub Actions)"
-run = ["go test -v -coverprofile=coverage.out ./...", "go test -tags=golden -run TestGolden ./internal/tui/...", "go build -v -o gh-sweep ./cmd/gh-sweep"]
+run = [
+  "go test -v -coverprofile=coverage.out ./...",
+  "go test -tags=golden -run TestGolden ./internal/tui/...",
+  "go build -v -o gh-sweep ./cmd/gh-sweep"
+]
 
 [tasks.clean]
 description = "Clean build artifacts"
@@ -22,6 +26,7 @@ depends = ["build"]
 [tasks.dev]
 description = "Run from source (always reflects current code, no stale build)"
 run = "go run ./cmd/gh-sweep"
+raw_args = true
 
 [tasks.format]
 description = "Format code with golangci-lint and golines"
@@ -34,10 +39,12 @@ run = "hk fix --quiet"
 [tasks.lint]
 description = "Run linter"
 run = "golangci-lint run ./..."
+raw_args = true
 
 [tasks.test]
 description = "Run tests with coverage"
 run = "go test -coverprofile=coverage.out ./..."
+raw_args = true
 
 [tasks."test:coverage-min"]
 description = "Verify minimum coverage threshold (70%)"
@@ -51,18 +58,6 @@ if (( $(awk "BEGIN {print ($coverage < 70)}") )); then
 fi
 '''
 
-[tasks."test:golden"]
-description = "Run golden snapshot tests"
-run = "go test -tags=golden -run TestGolden ./internal/tui/..."
-
-[tasks."test:golden-update"]
-description = "Regenerate golden snapshots"
-run = "go test -tags=golden -run TestGolden ./internal/tui/... -update"
-
-[tasks."test:safety"]
-description = "Check tests for un-faked GitHub client construction"
-run = "./scripts/check-test-safety.sh"
-
 [tasks."test:view-coverage"]
 description = "View coverage report in browser"
 run = "go tool cover -html=coverage.out"
@@ -72,8 +67,8 @@ actionlint = "latest"
 go = "latest"
 "go:github.com/golangci/golines" = "0.15.0"
 "golangci-lint" = "2.12.2"
-hk = "1.32.0"
+hk = "1.53.0"
 ls-lint = "latest"
 "pipx:commitizen" = "latest"
-"pipx:pre-commit-hooks" = "latest"
-"pipx:toml-sort" = "latest"
+pkl = "latest"
+tombi = "latest"

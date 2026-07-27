@@ -12,27 +12,33 @@ mise run ci
 
 ## Tasks
 
-Shared tasks live in `.config/mise/conf.d/template.toml` (managed by the copier template). Project-specific tasks go in additional `.config/mise/conf.d/*.toml` files.
+Shared tasks live in `.config/mise/conf.d/template.toml` (managed by the copier template).
+Project-specific tasks go in additional `.config/mise/conf.d/*.toml` files.
 
-| Command                       | Description                                                           |
-| ----------------------------- | --------------------------------------------------------------------- |
-| `mise run bench`              | Run benchmarks                                                        |
-| `mise run brew:sha`           | Print the SHA256 steps for the Homebrew formula (run after a release) |
-| `mise run build`              | Build binary                                                          |
-| `mise run ci`                 | Full CI check (tests + golden tests + build)                          |
-| `mise run clean`              | Clean build artifacts                                                 |
-| `mise run demo`               | Generate VHS demo recordings                                          |
-| `mise dev`                    | Run from source (`go run`, always reflects current code)              |
-| `mise run format`             | Auto-fix lint and formatting                                          |
-| `mise run hooks`              | Run git hooks                                                         |
-| `mise run lint`               | Run linter                                                            |
-| `mise run test`               | Run tests with coverage                                               |
-| `mise run test:coverage-min`  | Verify the 70% coverage threshold                                     |
-| `mise run test:golden`        | Run golden snapshot tests                                             |
-| `mise run test:golden-update` | Regenerate golden snapshots                                           |
-| `mise run test:safety`        | Check tests for un-faked GitHub client construction                   |
-| `mise run test:view-coverage` | View coverage report in browser                                       |
-| `mise tasks`                  | List all available tasks                                              |
+mise loads `conf.d/*.toml` files in alphabetical order, and a task defined in more
+than one file resolves to whichever file loaded last. Name your project file so it
+sorts after `template.toml` (`user.toml` works; `project.toml` does not, since
+`p` < `t`) or a same-named task override will silently do nothing.
+
+| Command | Description |
+|---------|-------------|
+| `mise run bench` | Run benchmarks |
+| `mise run brew:sha` | Print the SHA256 steps for the Homebrew formula (run after a release) |
+| `mise run build` | Build binary |
+| `mise run ci` | Full CI check (tests + golden tests + build) |
+| `mise run clean` | Clean build artifacts |
+| `mise run demo` | Generate VHS demo recordings |
+| `mise run format` | Auto-fix lint and formatting |
+| `mise run hooks` | Run git hooks |
+| `mise run lint` | Run linter |
+| `mise dev` | Run from source (`go run`, always reflects current code) |
+| `mise run test` | Run tests with coverage |
+| `mise run test:coverage-min` | Verify the 70% coverage threshold |
+| `mise run test:golden` | Run golden snapshot tests |
+| `mise run test:golden-update` | Regenerate golden snapshots |
+| `mise run test:safety` | Check tests for un-faked GitHub client construction |
+| `mise run test:view-coverage` | View coverage report in browser |
+| `mise tasks` | List all available tasks |
 
 ## Code Guidelines
 

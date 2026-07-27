@@ -1,65 +1,38 @@
 // Install with `hk install --mise` to ensure local tools are available
-// hk_version below must match this pin: amends/import can't interpolate a
-// local since pkl requires them before any other module member
+// The hk version is pinned by hk_version in copier.yml
+// Skip with `HK=0` or `git ... --no-verify`
+//
+// `amends`/`import` must be the first module members and cannot interpolate a
+// pkl `local`, so copier substitutes the version literal at generation time.
 
-amends "package://github.com/jdx/hk/releases/download/v1.32.0/hk@1.32.0#/Config.pkl"
-import "package://github.com/jdx/hk/releases/download/v1.32.0/hk@1.32.0#/Builtins.pkl"
+amends "package://github.com/jdx/hk/releases/download/v1.53.0/hk@1.53.0#/Config.pkl"
+import "package://github.com/jdx/hk/releases/download/v1.53.0/hk@1.53.0#/Builtins.pkl"
 
-local hk_version = "1.32.0"
+min_hk_version = "1.53.0"
 
-min_hk_version = hk_version
+// Golden files are byte-exact terminal snapshots and intentionally carry no
+// trailing newline; any whitespace fixer that rewrites them breaks the tests.
+exclude = List("**/*.golden")
 
-local file_list = List("**/*.{gitignore,go,md,pkl,toml,yaml,yml}")
-
+// Builtins carry a `check_diff`, so a clean file is never rewritten and hk
+// stages exactly the files each step touched (`stage = "<JOB_FILES>"` default).
 local linters = new Mapping<String, Step> {
     ["actionlint"] = Builtins.actionlint
+    ["check-added-large-files"] = Builtins.check_added_large_files
+    ["check-merge-conflict"] = Builtins.check_merge_conflict
+    ["check-symlinks"] = Builtins.check_symlinks
+    ["detect-private-key"] = Builtins.detect_private_key
     ["ls-lint"] {
         check = "ls-lint"
     }
-    ["pkl"] {
-        glob = List("*.pkl")
-        check = "pkl eval {{files}} >/dev/null"
-    }
-    ["pch-check-added-large-files"] {
-        glob = file_list
-        check = "check-added-large-files {{ files }}"
-    }
-    ["pch-check-merge-conflict"] {
-        glob = file_list
-        check = "check-merge-conflict {{ files }}"
-    }
-    ["pch-check-symlinks"] {
-        glob = file_list
-        check = "check-symlinks {{ files }}"
-    }
-    ["pch-check-vcs-permalinks"] {
-        glob = file_list
-        check = "check-vcs-permalinks {{ files }}"
-    }
-    ["pch-check-yaml"] {
-        glob = List("**/*.{yml,yaml}")
-        check = "check-yaml {{ files }}"
-    }
-    ["pch-end-of-file-fixer"] {
-        glob = file_list
-        check_first = false
-        fix = "end-of-file-fixer {{ files }}"
-    }
-    ["pch-mixed-line-ending"] {
-        glob = file_list
-        check_first = false
-        fix = "mixed-line-ending {{ files }}"
-    }
-    ["pch-trailing-whitespace-fixer"] {
-        glob = file_list
-        check_first = false
-        fix = "trailing-whitespace-fixer {{ files }}"
-    }
-    ["toml-sort"] {
-        glob = List("**/*.toml")
-        check = "toml-sort --check {{ files }}"
-        fix = "toml-sort --in-place {{ files }}"
-    }
+    ["mixed-line-ending"] = Builtins.mixed_line_ending
+    ["newlines"] = Builtins.newlines
+    ["pkl"] = Builtins.pkl
+    // Matches the tombi LSP that formats TOML on save in nvim, so the editor
+    // and the hook agree. `Builtins.tombi` (the linter) is deliberately absent:
+    // it validates against Schema Store and rejects valid-but-unschema'd keys.
+    ["tombi-format"] = Builtins.tombi_format
+    ["trailing-whitespace"] = Builtins.trailing_whitespace
 }
 
 local commit_msg_checks = new Mapping<String, Step> {
@@ -67,6 +40,7 @@ local commit_msg_checks = new Mapping<String, Step> {
         check = "cz check --allow-abort --commit-msg-file={{commit_msg_file}}"
     }
 }
+
 local pre_push_checks = new Mapping<String, Step> {
     ["ci"] {
         check = "mise run ci"
@@ -91,6 +65,8 @@ hooks = new {
     ["commit-msg"] {
         steps = commit_msg_checks
     }
+
+    // "fix" and "check" back the `hk fix` and `hk check` commands
     ["fix"] {
         fix = true
         steps = linters

@@ -1,0 +1,16 @@
+# Changes here will be overwritten by Copier
+_commit: v0.6.1
+_src_path: gh:KyleKing/my_go_template
+author_email: dev.act.kyle@gmail.com
+author_name: Kyle King
+author_username: kyleking
+copyright_date: '2024'
+development_branch: main
+module_path: github.com/KyleKing/gh-sweep
+project_description: 'TUI for sweeping GitHub repositories: dead branches, unresolved
+    review threads, protection drift, and slow workflows.'
+project_name: gh-sweep
+project_type: cli
+repository_namespace: KyleKing
+repository_provider: https://github.com
+use_goreleaser: true

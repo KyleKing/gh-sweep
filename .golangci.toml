@@ -4,12 +4,7 @@
 version = "2"
 
 [formatters]
-enable = [
-  "gci",
-  "gofmt",
-  "gofumpt",
-  "goimports"
-]
+enable = ["gci", "gofmt", "gofumpt", "goimports"]
 
 [formatters.settings.gci]
 sections = ["standard", "default", "prefix(github.com/KyleKing/gh-sweep)"]
@@ -22,11 +17,11 @@ local-prefixes = ["github.com/KyleKing/gh-sweep"]
 
 [linters]
 disable = [
-  "depguard", # requires allowlist/denylist configuration
-  "forbidigo", # requires custom regex configuration
-  "gochecknoglobals", # BubbleTea/lipgloss styles use package-level vars
-  "goheader", # copyright headers add noise for personal projects
-  "wsl" # whitespace linting too nitpicky
+  "depguard",  # requires allowlist/denylist configuration
+  "forbidigo",  # requires custom regex configuration
+  "gochecknoglobals",  # BubbleTea/lipgloss styles use package-level vars
+  "goheader",  # copyright headers add noise for personal projects
+  "wsl"  # whitespace linting too nitpicky
 ]
 enable = [
   "asciicheck",
@@ -72,7 +67,7 @@ enable = [
   "ineffassign",
   "interfacebloat",
   "intrange",
-  "ireturn", # see linters.settings.ireturn: bubbletea.Model allowed by design
+  "ireturn",  # see linters.settings.ireturn: bubbletea.Model allowed by design
   "lll",
   "loggercheck",
   "maintidx",
@@ -190,7 +185,13 @@ min-len = 3
 min-occurrences = 3
 
 [linters.settings.gocritic]
-enabled-tags = ["diagnostic", "style", "performance", "experimental", "opinionated"]
+enabled-tags = [
+  "diagnostic",
+  "style",
+  "performance",
+  "experimental",
+  "opinionated"
+]
 disabled-checks = ["whyNoLint"]
 
 [linters.settings.gocyclo]
@@ -210,7 +211,13 @@ disable = ["shadow", "fieldalignment"]
 [linters.settings.ireturn]
 # bubbletea's Elm architecture requires Update-family methods to return tea.Model
 # and command functions to return tea.Msg
-allow = ["error", "empty", "stdlib", "charm\\.land/bubbletea/v2\\.Model", "charm\\.land/bubbletea/v2\\.Msg"]
+allow = [
+  "error",
+  "empty",
+  "stdlib",
+  "charm\\.land/bubbletea/v2\\.Model",
+  "charm\\.land/bubbletea/v2\\.Msg"
+]
 
 [linters.settings.lll]
 line-length = 120
@@ -239,52 +246,52 @@ require-specific = true
 [linters.settings.revive]
 enable-all-rules = false
 rules = [
-  {name = "atomic"},
-  {name = "blank-imports"},
-  {name = "bool-literal-in-expr"},
-  {name = "call-to-gc"},
-  {name = "confusing-naming"},
-  {name = "constant-logical-expr"},
-  {name = "context-as-argument"},
-  {name = "context-keys-type"},
-  {name = "defer"},
-  {name = "dot-imports"},
-  {name = "early-return"},
-  {name = "empty-block"},
-  {name = "empty-lines"},
-  {name = "error-naming"},
-  {name = "error-return"},
-  {name = "error-strings"},
-  {name = "errorf"},
-  {name = "exported"},
-  {name = "if-return"},
-  {name = "import-shadowing"},
-  {name = "increment-decrement"},
-  {name = "indent-error-flow"},
-  {name = "modifies-parameter"},
-  {name = "modifies-value-receiver"},
-  {name = "package-comments"},
-  {name = "range"},
-  {name = "range-val-address"},
-  {name = "range-val-in-closure"},
-  {name = "receiver-naming"},
-  {name = "redefines-builtin-id"},
-  {name = "string-of-int"},
-  {name = "struct-tag"},
-  {name = "superfluous-else"},
-  {name = "time-equal"},
-  {name = "time-naming"},
-  {name = "unexported-naming"},
-  {name = "unexported-return"},
-  {name = "unnecessary-stmt"},
-  {name = "unreachable-code"},
-  {name = "unused-parameter"},
-  {name = "unused-receiver"},
-  {name = "use-any"},
-  {name = "useless-break"},
-  {name = "var-declaration"},
-  {name = "var-naming"},
-  {name = "waitgroup-by-value"}
+  { name = "atomic" },
+  { name = "blank-imports" },
+  { name = "bool-literal-in-expr" },
+  { name = "call-to-gc" },
+  { name = "confusing-naming" },
+  { name = "constant-logical-expr" },
+  { name = "context-as-argument" },
+  { name = "context-keys-type" },
+  { name = "defer" },
+  { name = "dot-imports" },
+  { name = "early-return" },
+  { name = "empty-block" },
+  { name = "empty-lines" },
+  { name = "error-naming" },
+  { name = "error-return" },
+  { name = "error-strings" },
+  { name = "errorf" },
+  { name = "exported" },
+  { name = "if-return" },
+  { name = "import-shadowing" },
+  { name = "increment-decrement" },
+  { name = "indent-error-flow" },
+  { name = "modifies-parameter" },
+  { name = "modifies-value-receiver" },
+  { name = "package-comments" },
+  { name = "range" },
+  { name = "range-val-address" },
+  { name = "range-val-in-closure" },
+  { name = "receiver-naming" },
+  { name = "redefines-builtin-id" },
+  { name = "string-of-int" },
+  { name = "struct-tag" },
+  { name = "superfluous-else" },
+  { name = "time-equal" },
+  { name = "time-naming" },
+  { name = "unexported-naming" },
+  { name = "unexported-return" },
+  { name = "unnecessary-stmt" },
+  { name = "unreachable-code" },
+  { name = "unused-parameter" },
+  { name = "unused-receiver" },
+  { name = "use-any" },
+  { name = "useless-break" },
+  { name = "var-declaration" },
+  { name = "var-naming" },
+  { name = "waitgroup-by-value" }
 ]
 
 [linters.settings.staticcheck]
