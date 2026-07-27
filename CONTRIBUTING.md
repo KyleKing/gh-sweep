@@ -58,38 +58,77 @@ Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
 
 Git hooks run automatically via hk on commit and push.
 
+
 ## Development Install
 
 Run straight from source with `go run`, which always reflects the current code, so there's no built binary or installed extension to go stale between edits:
 
 ```bash
 go run ./cmd/gh-sweep [args]
-# or
-mise dev -- [args]
 ```
 
-To test the actual `gh sweep` extension invocation or a Homebrew install, use the released version rather than installing from this checkout:
+To test the actual `gh gh-sweep ...` extension invocation or a Homebrew install, use the released version rather than installing from this checkout:
 
 ```bash
-gh extension install kyleking/gh-sweep
+gh extension install KyleKing/gh-sweep
 # or
 brew install --formula https://github.com/KyleKing/gh-sweep/raw/main/Formula/gh-sweep.rb
 ```
+
 
 ## Releases
 
-Merging a releasable Conventional Commit to `main` triggers the `bump_version` workflow: commitizen bumps the version, tags, and updates the changelog, then goreleaser builds the binaries and publishes the GitHub release in the same workflow (tags pushed with the default `GITHUB_TOKEN` cannot trigger a second workflow). A manually pushed `v*` tag runs `release.yml` as a fallback.
+Automated by the Bump Version workflow. **Note:** For GH CLI extensions, the first release is required before users can run `gh extension install KyleKing/gh-sweep`.
 
-After a release:
+### Creating a Release
 
-1. Verify the properly named binaries are attached (`gh-sweep-linux-amd64`, `gh-sweep-darwin-arm64`, etc.), since `gh extension install kyleking/gh-sweep` and the formula download them by that exact naming
-1. Update the `version` and `sha256` values in `Formula/gh-sweep.rb`; `mise run brew:sha` prints the `shasum` commands
+1. Land a `fix:` or `feat:` commit on `main`. Commit types commitizen does not bump (`docs:`, `build(deps):`) cut no tag and publish nothing.
 
-Users install from the repository formula:
+2. GitHub Actions will automatically:
+   - Bump the version, update CHANGELOG.md, and push a `bump:` commit
+   - Tag the new version
+   - Run goreleaser to build binaries for Linux, macOS, Windows, and FreeBSD (amd64/arm64) and publish the release
+
+   goreleaser runs inside that same workflow because a tag pushed with `GITHUB_TOKEN` does not trigger any other workflow.
+
+3. Verify the release has properly named binaries:
+   - `gh-sweep-linux-amd64`
+   - `gh-sweep-darwin-arm64`
+   - `gh-sweep-windows-amd64.exe`
+   - etc.
+
+### Updating the Homebrew Formula
+
+After a release, update `Formula/gh-sweep.rb`:
+
+1. Download the release binaries from the GitHub release page
+2. Generate SHA256 checksums:
+
+   ```bash
+   shasum -a 256 gh-sweep-darwin-arm64 gh-sweep-darwin-amd64 gh-sweep-linux-arm64 gh-sweep-linux-amd64
+   ```
+
+   Or run `mise run brew:sha` for a reminder of these steps.
+
+3. Update the `version` and `sha256` values in `Formula/gh-sweep.rb`
+4. Commit and push the formula changes
+
+### Installing via Homebrew
+
+Users can install directly from the repository formula:
 
 ```bash
 brew install --formula https://github.com/KyleKing/gh-sweep/raw/main/Formula/gh-sweep.rb
 ```
+
+Or from a local checkout:
+
+```bash
+brew install --formula ./Formula/gh-sweep.rb
+```
+
+To set up a [homebrew tap](https://docs.brew.sh/Taps) for `brew install KyleKing/tap/gh-sweep`, create a `homebrew-tap` repo at `https://github.com/KyleKing/homebrew-tap` and copy the formula there.
+
 
 ## Troubleshooting
 
