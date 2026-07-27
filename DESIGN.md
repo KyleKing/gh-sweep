@@ -42,7 +42,7 @@ Bubble Tea TUI plus Cobra CLI for sweeping GitHub repositories: branch cleanup, 
 
 Unresolved comment review uses GraphQL `reviewThreads` (REST cannot report resolution state); without `--pr` it scans the newest open PRs capped at `DefaultOpenPRCap` (20) to bound API cost.
 
-Watch status (`watching.go` / `watchGraphql.go`) uses GraphQL `viewer.repositories { viewerSubscription }` in one paginated query rather than one REST call per repo, both faster and immune to the per-repo partial-failure case REST invited. Neither REST nor GraphQL can see or set GitHub's "Custom" per-notification-type watch setting ([community/discussions/65099](https://github.com/orgs/community/discussions/65099)); a repo left at Custom on github.com reports the same state here as one at the plain default (Participating and @mentions). This is a hard API limitation, not a gh-sweep gap, so the TUI and CLI both say so rather than asserting a state they can't confirm.
+Watch status (`watching.go` / `watch_graphql.go`) uses GraphQL `viewer.repositories { viewerSubscription }` in one paginated query rather than one REST call per repo, both faster and immune to the per-repo partial-failure case REST invited. Neither REST nor GraphQL can see or set GitHub's "Custom" per-notification-type watch setting ([community/discussions/65099](https://github.com/orgs/community/discussions/65099)); a repo left at Custom on github.com reports the same state here as one at the plain default (Participating and @mentions). This is a hard API limitation, not a gh-sweep gap, so the TUI and CLI both say so rather than asserting a state they can't confirm.
 
 Adding a new API surface:
 
