@@ -1,3 +1,9 @@
+## v0.4.3 (2026-07-27)
+
+### Refactor
+
+- rename camelCase Go files to snake_case
+
 ## v0.4.2 (2026-07-27)
 
 ### Fix
