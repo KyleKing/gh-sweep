@@ -8,5 +8,9 @@ See screenshots on desktop:
 
 2026-07-26 decisions needed:
 
-- Tags v0.1.0-v0.3.2 have no GitHub releases because goreleaser first succeeded at v0.3.3: backfill or ignore?
+- Tags v0.1.0-v0.3.2 have no GitHub releases because goreleaser first succeeded at v0.3.3: backfill or ignore? (resolved 2026-07-27: deleted)
 - Adopt .copier-answers.yml so this repo becomes a real copier child?
+
+2026-07-27:
+
+- Formula/gh-sweep.rb still pins version "0.1.0" with REPLACE_WITH_SHA256 placeholders, so its download URLs 404; update it to 0.4.2 with real sums from `mise run brew:sha` or drop the formula
