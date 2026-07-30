@@ -13,11 +13,11 @@ See screenshots on desktop:
 
 2026-07-27:
 
-- Formula/gh-sweep.rb still pins version "0.1.0" with REPLACE_WITH_SHA256 placeholders, so its download URLs 404; update it to 0.4.2 with real sums from `mise run brew:sha` or drop the formula
+- Formula/gh-sweep.rb still pins version "0.1.0" with REPLACE_WITH_SHA256 placeholders, so its download URLs 404. As of v0.4.4 the release carries four real, distinct binaries for the platforms the formula covers, so it can now be filled in for real: set version "0.4.4" and paste the darwin-arm64, darwin-amd64, linux-arm64, and linux-amd64 sums from the release's checksums.txt. Its `test do` block asserts the version string, which the v0.4.4 binary prints. The standing question is whether to hand-maintain it at all: scripts/provision-tap-deploy-key.sh already exists for a goreleaser-pushed tap, and .goreleaser.yml has no brews block, so adding one would keep the formula current on every release instead of going stale after each one
 
 2026-07-27 back-ports for my_go_template: all seven landed in template v0.6.3 and arrived here via copier update
 
-2026-07-27 remaining back-ports for my_go_template (another agent owns that checkout; route these rather than editing it here):
+2026-07-27 remaining back-ports for my_go_template (another agent owns that checkout; route these rather than editing it here). Still open after template v0.6.4, which touched only .goreleaser.yml:
 
 - CONTRIBUTING.md renders "gh gh-sweep ..." for the extension invocation, but a `gh-<name>` extension is invoked as `gh <name>`; the template should strip the `gh-` prefix in that sentence
 - CONTRIBUTING.md dropped the `mise dev -- [args]` alternative next to `go run ./cmd/...`, though conf.d/template.toml still defines the `dev` task
