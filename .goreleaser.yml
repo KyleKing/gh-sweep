@@ -30,7 +30,6 @@ builds:
       - goos: windows
         goarch: arm64
     binary: gh-sweep
-    no_unique_dist_dir: true
 
 archives:
   - id: gh-sweep
