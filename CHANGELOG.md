@@ -1,3 +1,9 @@
+## v0.4.4 (2026-07-30)
+
+### Fix
+
+- **release**: build each target into its own dist path
+
 ## v0.4.3 (2026-07-27)
 
 ### Refactor
