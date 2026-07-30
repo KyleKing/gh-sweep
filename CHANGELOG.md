@@ -1,3 +1,9 @@
+## v0.5.0 (2026-07-30)
+
+### Feat
+
+- **release**: publish a Homebrew cask from goreleaser
+
 ## v0.4.4 (2026-07-30)
 
 ### Fix
