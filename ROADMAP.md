@@ -12,18 +12,39 @@ A cross-repo sweep and audit tool: point it at an org or a repo list and find wh
 
 Four layers, detailed in [DESIGN.md](DESIGN.md#testing): table-driven unit tests as the base, golden snapshots behind a build tag for visual regression, teatest end-to-end runs against a fake GitHub transport, and a two-part safety net (runtime mutation guard plus a static scan) so no test can mutate real GitHub state. New features land with unit tests first; golden snapshots stay deliberately few to avoid brittle churn.
 
-## Shipped
+Shipped work is not tracked here. `CHANGELOG.md` and `git log` are the record.
 
-- Layout restructure onto the Go template tooling (52f100f)
-- Config loading wired into TUI and CLI with flag precedence (521b4c1)
-- Bubble Tea v2 migration with the semantic theme (10adee3)
-- Branch management with guarded batch delete (ba2ff65)
-- Real unresolved-comment review via GraphQL review threads (707df75)
-- Protection CLI wiring and real analytics data (fcb59dc)
-- Orphan branch sweep (e2e40a1) and watch-status enforcement (bbe525b)
-- GHA performance reporting with cache and CSV export (04628bd)
-- Release plumbing: goreleaser, commitizen bump, brew formula (f54b1ab)
-- Test suite: transport seam, mutation guard, golden and teatest layers (cd206cc)
+## M0: Guardrails on the destructive commands
+
+The highest-priority milestone. `orphans --cleanup` is currently an unprompted,
+unlimited delete, and all four gaps below are present as of v0.5.0.
+
+- `runCleanup` in `internal/cli/orphans.go` deletes every classified branch
+  immediately. `--dry-run` previews, but `orphans --cleanup` without it deletes
+  with no prompt, no count summary, and no limit. With `--org` and `--namespace`
+  both omitted the namespace resolves to the authenticated user and the scan
+  covers every non-archived repo you own, so a bare `orphans --cleanup` is an
+  account-wide branch delete. Add an interactive confirmation before the delete
+  loop: print the count and the full list, then require a typed `yes`, with a
+  `--yes`/`--force` flag to skip it for automation. The TUI orphans component
+  already gates deletion behind a `y/N` screen, so the CLI is the asymmetric path
+- `internal/orphans/detector.go:70` classifies a branch whose PR closed without
+  merging as `OrphanTypeClosedPR` and returns it as deletable, which can erase
+  abandoned-for-now work. Exclude that class from `--cleanup` by default behind
+  an explicit opt-in flag, or at minimum list it separately in the confirmation
+  so it is never deleted silently alongside merged branches
+- `DefaultScanOptions` in `internal/orphans/types.go:94` sets
+  `StaleDaysThreshold` to 7. A branch with no PR whose last commit is a week old
+  is classified stale and deletable, which is short for personal repos. Either
+  raise the default to 30 or make the confirmation non-negotiable for the stale
+  class
+- `watching --watch-all` has no confirmation and no dry-run, and the TUI `w`/`u`
+  keys mutate subscriptions with no prompt. Lower stakes (notifications only) but
+  the same pattern would make the tool consistent
+
+Coverage on exactly this code is the thinnest in the repo, so M3 below and this
+milestone reinforce each other. Test the orphan detector and the CLI cleanup path
+first.
 
 ## M1: Pages CNAME subdomain-takeover audit
 
