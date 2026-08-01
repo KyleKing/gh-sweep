@@ -23,21 +23,20 @@ sorts after `template.toml` (`user.toml` works; `project.toml` does not, since
 | Command | Description |
 |---------|-------------|
 | `mise run bench` | Run benchmarks |
-| `mise run brew:sha` | Print the SHA256 steps for the Homebrew formula (run after a release) |
 | `mise run build` | Build binary |
 | `mise run ci` | Full CI check (tests + golden tests + build) |
 | `mise run clean` | Clean build artifacts |
-| `mise run demo` | Generate VHS demo recordings |
+| `mise run demo` | Generate VHS demo recordings (needs [vhs](https://github.com/charmbracelet/vhs) on `PATH`; it is not pinned in `[tools]`) |
+| `mise run dev` | Run from source (`go run`, always reflects current code) |
 | `mise run format` | Auto-fix lint and formatting |
 | `mise run hooks` | Run git hooks |
 | `mise run lint` | Run linter |
-| `mise dev` | Run from source (`go run`, always reflects current code) |
 | `mise run test` | Run tests with coverage |
-| `mise run test:coverage-min` | Verify the 70% coverage threshold |
+| `mise run test:coverage-min` | Fail below the 70% coverage threshold |
 | `mise run test:golden` | Run golden snapshot tests |
 | `mise run test:golden-update` | Regenerate golden snapshots |
 | `mise run test:safety` | Check tests for un-faked GitHub client construction |
-| `mise run test:view-coverage` | View coverage report in browser |
+| `mise run test:view-coverage` | Open the coverage report in a browser |
 | `mise tasks` | List all available tasks |
 
 ## Code Guidelines
@@ -67,18 +66,24 @@ Run straight from source with `go run`, which always reflects the current code, 
 go run ./cmd/gh-sweep [args]
 ```
 
-To test the actual `gh gh-sweep ...` extension invocation or a Homebrew install, use the released version rather than installing from this checkout:
+Or through mise, which runs the same thing:
+
+```bash
+mise run dev [args]
+```
+
+To test the actual `gh sweep ...` invocation (the GitHub CLI strips the `gh-` prefix from the repository name) or a Homebrew install, use the released version rather than installing from this checkout:
 
 ```bash
 gh extension install KyleKing/gh-sweep
 # or
-brew install --formula https://github.com/KyleKing/gh-sweep/raw/main/Formula/gh-sweep.rb
+brew install --cask KyleKing/tap/gh-sweep
 ```
 
 
 ## Releases
 
-Automated by the Bump Version workflow. **Note:** For GH CLI extensions, the first release is required before users can run `gh extension install KyleKing/gh-sweep`.
+Automated by the Bump Version workflow. **Note:** the first release is required before users can run `gh extension install KyleKing/gh-sweep`.
 
 ### Creating a Release
 
@@ -91,43 +96,23 @@ Automated by the Bump Version workflow. **Note:** For GH CLI extensions, the fir
 
    goreleaser runs inside that same workflow because a tag pushed with `GITHUB_TOKEN` does not trigger any other workflow.
 
-3. Verify the release has properly named binaries:
-   - `gh-sweep-linux-amd64`
-   - `gh-sweep-darwin-arm64`
-   - `gh-sweep-windows-amd64.exe`
-   - etc.
-
-### Updating the Homebrew Formula
-
-After a release, update `Formula/gh-sweep.rb`:
-
-1. Download the release binaries from the GitHub release page
-2. Generate SHA256 checksums:
+3. Verify the release by distinct hash, not by asset count. Every target is a separate build, so the checksums must all differ; a repeated hash means one binary was published under several names:
 
    ```bash
-   shasum -a 256 gh-sweep-darwin-arm64 gh-sweep-darwin-amd64 gh-sweep-linux-arm64 gh-sweep-linux-amd64
+   gh release download <tag> -p checksums.txt -O - | awk '{print $1}' | sort -u | wc -l
    ```
 
-   Or run `mise run brew:sha` for a reminder of these steps.
-
-3. Update the `version` and `sha256` values in `Formula/gh-sweep.rb`
-4. Commit and push the formula changes
+   Expect one line per binary. Names should read `gh-sweep-linux-amd64`, `gh-sweep-darwin-arm64`, `gh-sweep-windows-amd64.exe`, and so on.
 
 ### Installing via Homebrew
 
-Users can install directly from the repository formula:
+goreleaser builds the cask and pushes it to `https://github.com/KyleKing/homebrew-tap` as part of the release, with the SHA256 values taken from the artifacts it just built:
 
 ```bash
-brew install --formula https://github.com/KyleKing/gh-sweep/raw/main/Formula/gh-sweep.rb
+brew install --cask KyleKing/tap/gh-sweep
 ```
 
-Or from a local checkout:
-
-```bash
-brew install --formula ./Formula/gh-sweep.rb
-```
-
-To set up a [homebrew tap](https://docs.brew.sh/Taps) for `brew install KyleKing/tap/gh-sweep`, create a `homebrew-tap` repo at `https://github.com/KyleKing/homebrew-tap` and copy the formula there.
+The push needs a `TAP_DEPLOY_KEY` secret scoped to the tap repo; run `scripts/provision-tap-deploy-key.sh` to create it. Without the secret the release still publishes every binary and skips the cask with a warning.
 
 
 ## Troubleshooting
@@ -138,3 +123,6 @@ hk install --mise --force  # Reinstall hooks
 go test -v -run TestName ./package  # Debug specific test
 go test -tags=golden -run TestGolden ./internal/tui/... -update  # Refresh stale goldens
 ```
+
+Golden files are byte-exact snapshots, so `hk.pkl` excludes `**/*.golden` from every
+whitespace fixer. Regenerate them with `-update` and review the diff; never hand-edit.
