@@ -109,5 +109,5 @@ Coverage targets by tier: critical paths (`internal/github`, `internal/config`, 
 
 1. `mise run ci` (tests, golden pass, build)
 1. Merge conventional commits to `main`; `bump_version.yml` runs commitizen to tag and goreleaser to publish binaries (`gh-sweep-<os>-<arch>`)
-1. Update `Formula/gh-sweep.rb` version and SHA256 values (`mise run brew:sha` prints the steps)
+1. Confirm goreleaser pushed the cask to `KyleKing/homebrew-tap` (it needs the `TAP_DEPLOY_KEY` secret; without it the binaries still publish and the cask is skipped)
 1. Verify `gh extension install kyleking/gh-sweep` finds the binaries, which are downloaded by that exact naming

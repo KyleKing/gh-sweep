@@ -18,6 +18,7 @@ limit, so gh-sweep says so rather than asserting a state it cannot confirm.
 `gha-perf` reports stale numbers because it merges into a JSON cache under
 `~/.cache/gh-sweep/gha-perf/`. Pass `--no-cache` to ignore it for one run.
 
-`brew install` fails. No cask has published to `kyleking/homebrew-tap` for
-gh-sweep yet, and `Formula/gh-sweep.rb` in this repo is an unfilled stub. Install
-through `gh extension install` or `go install` instead.
+`brew install --cask KyleKing/tap/gh-sweep` fails. The tap holds no gh-sweep cask
+until the first release published after the `TAP_DEPLOY_KEY` secret was added on
+2026-07-30; v0.5.0 predates it. Install through `gh extension install` or
+`go install` until a later release appears in the tap.
