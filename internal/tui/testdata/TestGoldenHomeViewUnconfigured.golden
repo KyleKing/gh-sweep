@@ -25,6 +25,7 @@
 [38;2;147;154;183m  [7] 👥 Collaborators[m[38;2;147;154;183m - Manage repository access[m[38;2;147;154;183m (unavailable)[m
 [38;2;147;154;183m  [8] 🔐 Secrets Audit[m[38;2;147;154;183m - Review secrets usage (read-only)[m[38;2;147;154;183m (unavailable)[m
 [38;2;147;154;183m  [9] 📦 Releases[m[38;2;147;154;183m - Release version overview[m[38;2;147;154;183m (unavailable)[m
+[38;2;202;211;245m  [y] 📐 Policy[m[38;2;147;154;183m - Diff and sync settings against a policy file[m
 
 [38;2;147;154;183m💡 Configure with --repo flag or .gh-sweep.yaml[m
 

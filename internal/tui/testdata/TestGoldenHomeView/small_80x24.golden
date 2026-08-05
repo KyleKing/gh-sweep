@@ -25,5 +25,6 @@
 [38;2;202;211;245m  [7] 👥 Collaborators[m[38;2;147;154;183m - Manage repository access[m
 [38;2;202;211;245m  [8] 🔐 Secrets Audit[m[38;2;147;154;183m - Review secrets usage (read-only)[m
 [38;2;202;211;245m  [9] 📦 Releases[m[38;2;147;154;183m - Release version overview[m
+[38;2;202;211;245m  [y] 📐 Policy[m[38;2;147;154;183m - Diff and sync settings against a policy file[m
 
 [38;2;147;154;183mj/k or ↑/↓: move | enter: select | /: filter | 0-9/o/p: quick jump | q: quit[m
