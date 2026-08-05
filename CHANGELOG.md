@@ -1,3 +1,9 @@
+## v0.6.0 (2026-08-05)
+
+### Feat
+
+- add gh-sweep policy command for declarative repo settings sync
+
 ## v0.5.0 (2026-07-30)
 
 ### Feat
