@@ -67,6 +67,40 @@ func (c *Client) GetBranchProtection(owner, repo, branch string) (*ProtectionRul
 	return rule, nil
 }
 
+// UpdateBranchProtection replaces branch protection rules via PUT, which GitHub
+// requires as a full replacement rather than a partial patch. Fields left at their
+// zero value (e.g. no status checks) are sent as such, not omitted.
+func (c *Client) UpdateBranchProtection(owner, repo, branch string, desired ProtectionRule) error {
+	path := fmt.Sprintf("repos/%s/%s/branches/%s/protection", owner, repo, branch)
+
+	body := map[string]any{
+		"required_status_checks": map[string]any{
+			"strict":   false,
+			"contexts": desired.RequireStatusChecks,
+		},
+		"enforce_admins": desired.EnforceAdmins,
+		"required_pull_request_reviews": map[string]any{
+			"required_approving_review_count": desired.RequiredReviews,
+			"require_code_owner_reviews":      desired.RequireCodeOwnerReviews,
+		},
+		"restrictions":            nil,
+		"required_linear_history": desired.RequireLinearHistory,
+		"allow_force_pushes":      desired.AllowForcePushes,
+		"allow_deletions":         desired.AllowDeletions,
+	}
+
+	if desired.RequiredReviews == 0 {
+		body["required_pull_request_reviews"] = nil
+	}
+
+	var response protectionResponse
+	if err := c.Put(path, body, &response); err != nil {
+		return fmt.Errorf("failed to update branch protection: %w", err)
+	}
+
+	return nil
+}
+
 // GetDefaultBranchProtection retrieves protection rules for the repo's default branch.
 func (c *Client) GetDefaultBranchProtection(owner, repo string) (*ProtectionRule, error) {
 	branch := "main"

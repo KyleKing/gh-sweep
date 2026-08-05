@@ -7,6 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
+	"github.com/KyleKing/gh-sweep/internal/config"
 	"github.com/KyleKing/gh-sweep/internal/orphans"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/analytics"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/branches"
@@ -14,6 +15,7 @@ import (
 	"github.com/KyleKing/gh-sweep/internal/tui/components/comments"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/ghaperf"
 	orphanstui "github.com/KyleKing/gh-sweep/internal/tui/components/orphans"
+	policytui "github.com/KyleKing/gh-sweep/internal/tui/components/policy"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/protection"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/releases"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/secrets"
@@ -40,6 +42,7 @@ const (
 	ViewSecrets
 	ViewReleases
 	ViewOrphans
+	ViewPolicy
 )
 
 // menuItem describes one selectable entry in the home menu list.
@@ -72,6 +75,7 @@ type MainModel struct {
 	commentsModel      comments.Model
 	ghaPerfModel       ghaperf.Model
 	orphansModel       orphanstui.Model
+	policyModel        policytui.Model
 	protectionModel    protection.Model
 	releasesModel      releases.Model
 	secretsModel       secrets.Model
@@ -272,6 +276,15 @@ func (m MainModel) buildMenuItems() []menuItem {
 			section: "Phase 3: Access & Releases",
 			view:    ViewReleases,
 			enabled: hasRepos,
+		},
+		{
+			key:     "y",
+			icon:    "📐",
+			label:   "Policy",
+			desc:    "Diff and sync settings against a policy file",
+			section: "Phase 3: Access & Releases",
+			view:    ViewPolicy,
+			enabled: true,
 		},
 	}
 }
@@ -499,6 +512,16 @@ func (m MainModel) activateItem(item menuItem) (tea.Model, tea.Cmd) {
 	case ViewOrphans:
 		m.orphansModel = orphanstui.NewModel(m.org, orphans.DefaultScanOptions())
 		return m, m.orphansModel.Init()
+
+	case ViewPolicy:
+		policyCfg, err := config.LoadPolicy("")
+		if err != nil {
+			m.policyModel = policytui.NewModelWithConfigError(err)
+		} else {
+			m.policyModel = policytui.NewModel(policyCfg)
+		}
+
+		return m, m.policyModel.Init()
 	}
 
 	return m, nil
@@ -543,6 +566,9 @@ func (m MainModel) updateActive(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case ViewOrphans:
 		m.orphansModel, cmd = m.orphansModel.Update(msg)
+
+	case ViewPolicy:
+		m.policyModel, cmd = m.policyModel.Update(msg)
 	}
 
 	return m, cmd
@@ -587,6 +613,8 @@ func (m MainModel) renderContent() string {
 		return m.watchingModel.View()
 	case ViewOrphans:
 		return m.orphansModel.View()
+	case ViewPolicy:
+		return m.policyModel.View()
 	default:
 		return m.renderHome()
 	}

@@ -81,6 +81,16 @@ func endpointFake() roundTripFunc {
 				"allow_force_pushes":{"enabled":false},
 				"allow_deletions":{"enabled":false}
 			}`), nil
+		case method == http.MethodPut && path == "/repos/acme/widgets/branches/main/protection":
+			return okJSON(req, `{}`), nil
+		case method == http.MethodPatch && path == "/repos/acme/widgets":
+			return okJSON(req, `{"name":"widgets","default_branch":"main"}`), nil
+		case method == http.MethodGet && path == "/repos/acme/widgets/immutable-releases":
+			return okJSON(req, `{"enabled":false,"enforced_by_owner":false}`), nil
+		case method == http.MethodPut && path == "/repos/acme/widgets/immutable-releases":
+			return okJSON(req, `{}`), nil
+		case method == http.MethodDelete && path == "/repos/acme/widgets/immutable-releases":
+			return okJSON(req, `{}`), nil
 		case method == http.MethodGet && path == "/repos/acme/widgets/subscription":
 			return okJSON(req, `{"subscribed":true,"ignored":false,"reason":""}`), nil
 		case method == http.MethodPut && path == "/repos/acme/widgets/subscription":
@@ -392,6 +402,51 @@ func TestListWebhooksAndDeliveries(t *testing.T) {
 
 	if len(deliveries) != 2 || deliveries[1].Status != 502 {
 		t.Errorf("deliveries = %+v", deliveries)
+	}
+}
+
+func TestUpdateRepoSettings(t *testing.T) {
+	t.Parallel()
+
+	enabled := true
+	err := newEndpointClient(t).
+		UpdateRepoSettings("acme", "widgets", RepoSettingsPatch{DeleteBranchOnMerge: &enabled})
+	if err != nil {
+		t.Errorf("UpdateRepoSettings() error = %v", err)
+	}
+}
+
+func TestUpdateBranchProtection(t *testing.T) {
+	t.Parallel()
+
+	err := newEndpointClient(t).UpdateBranchProtection("acme", "widgets", "main", ProtectionRule{
+		RequiredReviews: 1,
+	})
+	if err != nil {
+		t.Errorf("UpdateBranchProtection() error = %v", err)
+	}
+}
+
+func TestImmutableReleasesLifecycle(t *testing.T) {
+	t.Parallel()
+
+	client := newEndpointClient(t)
+
+	settings, err := client.GetImmutableReleases("acme", "widgets")
+	if err != nil {
+		t.Fatalf("GetImmutableReleases() error = %v", err)
+	}
+
+	if settings.Enabled || settings.EnforcedByOwner {
+		t.Errorf("settings = %+v, want disabled", settings)
+	}
+
+	if err := client.SetImmutableReleases("acme", "widgets", true); err != nil {
+		t.Errorf("SetImmutableReleases(true) error = %v", err)
+	}
+
+	if err := client.SetImmutableReleases("acme", "widgets", false); err != nil {
+		t.Errorf("SetImmutableReleases(false) error = %v", err)
 	}
 }
 

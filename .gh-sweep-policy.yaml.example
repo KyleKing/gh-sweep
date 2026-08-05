@@ -1,0 +1,51 @@
+# gh-sweep policy example
+# Copy to .gh-sweep-policy.yaml and run `gh-sweep policy --list` to see drift,
+# or `gh-sweep policy --apply` to sync repos toward it.
+#
+# Every field is optional. An omitted field is left unmanaged: gh-sweep never
+# reports or changes a setting you haven't declared here.
+
+default_org: your-org
+
+repositories:
+  - owner/repo1
+  - owner/repo2
+  - repo3 # uses default_org
+
+# Repository settings (PATCH /repos/{owner}/{repo})
+settings:
+  delete_branch_on_merge: true
+  allow_squash_merge: true
+  allow_merge_commit: false
+  allow_rebase_merge: false
+  allow_auto_merge: false
+  allow_update_branch: true
+  use_squash_pr_title_as_default: true
+  has_wiki: false
+  has_projects: false
+  # has_issues: true
+  # has_discussions: false
+  # allow_forking: true
+  # web_commit_signoff_required: false
+
+# security_and_analysis toggles: "enabled" or "disabled"
+security:
+  secret_scanning: enabled
+  secret_scanning_push_protection: enabled
+  # dependabot_security_updates: enabled
+
+# Release immutability (PUT/DELETE /repos/{owner}/{repo}/immutable-releases)
+releases:
+  immutable: true
+
+# Branch-protection baseline applied to each repo's default branch
+# (PUT /repos/{owner}/{repo}/branches/{branch}/protection)
+protection:
+  required_reviews: 1
+  require_code_owner_reviews: false
+  require_status_checks:
+    - ci
+  enforce_admins: false
+  require_linear_history: false
+  allow_force_pushes: false
+  allow_deletions: false
