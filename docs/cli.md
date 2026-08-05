@@ -114,6 +114,57 @@ gh sweep orphans --org my-org --cleanup --dry-run
 
 Always run `--cleanup --dry-run` before `--cleanup`.
 
+## policy
+
+Diff and sync repo settings, security & analysis, release immutability, and
+branch protection against a declared [policy file](./configuration.md#policy-file).
+A field left out of the policy is never reported or changed.
+
+```bash
+gh sweep policy
+gh sweep policy --list
+gh sweep policy --list --format json
+gh sweep policy --apply
+gh sweep policy --apply --yes
+```
+
+| Flag | Effect |
+|------|--------|
+| `--policy` | Path to the policy file, default `.gh-sweep-policy.yaml` |
+| `--list` | Print a table instead of the TUI; exits 1 if any repo has drift |
+| `--apply` | Sync drifted repos toward the policy, confirming each repo |
+| `--yes` | Skip the confirmation prompt when applying (scripted or CI use) |
+| `--format` | `table`, `json`, or `markdown`, default `table` |
+
+`--list --format json` exits non-zero on drift, which makes it usable as a
+scheduled drift check without parsing its output:
+
+```yaml
+# .github/workflows/policy-check.yml
+on:
+  schedule:
+    - cron: "0 6 * * 1" # every Monday
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cli/gh-extension-precompile@v2 # or `go install` the binary
+      - run: gh extension install kyleking/gh-sweep
+      - run: gh sweep policy --list --format json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_SWEEP_TOKEN }}
+```
+
+The job fails when drift is found. `GH_SWEEP_TOKEN` needs read access to every
+repo the policy covers; the default `GITHUB_TOKEN` only covers the repo the
+workflow runs in. Applying from CI (`--apply --yes` in a workflow) is not
+wired up as a documented pattern yet: unattended writes to branch protection
+need their own decision about who is allowed to trigger them, see
+[ROADMAP.md](../ROADMAP.md#deferred).
+
 ## watching
 
 Audit repository watch status.

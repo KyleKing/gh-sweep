@@ -28,7 +28,28 @@ Use [Renovate](https://github.com/renovatebot/renovate) for multi-repo setups, g
 
 ### Repository settings as code
 
-Use [Pulumi](https://www.pulumi.com/registry/packages/github/) or [Terraform](https://registry.terraform.io/providers/integrations/github/) to declare settings and protection rules. gh-sweep detects drift from a baseline repo and suits interactive exploration before you write the IaC.
+gh-sweep's `policy` command declares repo settings, security & analysis,
+release immutability, and a branch-protection baseline in a YAML file, diffs
+it against live repos, and applies drift. That overlaps with what
+[Pulumi](https://www.pulumi.com/registry/packages/github/) and
+[Terraform](https://registry.terraform.io/providers/integrations/github/) do,
+but the two are built for different scales.
+
+Terraform and Pulumi own state: every managed resource lives in a state file
+that has to stay in sync with reality, which is exactly what an org needs
+when it has to express per-team, per-environment variation and prove who
+changed what for an audit. `policy` has no state file. It reads live GitHub on
+every run and diffs it against the YAML you wrote, so there is nothing to go
+stale, drift-detect, or import. That trade only pays off at the scale
+`policy` targets: one person keeping a personal or small-team set of repos
+consistent, where the settings really are meant to be the same everywhere and
+the state-file overhead buys nothing.
+
+Reach for Terraform or Pulumi once you need per-environment configuration, a
+change history independent of git blame on a YAML file, or org-wide policy
+enforcement with approval workflows. Reach for `policy` when you want a repo
+to look the way you declared it, fast, without adopting an IaC pipeline to
+get there.
 
 ### Stale issue and PR cleanup
 

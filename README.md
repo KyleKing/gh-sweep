@@ -28,19 +28,20 @@ cleanup before deleting anything:
 gh sweep orphans --org my-org --cleanup --dry-run
 ```
 
-Run `gh sweep` with no arguments for the home menu, which reaches all twelve
+Run `gh sweep` with no arguments for the home menu, which reaches all thirteen
 views. Each view prints its keys along the bottom of the screen.
 
 ## What it does not do
 
 - Update dependencies. Use Renovate or Dependabot
-- Declare settings or protection rules as code. It reports drift from a baseline
-  repo, and Pulumi or Terraform enforce the rules
 - Touch issues. The orphan sweep covers branches only
 - Automate releases. The releases view reads release state and nothing more
 - Follow a CI run live. `gha-perf` reports history, so use watchgha to tail a run
-- Write anything in the settings, webhooks, collaborators, secrets, or releases
-  views, which are read-only
+- Write anything in the webhooks, collaborators, secrets, or releases views,
+  which are read-only. Repo settings, security & analysis, release
+  immutability, and branch protection are the exception: `gh sweep policy`
+  diffs and applies those against a file you declare (see
+  [docs/alternatives.md](docs/alternatives.md))
 
 Full docs: [./docs](./docs)
 

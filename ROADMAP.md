@@ -91,13 +91,12 @@ Record a demo with VHS (`.github/assets/demo.tape`, following the gh-repo-dashbo
 Low priority; pick up when convenient.
 
 - Stacked-PR creation from selected branches (dependency detection via merge-base, PR chains with linked descriptions); parent-resolution heuristics are the open question
-- Protection apply/template: template-based rule application with preview and per-repo reporting, export/import; template format and merge-vs-replace semantics undecided
 - Linear and mani integrations: the packages were removed because both are large surface areas better served by their own tools until a concrete need returns
 - SQLite cache with TTL and ETags for offline comment browsing; the JSON gha-perf cache covers the current need
 - Real-time watching of runs or events; watchgha owns live monitoring
 - Branch extras: multi-select by ranges ("1-10", "all"), tree visualization of branch hierarchy, pairwise comparison matrix
 - Comment extras: surrounding-code context preview, open in browser, mark resolved from the TUI, heuristic resolution detection ("done"/"fixed" replies, merged PR with comment absent from the final diff)
-- Settings sync: change preview, selective and bulk apply, rollback from stored prior state, git-backed shareable templates
+- Policy extras: a richer change-preview format than the current table/JSON/markdown diff output; git-backed shareable policy templates across users; org rulesets and custom-property coverage reporting alongside the per-repo diff
 - Analytics extras: AI-vs-human review ratios, contributor and bus-factor metrics, merge-behavior stats, review-delay percentiles, activity heatmap, CSV/JSON/markdown export
 - Release extras: version grouping across repos, semver compliance flags, aggregated release-notes export
 - Read-only dependency visibility (which repos have Renovate or Dependabot, version comparison)

@@ -1,6 +1,9 @@
 # gh-sweep configuration example
 # Copy this file to .gh-sweep.yaml in your project root or home directory
 # (project file takes precedence over the home file)
+#
+# This file holds flag defaults. To declare the settings you want repos to
+# converge on, see .gh-sweep-policy.yaml.example instead.
 
 # Baseline repository for protection/settings comparisons (optional)
 # baseline: owner/baseline-repo

@@ -4,7 +4,7 @@ Project-specific architecture, design decisions, and domain context for gh-sweep
 
 ## Overview
 
-Bubble Tea TUI plus Cobra CLI for sweeping GitHub repositories: branch cleanup, protection drift, unresolved review threads, Actions performance, and a set of read-only audit views. The bare `gh-sweep` command opens a home menu with 13 views; each subcommand (`branches`, `comments`, `protection`, `gha-perf`, `orphans`, `watching`) opens its view directly or prints a table with `--list`.
+Bubble Tea TUI plus Cobra CLI for sweeping GitHub repositories: branch cleanup, protection drift, unresolved review threads, Actions performance, and a set of read-only audit views. The bare `gh-sweep` command opens a home menu with 13 views; each subcommand (`branches`, `comments`, `protection`, `gha-perf`, `orphans`, `watching`, `policy`) opens its view directly or prints a table with `--list`.
 
 - Framework: Bubble Tea v2 (`charm.land/bubbletea/v2`) with lipgloss/v2
 - Theme: Catppuccin Latte/Macchiato via a hand-rolled semantic role palette
@@ -23,6 +23,8 @@ Bubble Tea TUI plus Cobra CLI for sweeping GitHub repositories: branch cleanup, 
 │   │   └── transport.go   #   test transport seam and mutation guard
 │   ├── models/            # Shared data structures
 │   ├── orphans/           # Orphan detection (scanner, detector, types)
+│   ├── policy/            # Declared-policy diff/apply engine (settings,
+│   │                      #   security, releases, branch protection)
 │   └── tui/
 │       ├── main.go        # MainModel: home menu and view switching
 │       ├── theme/         # Semantic color roles, background detection
@@ -50,6 +52,29 @@ Adding a new API surface:
 1. Route all requests through the client so the transport seam applies
 1. Add a table-driven test with `NewClientWithTransport` or `SetTestTransport`
 1. Run `mise run test:safety` to confirm the test never builds a raw client
+
+## Policy
+
+`policy` diffs and syncs repo settings, `security_and_analysis` toggles, release
+immutability, and a branch-protection baseline against a declared
+`config.PolicyConfig` (`.gh-sweep-policy.yaml`, distinct from `.gh-sweep.yaml`:
+that file holds flag defaults, this one holds desired state). A field left
+unset in the policy is never reported or changed, so a narrow policy only
+touches what it declares.
+
+`internal/policy` holds the engine (`Evaluate` diffs, `Apply` writes) shared by
+`internal/cli/policy.go` and `internal/tui/components/policy`; `Apply` re-sends
+the whole managed subset of a domain rather than only the fields that drifted,
+so re-running an already-converged policy is a safe no-op. Branch-protection
+apply merges declared overrides onto the repo's live rule before the PUT,
+since GitHub's protection endpoint replaces the whole rule rather than
+patching fields.
+
+`gh-sweep policy --list --format json` exits 1 when it finds drift, so a
+scheduled GitHub Action can fail its own job on drift without parsing output;
+see [docs/cli.md](docs/cli.md#policy) for a workflow example. `--apply --yes`
+skips the per-repo confirmation prompt for scripted use, but no code path
+applies a policy without that flag or an interactive `y`.
 
 ## TUI Composition
 

@@ -39,3 +39,37 @@ The persistent `--org` and `--repos` flags override `default_org` and
 
 `protected_patterns` decides which branches the delete paths refuse to touch, so
 keep it accurate before running any cleanup.
+
+## Policy file
+
+The `policy` command reads a second, separate file: `.gh-sweep-policy.yaml`
+(project directory, or `~/.gh-sweep-policy.yaml`). Where `.gh-sweep.yaml` holds
+flag defaults, `.gh-sweep-policy.yaml` holds desired state: the settings you
+want every listed repo to converge on. A field left out is never reported or
+changed, so a narrow policy only touches what it declares.
+
+[.gh-sweep-policy.yaml.example](../.gh-sweep-policy.yaml.example) has the full
+schema. The shape:
+
+```yaml
+default_org: your-org
+repositories:
+  - owner/repo1
+  - repo2 # uses default_org
+
+settings:
+  delete_branch_on_merge: true
+  allow_squash_merge: true
+
+security:
+  secret_scanning: enabled
+
+releases:
+  immutable: true
+
+protection:
+  required_reviews: 1
+  require_status_checks: [ci]
+```
+
+See [gh sweep policy](./cli.md#policy) for diffing and applying it.
