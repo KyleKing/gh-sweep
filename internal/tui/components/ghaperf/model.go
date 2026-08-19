@@ -1,3 +1,6 @@
+// Package ghaperf is the TUI view for GitHub Actions run-timing data: an
+// overview, per-workflow and per-job durations, and branch-vs-baseline
+// comparisons.
 package ghaperf
 
 import (
@@ -26,6 +29,36 @@ const (
 	viewBranches
 )
 
+const (
+	repoPartsCount = 2
+
+	defaultBaseBranch          = "main"
+	defaultFilterDays          = 30
+	defaultMaxVisible          = 15
+	defaultRegressionThreshold = 20.0
+	defaultRunsFetchLimit      = 100
+
+	windowChromeHeight = 12
+	minVisibleRows     = 5
+	helpKeyWidth       = 16
+	percentMultiplier  = 100.0
+	recentRunsLimit    = 10
+
+	workflowNameTruncateLen   = 30
+	workflowColumnTruncateLen = 35
+	jobNameTruncateLen        = 50
+	branchNameTruncateLen     = 30
+
+	conclusionSuccess = "success"
+
+	trendWidth = 20
+	barWidth   = 20
+)
+
+var errInvalidRepoFormat = errors.New("invalid repo format, expected owner/repo")
+
+// Model is the ghaperf TUI state: the loaded run data, the active tab, and
+// the cursor/scroll position within it.
 type Model struct {
 	repo       string
 	owner      string
@@ -58,10 +91,12 @@ type Model struct {
 	showHelp bool
 }
 
+// NewModel creates a ghaperf model for repo ("owner/repo"). An invalid repo
+// format is validated at load time, not here.
 func NewModel(repo string, opts ...Option) Model {
 	parts := strings.Split(repo, "/")
 	owner, repoName := "", ""
-	if len(parts) == 2 {
+	if len(parts) == repoPartsCount {
 		owner, repoName = parts[0], parts[1]
 	}
 
@@ -71,10 +106,10 @@ func NewModel(repo string, opts ...Option) Model {
 		repoName:            repoName,
 		loading:             true,
 		viewMode:            viewOverview,
-		filterDays:          30,
-		baseBranch:          "main",
-		maxVisible:          15,
-		regressionThreshold: 20.0,
+		filterDays:          defaultFilterDays,
+		baseBranch:          defaultBaseBranch,
+		maxVisible:          defaultMaxVisible,
+		regressionThreshold: defaultRegressionThreshold,
 	}
 
 	for _, opt := range opts {
@@ -84,32 +119,39 @@ func NewModel(repo string, opts ...Option) Model {
 	return m
 }
 
+// Option configures a Model built by NewModel.
 type Option func(*Model)
 
+// WithBranch filters runs to a single branch.
 func WithBranch(branch string) Option {
 	return func(m *Model) {
 		m.filterBranch = branch
 	}
 }
 
+// WithDays sets how many trailing days of runs to load.
 func WithDays(days int) Option {
 	return func(m *Model) {
 		m.filterDays = days
 	}
 }
 
+// WithWorkflow filters runs to a single workflow file.
 func WithWorkflow(workflow string) Option {
 	return func(m *Model) {
 		m.selectedWorkflow = workflow
 	}
 }
 
+// WithCacheOnly restricts loading to cached data, skipping the GitHub fetch.
 func WithCacheOnly(cacheOnly bool) Option {
 	return func(m *Model) {
 		m.cacheOnly = cacheOnly
 	}
 }
 
+// WithBaseBranch sets the branch other branches are compared against in the
+// Branches view.
 func WithBaseBranch(branch string) Option {
 	return func(m *Model) {
 		m.baseBranch = branch
@@ -135,13 +177,14 @@ type dataLoadedMsg struct {
 	err           error
 }
 
+// Init starts the initial data load.
 func (m Model) Init() tea.Cmd {
 	return m.loadData
 }
 
 func (m Model) loadData() tea.Msg {
 	if m.owner == "" || m.repoName == "" {
-		return dataLoadedMsg{err: errors.New("invalid repo format, expected owner/repo")}
+		return dataLoadedMsg{err: errInvalidRepoFormat}
 	}
 
 	cacheManager, err := cache.NewGHAPerfCacheManager("")
@@ -166,49 +209,10 @@ func (m Model) loadData() tea.Msg {
 	}
 
 	cachedCount := len(cachedData.Runs)
-	var allRuns []github.RunTiming
-	var newCount int
 
-	if m.cacheOnly {
-		allRuns = cachedData.Runs
-	} else {
-		cachedIDs := make(map[int]bool)
-		for _, r := range cachedData.Runs {
-			cachedIDs[r.RunID] = true
-		}
-
-		since := time.Now().AddDate(0, 0, -m.filterDays)
-		opts := github.FetchWorkflowRunsOptions{
-			WorkflowFile: m.selectedWorkflow,
-			Branch:       m.filterBranch,
-			Limit:        100,
-			CreatedAfter: since,
-		}
-
-		newRuns, err := client.FetchWorkflowRunsWithDetails(m.owner, m.repoName, opts)
-		if err != nil {
-			if cachedCount > 0 {
-				allRuns = cachedData.Runs
-			} else {
-				return dataLoadedMsg{err: fmt.Errorf("failed to fetch workflow runs: %w", err)}
-			}
-		} else {
-			var actuallyNew []github.RunTiming
-			for _, r := range newRuns {
-				if !cachedIDs[r.RunID] {
-					actuallyNew = append(actuallyNew, r)
-				}
-			}
-			newCount = len(actuallyNew)
-
-			allRuns = cache.MergeRuns(cachedData.Runs, newRuns)
-
-			if newCount > 0 {
-				cachedData.Runs = allRuns
-				//nolint:errcheck // cache write failures must not block rendering fetched data
-				_ = cacheManager.Save(m.owner, m.repoName, cachedData)
-			}
-		}
+	allRuns, newCount, err := m.fetchRuns(client, cacheManager, cachedData)
+	if err != nil {
+		return dataLoadedMsg{err: err}
 	}
 
 	if m.filterBranch != "" {
@@ -235,14 +239,74 @@ func (m Model) loadData() tea.Msg {
 	}
 }
 
+// fetchRuns returns the runs to render (cached, freshly fetched and merged,
+// or a cached fallback on fetch failure) and how many of them are new since
+// the last cache write.
+func (m Model) fetchRuns(
+	client *github.Client,
+	cacheManager *cache.GHAPerfCacheManager,
+	cachedData *cache.GHAPerfCache,
+) ([]github.RunTiming, int, error) {
+	if m.cacheOnly {
+		return cachedData.Runs, 0, nil
+	}
+
+	cachedIDs := make(map[int]bool, len(cachedData.Runs))
+	for i := range cachedData.Runs {
+		cachedIDs[cachedData.Runs[i].RunID] = true
+	}
+
+	since := time.Now().AddDate(0, 0, -m.filterDays)
+	opts := github.FetchWorkflowRunsOptions{
+		WorkflowFile: m.selectedWorkflow,
+		Branch:       m.filterBranch,
+		Limit:        defaultRunsFetchLimit,
+		CreatedAfter: since,
+	}
+
+	newRuns, err := client.FetchWorkflowRunsWithDetails(m.owner, m.repoName, opts)
+	if err != nil {
+		if len(cachedData.Runs) == 0 {
+			return nil, 0, fmt.Errorf("failed to fetch workflow runs: %w", err)
+		}
+
+		return cachedData.Runs, 0, nil
+	}
+
+	newCount := countNewRuns(newRuns, cachedIDs)
+	allRuns := cache.MergeRuns(cachedData.Runs, newRuns)
+
+	if newCount > 0 {
+		cachedData.Runs = allRuns
+		//nolint:errcheck // cache write failures must not block rendering fetched data
+		_ = cacheManager.Save(m.owner, m.repoName, cachedData)
+	}
+
+	return allRuns, newCount, nil
+}
+
+func countNewRuns(newRuns []github.RunTiming, cachedIDs map[int]bool) int {
+	count := 0
+	for i := range newRuns {
+		if !cachedIDs[newRuns[i].RunID] {
+			count++
+		}
+	}
+
+	return count
+}
+
+// Update handles messages.
+//
+//nolint:unparam // matches every TUI component's Update(Model, tea.Cmd) shape
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		m.maxVisible = msg.Height - 12
-		if m.maxVisible < 5 {
-			m.maxVisible = 5
+		m.maxVisible = msg.Height - windowChromeHeight
+		if m.maxVisible < minVisibleRows {
+			m.maxVisible = minVisibleRows
 		}
 
 		return m, nil
@@ -261,78 +325,100 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyPressMsg:
-		if m.showHelp {
-			if msg.String() == "?" || msg.String() == "esc" {
-				m.showHelp = false
-			}
-
-			return m, nil
-		}
-
-		switch msg.String() {
-		case "ctrl+c", "q":
-			return m, tea.Quit
-
-		case "?":
-			m.showHelp = true
-
-		case "g":
-			m.cursor = 0
-			if m.cursor < m.scrollTop {
-				m.scrollTop = m.cursor
-			}
-
-		case "G":
-			maxCursor := m.getMaxCursor()
-			if maxCursor >= 0 {
-				m.cursor = maxCursor
-			}
-			if m.cursor >= m.scrollTop+m.maxVisible {
-				m.scrollTop = m.cursor - m.maxVisible + 1
-			}
-
-		case "1":
-			m.viewMode = viewOverview
-			m.cursor = 0
-			m.scrollTop = 0
-		case "2":
-			m.viewMode = viewWorkflows
-			m.cursor = 0
-			m.scrollTop = 0
-		case "3":
-			m.viewMode = viewJobs
-			m.cursor = 0
-			m.scrollTop = 0
-		case "4":
-			m.viewMode = viewBranches
-			m.cursor = 0
-			m.scrollTop = 0
-
-		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
-				if m.cursor < m.scrollTop {
-					m.scrollTop = m.cursor
-				}
-			}
-		case "down", "j":
-			maxCursor := m.getMaxCursor()
-			if m.cursor < maxCursor {
-				m.cursor++
-				if m.cursor >= m.scrollTop+m.maxVisible {
-					m.scrollTop = m.cursor - m.maxVisible + 1
-				}
-			}
-
-		case "r":
-			m.loading = true
-			m.cacheOnly = false
-
-			return m, m.loadData
-		}
+		return m.updateKeyMsg(msg)
 	}
 
 	return m, nil
+}
+
+var tabKeyModes = map[string]viewMode{
+	"1": viewOverview,
+	"2": viewWorkflows,
+	"3": viewJobs,
+	"4": viewBranches,
+}
+
+func (m Model) updateKeyMsg(msg tea.KeyPressMsg) (Model, tea.Cmd) {
+	if m.showHelp {
+		if msg.String() == "?" || msg.String() == "esc" {
+			m.showHelp = false
+		}
+
+		return m, nil
+	}
+
+	key := msg.String()
+
+	if mode, ok := tabKeyModes[key]; ok {
+		m.switchView(mode)
+
+		return m, nil
+	}
+
+	switch key {
+	case "ctrl+c", "q":
+		return m, tea.Quit
+
+	case "?":
+		m.showHelp = true
+
+	case "g":
+		m.cursor = 0
+		if m.cursor < m.scrollTop {
+			m.scrollTop = m.cursor
+		}
+
+	case "G":
+		m.jumpToBottom()
+
+	case "up", "k":
+		m.moveCursorUp()
+	case "down", "j":
+		m.moveCursorDown()
+
+	case "r":
+		m.loading = true
+		m.cacheOnly = false
+
+		return m, m.loadData
+	}
+
+	return m, nil
+}
+
+func (m *Model) switchView(mode viewMode) {
+	m.viewMode = mode
+	m.cursor = 0
+	m.scrollTop = 0
+}
+
+func (m *Model) jumpToBottom() {
+	maxCursor := m.getMaxCursor()
+	if maxCursor >= 0 {
+		m.cursor = maxCursor
+	}
+	if m.cursor >= m.scrollTop+m.maxVisible {
+		m.scrollTop = m.cursor - m.maxVisible + 1
+	}
+}
+
+func (m *Model) moveCursorUp() {
+	if m.cursor > 0 {
+		m.cursor--
+		if m.cursor < m.scrollTop {
+			m.scrollTop = m.cursor
+		}
+	}
+}
+
+func (m *Model) moveCursorDown() {
+	maxCursor := m.getMaxCursor()
+	if m.cursor < maxCursor {
+		m.cursor++
+		if m.cursor >= m.scrollTop+m.maxVisible {
+			m.scrollTop = m.cursor - m.maxVisible + 1
+		}
+	}
 }
 
 func (m Model) getMaxCursor() int {
@@ -348,6 +434,7 @@ func (m Model) getMaxCursor() int {
 	}
 }
 
+// View renders the model.
 func (m Model) View() string {
 	if m.loading {
 		return "Loading GHA performance data...\n"
@@ -375,7 +462,7 @@ func (m Model) View() string {
 	b.WriteString("\n\n")
 
 	if m.showHelp {
-		return m.renderHelp(&b)
+		return renderHelp(&b)
 	}
 
 	activeTab := lipgloss.NewStyle().
@@ -423,7 +510,7 @@ func (m Model) View() string {
 	return b.String()
 }
 
-func (m Model) renderHelp(b *strings.Builder) string {
+func renderHelp(b *strings.Builder) string {
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Primary)
 	b.WriteString(titleStyle.Render("Keybindings"))
 	b.WriteString("\n\n")
@@ -438,7 +525,7 @@ func (m Model) renderHelp(b *strings.Builder) string {
 	}
 
 	for _, binding := range bindings {
-		keyStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Warning).Width(16)
+		keyStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Warning).Width(helpKeyWidth)
 		fmt.Fprintf(b, "%s %s\n", keyStyle.Render(binding[0]), binding[1])
 	}
 
@@ -464,10 +551,10 @@ func (m Model) renderOverview() string {
 	var successCount, failureCount int
 	var totalDuration time.Duration
 
-	for _, r := range m.runs {
-		totalDuration += r.Duration
-		switch r.Conclusion {
-		case "success":
+	for i := range m.runs {
+		totalDuration += m.runs[i].Duration
+		switch m.runs[i].Conclusion {
+		case conclusionSuccess:
 			successCount++
 		case "failure":
 			failureCount++
@@ -477,7 +564,7 @@ func (m Model) renderOverview() string {
 	successRate := float64(0)
 	avgDuration := time.Duration(0)
 	if totalRuns > 0 {
-		successRate = float64(successCount) / float64(totalRuns) * 100
+		successRate = float64(successCount) / float64(totalRuns) * percentMultiplier
 		avgDuration = totalDuration / time.Duration(totalRuns)
 	}
 
@@ -493,22 +580,24 @@ func (m Model) renderOverview() string {
 	b.WriteString("\n")
 
 	displayRuns := m.runs
-	if len(displayRuns) > 10 {
-		displayRuns = displayRuns[:10]
+	if len(displayRuns) > recentRunsLimit {
+		displayRuns = displayRuns[:recentRunsLimit]
 	}
 
 	successStyle := lipgloss.NewStyle().Foreground(theme.Current().Success)
 	failureStyle := lipgloss.NewStyle().Foreground(theme.Current().Error)
 
-	for _, r := range displayRuns {
+	for i := range displayRuns {
+		r := &displayRuns[i]
+
 		status := successStyle.Render("OK")
-		if r.Conclusion != "success" {
+		if r.Conclusion != conclusionSuccess {
 			status = failureStyle.Render("FAIL")
 		}
 
 		workflow := r.Workflow
-		if len(workflow) > 30 {
-			workflow = workflow[:27] + "..."
+		if len(workflow) > workflowNameTruncateLen {
+			workflow = workflow[:workflowNameTruncateLen-3] + "..."
 		}
 
 		fmt.Fprintf(&b, "  %s %-30s %-15s %s\n",
@@ -521,18 +610,13 @@ func (m Model) renderOverview() string {
 	return b.String()
 }
 
-const (
-	trendWidth = 20
-	barWidth   = 20
-)
-
 // runDurationsFor returns workflow's run durations in seconds, oldest first,
 // for the trend sparkline.
 func (m Model) runDurationsFor(workflow string) []float64 {
 	var runs []github.RunTiming
-	for _, r := range m.runs {
-		if r.Workflow == workflow {
-			runs = append(runs, r)
+	for i := range m.runs {
+		if m.runs[i].Workflow == workflow {
+			runs = append(runs, m.runs[i])
 		}
 	}
 
@@ -541,8 +625,8 @@ func (m Model) runDurationsFor(workflow string) []float64 {
 	})
 
 	durations := make([]float64, len(runs))
-	for i, r := range runs {
-		durations[i] = r.DurationSeconds
+	for i := range runs {
+		durations[i] = runs[i].DurationSeconds
 	}
 
 	return durations
@@ -565,7 +649,7 @@ func (m Model) renderWorkflows() string {
 	b.WriteString(headerStyle.Render(fmt.Sprintf("  %-35s %8s %8s %8s %8s %8s  %s\n",
 		"Workflow", "Runs", "Avg", "Min", "Max", "Success", "Trend")))
 
-	var workflows []*github.WorkflowStats
+	workflows := make([]*github.WorkflowStats, 0, len(m.workflowStats))
 	for _, ws := range m.workflowStats {
 		workflows = append(workflows, ws)
 	}
@@ -582,8 +666,8 @@ func (m Model) renderWorkflows() string {
 		}
 
 		name := ws.Workflow
-		if len(name) > 35 {
-			name = name[:32] + "..."
+		if len(name) > workflowColumnTruncateLen {
+			name = name[:workflowColumnTruncateLen-3] + "..."
 		}
 
 		trend := sparkline(m.runDurationsFor(ws.Workflow), trendWidth)
@@ -636,8 +720,8 @@ func (m Model) renderJobs() string {
 		}
 
 		name := js.WorkflowJob
-		if len(name) > 50 {
-			name = name[:47] + "..."
+		if len(name) > jobNameTruncateLen {
+			name = name[:jobNameTruncateLen-3] + "..."
 		}
 
 		line := fmt.Sprintf("  %-50s %8d %8s %8s %8s",
@@ -675,7 +759,34 @@ func (m Model) renderBranches() string {
 	b.WriteString(headerStyle.Render(fmt.Sprintf("  %-30s %8s %10s %12s  %s\n",
 		"Branch", "Runs", "Avg", "Delta", "Relative")))
 
-	var branches []*github.BranchStats
+	branches, maxAvg := m.sortedBranchStats()
+
+	selectedStyle := lipgloss.NewStyle().
+		Background(theme.Current().Secondary)
+
+	for i, bs := range branches {
+		if i < m.scrollTop || i >= m.scrollTop+m.maxVisible {
+			continue
+		}
+
+		line := m.branchRowLine(bs, maxAvg)
+
+		if i == m.cursor {
+			b.WriteString(selectedStyle.Render(line))
+		} else {
+			b.WriteString(line)
+		}
+		b.WriteString("\n")
+	}
+
+	return b.String()
+}
+
+// sortedBranchStats returns m.branchStats as a slice with the baseline
+// branch first and the rest ordered slowest-first, alongside the slowest
+// average duration for scaling the comparison bar.
+func (m Model) sortedBranchStats() ([]*github.BranchStats, time.Duration) {
+	branches := make([]*github.BranchStats, 0, len(m.branchStats))
 	var maxAvg time.Duration
 	for _, bs := range m.branchStats {
 		branches = append(branches, bs)
@@ -695,56 +806,45 @@ func (m Model) renderBranches() string {
 		return branches[i].AvgDuration > branches[j].AvgDuration
 	})
 
-	selectedStyle := lipgloss.NewStyle().
-		Background(theme.Current().Secondary)
+	return branches, maxAvg
+}
+
+func (m Model) branchRowLine(bs *github.BranchStats, maxAvg time.Duration) string {
+	name := bs.Branch
+	if bs.Branch == m.baseBranch {
+		name = "[BASE] " + name
+	}
+	if len(name) > branchNameTruncateLen {
+		name = name[:branchNameTruncateLen-3] + "..."
+	}
+
+	return fmt.Sprintf("  %-30s %8d %10s %12s  %s",
+		name,
+		bs.TotalRuns,
+		github.FormatDuration(bs.AvgDuration),
+		m.branchDelta(bs),
+		bar(float64(bs.AvgDuration), float64(maxAvg), barWidth))
+}
+
+func (m Model) branchDelta(bs *github.BranchStats) string {
+	if bs.Branch == m.baseBranch || bs.DeltaVsBasePct == 0 {
+		return ""
+	}
 
 	fasterStyle := lipgloss.NewStyle().Foreground(theme.Current().Success)
 	slowerStyle := lipgloss.NewStyle().Foreground(theme.Current().Error)
 
-	for i, bs := range branches {
-		if i < m.scrollTop || i >= m.scrollTop+m.maxVisible {
-			continue
-		}
-
-		name := bs.Branch
-		if bs.Branch == m.baseBranch {
-			name = "[BASE] " + name
-		}
-		if len(name) > 30 {
-			name = name[:27] + "..."
-		}
-
-		delta := ""
-		if bs.Branch != m.baseBranch && bs.DeltaVsBasePct != 0 {
-			sign := "+"
-			style := slowerStyle
-			if bs.DeltaVsBasePct < 0 {
-				sign = ""
-				style = fasterStyle
-			}
-
-			marker := ""
-			if bs.DeltaVsBasePct >= m.regressionThreshold {
-				marker = " ⚠"
-			}
-
-			delta = style.Render(fmt.Sprintf("%s%.0f%%%s", sign, bs.DeltaVsBasePct, marker))
-		}
-
-		line := fmt.Sprintf("  %-30s %8d %10s %12s  %s",
-			name,
-			bs.TotalRuns,
-			github.FormatDuration(bs.AvgDuration),
-			delta,
-			bar(float64(bs.AvgDuration), float64(maxAvg), barWidth))
-
-		if i == m.cursor {
-			b.WriteString(selectedStyle.Render(line))
-		} else {
-			b.WriteString(line)
-		}
-		b.WriteString("\n")
+	sign := "+"
+	style := slowerStyle
+	if bs.DeltaVsBasePct < 0 {
+		sign = ""
+		style = fasterStyle
 	}
 
-	return b.String()
+	marker := ""
+	if bs.DeltaVsBasePct >= m.regressionThreshold {
+		marker = " ⚠"
+	}
+
+	return style.Render(fmt.Sprintf("%s%.0f%%%s", sign, bs.DeltaVsBasePct, marker))
 }

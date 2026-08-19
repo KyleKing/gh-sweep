@@ -2,6 +2,8 @@ package ghaperf
 
 import "strings"
 
+const sparkMidpointDivisor = 2
+
 var sparkChars = []rune{'▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'}
 
 // sparkline renders values as a run of block characters scaled between their
@@ -29,7 +31,7 @@ func sparkline(values []float64, width int) string {
 
 	var b strings.Builder
 	for _, v := range values {
-		idx := len(sparkChars) / 2
+		idx := len(sparkChars) / sparkMidpointDivisor
 		if span > 0 {
 			idx = int((v - minV) / span * float64(len(sparkChars)-1))
 		}
