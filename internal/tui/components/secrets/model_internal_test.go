@@ -10,6 +10,8 @@ import (
 	"github.com/KyleKing/gh-sweep/internal/github"
 )
 
+var errForbidden = errors.New("forbidden")
+
 func loadedSecretsModel() Model {
 	m := NewModel("acme", []string{"acme/widgets"})
 	m, _ = m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
@@ -99,7 +101,7 @@ func TestSecretsLoadError(t *testing.T) {
 	t.Parallel()
 
 	m := NewModel("acme", []string{"acme/widgets"})
-	m, _ = m.Update(secretsLoadedMsg{err: errors.New("forbidden")})
+	m, _ = m.Update(secretsLoadedMsg{err: errForbidden})
 
 	if !strings.Contains(m.View(), "forbidden") {
 		t.Errorf("view = %q", m.View())

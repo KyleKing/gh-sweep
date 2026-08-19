@@ -1,3 +1,5 @@
+// Package secrets is the TUI view that audits organization and repository
+// secrets and flags ones that appear unused.
 package secrets
 
 import (
@@ -12,6 +14,16 @@ import (
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
+const (
+	repoPartsCount  = 2
+	helpKeyWidth    = 16
+	maxPreviewItems = 3
+
+	viewModeOrg    = "org"
+	viewModeRepo   = "repo"
+	viewModeUnused = "unused"
+)
+
 // Model represents the secrets audit TUI state.
 type Model struct {
 	org           string
@@ -24,7 +36,7 @@ type Model struct {
 	height        int
 	loading       bool
 	err           error
-	viewMode      string // "org", "repo", "unused"
+	viewMode      string // viewModeOrg, viewModeRepo, viewModeUnused
 	showHelp      bool
 }
 
@@ -35,7 +47,7 @@ func NewModel(org string, repos []string) Model {
 		repos:       repos,
 		repoSecrets: make(map[string][]github.Secret),
 		loading:     true,
-		viewMode:    "org",
+		viewMode:    viewModeOrg,
 	}
 }
 
@@ -78,7 +90,7 @@ func (m Model) loadSecrets() tea.Msg {
 	repoSecrets := make(map[string][]github.Secret)
 	for _, repoStr := range m.repos {
 		parts := strings.Split(repoStr, "/")
-		if len(parts) != 2 {
+		if len(parts) != repoPartsCount {
 			continue
 		}
 		owner, repo := parts[0], parts[1]
@@ -105,6 +117,8 @@ func (m Model) loadSecrets() tea.Msg {
 }
 
 // Update handles messages.
+//
+//nolint:unparam // matches every TUI component's Update(Model, tea.Cmd) shape
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -123,66 +137,74 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyPressMsg:
-		if m.showHelp {
-			if msg.String() == "?" || msg.String() == "esc" {
-				m.showHelp = false
-			}
-
-			return m, nil
-		}
-
-		switch msg.String() {
-		case "ctrl+c", "q":
-			return m, tea.Quit
-
-		case "?":
-			m.showHelp = true
-
-		case "g":
-			m.cursor = 0
-
-		case "G":
-			maxCursor := len(m.orgSecrets) - 1
-			switch m.viewMode {
-			case "repo":
-				maxCursor = len(m.repos) - 1
-			case "unused":
-				maxCursor = len(m.unusedSecrets) - 1
-			}
-			if maxCursor >= 0 {
-				m.cursor = maxCursor
-			}
-
-		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
-			}
-
-		case "down", "j":
-			maxCursor := len(m.orgSecrets) - 1
-			switch m.viewMode {
-			case "repo":
-				maxCursor = len(m.repos) - 1
-			case "unused":
-				maxCursor = len(m.unusedSecrets) - 1
-			}
-			if m.cursor < maxCursor {
-				m.cursor++
-			}
-
-		case "1":
-			m.viewMode = "org"
-			m.cursor = 0
-		case "2":
-			m.viewMode = "repo"
-			m.cursor = 0
-		case "3":
-			m.viewMode = "unused"
-			m.cursor = 0
-		}
+		return m.updateKeyMsg(msg)
 	}
 
 	return m, nil
+}
+
+func (m Model) updateKeyMsg(msg tea.KeyPressMsg) (Model, tea.Cmd) {
+	if m.showHelp {
+		if msg.String() == "?" || msg.String() == "esc" {
+			m.showHelp = false
+		}
+
+		return m, nil
+	}
+
+	switch msg.String() {
+	case "ctrl+c", "q":
+		return m, tea.Quit
+
+	case "?":
+		m.showHelp = true
+
+	case "g":
+		m.cursor = 0
+
+	case "G":
+		if maxCursor := m.maxCursor(); maxCursor >= 0 {
+			m.cursor = maxCursor
+		}
+
+	case "up", "k":
+		if m.cursor > 0 {
+			m.cursor--
+		}
+
+	case "down", "j":
+		if m.cursor < m.maxCursor() {
+			m.cursor++
+		}
+
+	case "1", "2", "3":
+		m.viewMode = viewModeForKey(msg.String())
+		m.cursor = 0
+	}
+
+	return m, nil
+}
+
+func viewModeForKey(key string) string {
+	switch key {
+	case "2":
+		return viewModeRepo
+	case "3":
+		return viewModeUnused
+	default:
+		return viewModeOrg
+	}
+}
+
+func (m Model) maxCursor() int {
+	switch m.viewMode {
+	case viewModeRepo:
+		return len(m.repos) - 1
+	case viewModeUnused:
+		return len(m.unusedSecrets) - 1
+	default:
+		return len(m.orgSecrets) - 1
+	}
 }
 
 // View renders the model.
@@ -213,19 +235,19 @@ func (m Model) View() string {
 	inactiveTab := lipgloss.NewStyle().
 		Foreground(theme.Current().Muted)
 
-	if m.viewMode == "org" {
+	if m.viewMode == viewModeOrg {
 		b.WriteString(activeTab.Render("[1] Organization"))
 	} else {
 		b.WriteString(inactiveTab.Render("[1] Organization"))
 	}
 	b.WriteString("  ")
-	if m.viewMode == "repo" {
+	if m.viewMode == viewModeRepo {
 		b.WriteString(activeTab.Render("[2] Repository"))
 	} else {
 		b.WriteString(inactiveTab.Render("[2] Repository"))
 	}
 	b.WriteString("  ")
-	if m.viewMode == "unused" {
+	if m.viewMode == viewModeUnused {
 		b.WriteString(activeTab.Render("[3] Unused"))
 	} else {
 		b.WriteString(inactiveTab.Render("[3] Unused"))
@@ -233,16 +255,16 @@ func (m Model) View() string {
 	b.WriteString("\n\n")
 
 	if m.showHelp {
-		return m.renderHelp(&b)
+		return renderHelp(&b)
 	}
 
 	// Content based on view mode
 	switch m.viewMode {
-	case "org":
+	case viewModeOrg:
 		b.WriteString(m.renderOrgSecrets())
-	case "repo":
+	case viewModeRepo:
 		b.WriteString(m.renderRepoSecrets())
-	case "unused":
+	case viewModeUnused:
 		b.WriteString(m.renderUnusedSecrets())
 	}
 
@@ -254,7 +276,7 @@ func (m Model) View() string {
 	return b.String()
 }
 
-func (m Model) renderHelp(b *strings.Builder) string {
+func renderHelp(b *strings.Builder) string {
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Primary)
 	b.WriteString(titleStyle.Render("Keybindings"))
 	b.WriteString("\n\n")
@@ -268,7 +290,7 @@ func (m Model) renderHelp(b *strings.Builder) string {
 	}
 
 	for _, binding := range bindings {
-		keyStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Warning).Width(16)
+		keyStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Warning).Width(helpKeyWidth)
 		fmt.Fprintf(b, "%s %s\n", keyStyle.Render(binding[0]), binding[1])
 	}
 
@@ -346,8 +368,8 @@ func (m Model) renderRepoSecrets() string {
 		// Show first few secrets
 		var lineSb288 strings.Builder
 		for j, secret := range secrets {
-			if j >= 3 {
-				fmt.Fprintf(&lineSb288, "   ... and %d more\n", len(secrets)-3)
+			if j >= maxPreviewItems {
+				fmt.Fprintf(&lineSb288, "   ... and %d more\n", len(secrets)-maxPreviewItems)
 				break
 			}
 			fmt.Fprintf(&lineSb288, "   - %s\n", secret.Name)
