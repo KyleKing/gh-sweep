@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -45,6 +44,8 @@ Examples:
 	Run: runOrphans,
 }
 
+const defaultStaleDays = 30
+
 func init() {
 	rootCmd.AddCommand(orphansCmd)
 
@@ -54,11 +55,11 @@ func init() {
 	orphansCmd.Flags().Bool("list", false, "CLI list mode (no TUI)")
 	orphansCmd.Flags().Bool("cleanup", false, "Delete orphaned branches")
 	orphansCmd.Flags().Bool("dry-run", false, "Preview deletions without executing")
-	orphansCmd.Flags().Bool("yes", false, "Skip the cleanup confirmation prompt")
+	orphansCmd.Flags().Bool(confirmYes, false, "Skip the cleanup confirmation prompt")
 	orphansCmd.Flags().
 		Bool("include-closed-pr", false, "Include closed-PR branches in --cleanup (excluded by default)")
 	orphansCmd.Flags().
-		Int("stale-days", 30, "Days of inactivity before a branch is considered stale")
+		Int("stale-days", defaultStaleDays, "Days of inactivity before a branch is considered stale")
 	orphansCmd.Flags().Bool("include-recent", false, "Include recent branches without PRs")
 	orphansCmd.Flags().StringSlice("exclude", nil, "Branch patterns to exclude")
 	orphansCmd.Flags().StringP("output", "o", "", "Output file path")
@@ -87,7 +88,7 @@ func (p orphansProgram) View() tea.View {
 	return v
 }
 
-func runOrphans(cmd *cobra.Command, args []string) {
+func runOrphans(cmd *cobra.Command, _ []string) {
 	ctx := context.Background()
 
 	client, err := github.NewClient(ctx)
@@ -96,12 +97,10 @@ func runOrphans(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	org := stringFlag(cmd, "org")
-	namespace := stringFlag(cmd, "namespace")
 	listMode := boolFlag(cmd, "list")
 	cleanup := boolFlag(cmd, "cleanup")
 	dryRun := boolFlag(cmd, "dry-run")
-	yes := boolFlag(cmd, "yes")
+	yes := boolFlag(cmd, confirmYes)
 	includeClosedPR := boolFlag(cmd, "include-closed-pr")
 	staleDays := intFlag(cmd, "stale-days")
 	includeRecent := boolFlag(cmd, "include-recent")
@@ -111,19 +110,10 @@ func runOrphans(cmd *cobra.Command, args []string) {
 
 	cfg := loadConfig()
 
-	if namespace == "" {
-		namespace = org
-	}
-	if namespace == "" {
-		namespace = cfg.DefaultOrg
-	}
-	if namespace == "" {
-		username, err := client.GetAuthenticatedUser()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: failed to get authenticated user: %v\n", err)
-			os.Exit(1)
-		}
-		namespace = username
+	namespace, err := resolveNamespace(cmd, client, cfg)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
 	}
 
 	if !cmd.Flags().Changed("stale-days") && cfg.Orphans.StaleDaysThreshold > 0 {
@@ -160,11 +150,11 @@ func runOrphans(cmd *cobra.Command, args []string) {
 	}
 
 	if cleanup {
-		runCleanup(ctx, client, result, dryRun, yes, includeClosedPR)
+		runCleanup(client, result, dryRun, yes, includeClosedPR)
 		return
 	}
 
-	if outputPath != "" || format == "json" || format == "markdown" {
+	if outputPath != "" || format == formatJSON || format == formatMarkdown {
 		outputResult(result, outputPath, format)
 		return
 	}
@@ -172,26 +162,34 @@ func runOrphans(cmd *cobra.Command, args []string) {
 	printTable(result)
 }
 
+func filterClosedPROrphans(
+	allOrphans []orphans.OrphanedBranch,
+	includeClosedPR bool,
+) ([]orphans.OrphanedBranch, int) {
+	if includeClosedPR {
+		return allOrphans, 0
+	}
+
+	filtered := make([]orphans.OrphanedBranch, 0, len(allOrphans))
+	skipped := 0
+
+	for _, orphan := range allOrphans {
+		if orphan.Type == orphans.OrphanTypeClosedPR {
+			skipped++
+			continue
+		}
+		filtered = append(filtered, orphan)
+	}
+
+	return filtered, skipped
+}
+
 func runCleanup(
-	ctx context.Context,
 	client *github.Client,
 	result *orphans.NamespaceScanResult,
 	dryRun, yes, includeClosedPR bool,
 ) {
-	allOrphans := result.AllOrphans()
-
-	var skippedClosedPR int
-	if !includeClosedPR {
-		var filtered []orphans.OrphanedBranch
-		for _, orphan := range allOrphans {
-			if orphan.Type == orphans.OrphanTypeClosedPR {
-				skippedClosedPR++
-				continue
-			}
-			filtered = append(filtered, orphan)
-		}
-		allOrphans = filtered
-	}
+	allOrphans, skippedClosedPR := filterClosedPROrphans(result.AllOrphans(), includeClosedPR)
 
 	if len(allOrphans) == 0 {
 		fmt.Println("No orphaned branches to clean up.")
@@ -226,11 +224,7 @@ func runCleanup(
 	}
 
 	if !dryRun && !yes {
-		reader := bufio.NewReader(os.Stdin)
-		fmt.Printf("Type \"yes\" to delete these %d branch(es): ", len(allOrphans))
-
-		line, err := reader.ReadString('\n')
-		if err != nil || strings.TrimSpace(line) != "yes" {
+		if !confirmTypedYes(fmt.Sprintf("Type \"yes\" to delete these %d branch(es): ", len(allOrphans))) {
 			fmt.Println("Aborted; no branches deleted.")
 			return
 		}
@@ -242,64 +236,44 @@ func runCleanup(
 		return
 	}
 
-	fmt.Println("Deleting orphaned branches:")
-
-	deleted := 0
-	failed := 0
-
-	for _, orphan := range allOrphans {
-		parts := strings.SplitN(orphan.Repository, "/", 2)
-		if len(parts) != 2 {
-			continue
-		}
-		owner, repo := parts[0], parts[1]
-
-		err := client.DeleteBranch(owner, repo, orphan.BranchName)
-		if err != nil {
-			fmt.Printf("  [FAILED] %s/%s: %v\n", orphan.Repository, orphan.BranchName, err)
-			failed++
-		} else {
-			fmt.Printf("  [DELETED] %s/%s\n", orphan.Repository, orphan.BranchName)
-			deleted++
-		}
-	}
-
+	deleted, failed := deleteOrphanedBranches(client, allOrphans)
 	fmt.Printf("\nTotal: %d deleted, %d failed\n", deleted, failed)
 }
 
-func outputResult(result *orphans.NamespaceScanResult, outputPath, format string) {
-	var output string
+func deleteOrphanedBranches(client *github.Client, allOrphans []orphans.OrphanedBranch) (int, int) {
+	fmt.Println("Deleting orphaned branches:")
 
-	switch format {
-	case "json":
-		data, err := json.MarshalIndent(result, "", "  ")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: failed to marshal JSON: %v\n", err)
-			os.Exit(1)
+	deleted, failed := 0, 0
+
+	for _, orphan := range allOrphans {
+		owner, repo, ok := splitRepo(orphan.Repository)
+		if !ok {
+			continue
 		}
-		output = string(data)
 
-	case "markdown":
-		output = formatMarkdown(result)
+		if err := client.DeleteBranch(owner, repo, orphan.BranchName); err != nil {
+			fmt.Printf("  [FAILED] %s/%s: %v\n", orphan.Repository, orphan.BranchName, err)
+			failed++
 
-	default:
-		var b strings.Builder
-		printTableTo(&b, result)
-		output = b.String()
+			continue
+		}
+
+		fmt.Printf("  [DELETED] %s/%s\n", orphan.Repository, orphan.BranchName)
+		deleted++
 	}
 
-	if outputPath != "" {
-		if err := os.WriteFile(outputPath, []byte(output), 0o644); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: failed to write output file: %v\n", err)
-			os.Exit(1)
-		}
-		fmt.Printf("Output written to: %s\n", outputPath)
-	} else {
-		fmt.Print(output)
-	}
+	return deleted, failed
 }
 
-func formatMarkdown(result *orphans.NamespaceScanResult) string {
+func outputResult(result *orphans.NamespaceScanResult, outputPath, format string) {
+	writeOutput(outputPath, format,
+		func() ([]byte, error) { return json.MarshalIndent(result, "", "  ") },
+		func() string { return formatOrphansMarkdown(result) },
+		func(b *strings.Builder) { printTableTo(b, result) },
+	)
+}
+
+func formatOrphansMarkdown(result *orphans.NamespaceScanResult) string {
 	var b strings.Builder
 
 	fmt.Fprintf(&b, "# Orphaned Branches Report: %s\n\n", result.Namespace)
@@ -363,7 +337,8 @@ func printTableTo(b *strings.Builder, result *orphans.NamespaceScanResult) {
 
 	b.WriteString("Orphaned Branches:\n\n")
 
-	for _, scanResult := range result.Results {
+	for i := range result.Results {
+		scanResult := &result.Results[i]
 		if len(scanResult.Orphans) == 0 {
 			continue
 		}

@@ -10,6 +10,8 @@ import (
 )
 
 func TestFormatProtectionTableDrift(t *testing.T) {
+	t.Parallel()
+
 	repos := []string{"owner/base", "owner/other", "owner/none"}
 	rules := map[string]*github.ProtectionRule{
 		"owner/base": {
@@ -48,6 +50,8 @@ func TestFormatProtectionTableDrift(t *testing.T) {
 }
 
 func TestFormatProtectionTableNoBaseline(t *testing.T) {
+	t.Parallel()
+
 	rules := map[string]*github.ProtectionRule{
 		"owner/a": {Repository: "owner/a", Branch: "main", RequiredReviews: 1},
 	}
@@ -63,6 +67,8 @@ func TestFormatProtectionTableNoBaseline(t *testing.T) {
 }
 
 func TestEqualStringSets(t *testing.T) {
+	t.Parallel()
+
 	if !equalStringSets([]string{"a", "b"}, []string{"b", "a"}) {
 		t.Error("expected order-insensitive equality")
 	}

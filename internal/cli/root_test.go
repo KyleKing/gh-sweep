@@ -7,6 +7,8 @@ import (
 )
 
 func TestRootCmd(t *testing.T) {
+	t.Parallel()
+
 	if rootCmd == nil {
 		t.Fatal("rootCmd is nil")
 	}
@@ -17,6 +19,8 @@ func TestRootCmd(t *testing.T) {
 }
 
 func TestResolveMainOptionsFromConfig(t *testing.T) {
+	t.Parallel()
+
 	cfg := &config.Config{
 		Baseline:     "acme/baseline",
 		DefaultOrg:   "acme",
@@ -48,6 +52,8 @@ func TestResolveMainOptionsFromConfig(t *testing.T) {
 }
 
 func TestResolveMainOptionsFlagsOverrideConfig(t *testing.T) {
+	t.Parallel()
+
 	cfg := &config.Config{
 		DefaultOrg:   "config-org",
 		Repositories: []string{"config-org/repo1"},

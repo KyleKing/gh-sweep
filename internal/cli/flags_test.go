@@ -21,10 +21,10 @@ func TestFlagHelpers(t *testing.T) {
 
 	cmd := testFlagCommand()
 
-	if got := boolFlag(cmd, "verbose"); got != false {
+	if got := boolFlag(cmd, "verbose"); got {
 		t.Errorf("boolFlag() = %v, want false", got)
 	}
-	if got := boolFlag(cmd, "missing"); got != false {
+	if got := boolFlag(cmd, "missing"); got {
 		t.Errorf("boolFlag(missing) = %v, want false", got)
 	}
 

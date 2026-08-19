@@ -42,6 +42,11 @@ func init() {
 	branchesCmd.Flags().Bool("list", false, "CLI list mode (no TUI)")
 }
 
+const (
+	hoursPerDay = 24
+	daysPerYear = 365
+)
+
 type branchesProgram struct {
 	model branchestui.Model
 }
@@ -64,7 +69,7 @@ func (p branchesProgram) View() tea.View {
 	return v
 }
 
-func runBranches(cmd *cobra.Command, args []string) {
+func runBranches(cmd *cobra.Command, _ []string) {
 	repo := stringFlag(cmd, "repo")
 	base := stringFlag(cmd, "base")
 	listMode := boolFlag(cmd, "list")
@@ -75,14 +80,14 @@ func runBranches(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	parts := strings.SplitN(repo, "/", 2)
-	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+	owner, name, ok := splitRepo(repo)
+	if !ok {
 		fmt.Fprintln(os.Stderr, "Error: repo must be in format owner/repo")
 		os.Exit(1)
 	}
 
 	if listMode {
-		listBranches(parts[0], parts[1], base)
+		listBranches(owner, name, base)
 		return
 	}
 
@@ -167,14 +172,14 @@ func formatCommitAge(commit, now time.Time) string {
 		return "-"
 	}
 
-	days := int(now.Sub(commit).Hours() / 24)
+	days := int(now.Sub(commit).Hours() / hoursPerDay)
 	switch {
 	case days < 1:
 		return "<1d"
-	case days < 365:
+	case days < daysPerYear:
 		return fmt.Sprintf("%dd", days)
 	default:
-		return fmt.Sprintf("%dy", days/365)
+		return fmt.Sprintf("%dy", days/daysPerYear)
 	}
 }
 
@@ -188,7 +193,7 @@ func formatBranchPR(pr *github.PullRequest) string {
 
 func formatBool(value bool) string {
 	if value {
-		return "yes"
+		return confirmYes
 	}
 
 	return "no"

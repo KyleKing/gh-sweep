@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -97,6 +96,7 @@ func captureStdout(t *testing.T, fn func()) string {
 	return string(out)
 }
 
+//nolint:paralleltest // captureStdout swaps the process-wide os.Stdout.
 func TestRunCleanupExcludesClosedPRByDefault(t *testing.T) {
 	transport := &deleteCountingTransport{}
 	client, err := github.NewClientWithTransport(context.Background(), transport)
@@ -105,7 +105,7 @@ func TestRunCleanupExcludesClosedPRByDefault(t *testing.T) {
 	}
 
 	output := captureStdout(t, func() {
-		runCleanup(context.Background(), client, testCleanupResult(), true, false, false)
+		runCleanup(client, testCleanupResult(), true, false, false)
 	})
 
 	if strings.Contains(output, "abandoned-feature") {
@@ -122,6 +122,7 @@ func TestRunCleanupExcludesClosedPRByDefault(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // captureStdout swaps the process-wide os.Stdout.
 func TestRunCleanupIncludeClosedPR(t *testing.T) {
 	transport := &deleteCountingTransport{}
 	client, err := github.NewClientWithTransport(context.Background(), transport)
@@ -130,7 +131,7 @@ func TestRunCleanupIncludeClosedPR(t *testing.T) {
 	}
 
 	output := captureStdout(t, func() {
-		runCleanup(context.Background(), client, testCleanupResult(), true, false, true)
+		runCleanup(client, testCleanupResult(), true, false, true)
 	})
 
 	if !strings.Contains(output, "abandoned-feature") {
@@ -141,6 +142,7 @@ func TestRunCleanupIncludeClosedPR(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // captureStdout swaps the process-wide os.Stdout.
 func TestRunCleanupAbortsWithoutTypedYes(t *testing.T) {
 	transport := &deleteCountingTransport{}
 	client, err := github.NewClientWithTransport(context.Background(), transport)
@@ -152,7 +154,7 @@ func TestRunCleanupAbortsWithoutTypedYes(t *testing.T) {
 	defer restoreStdin()
 
 	output := captureStdout(t, func() {
-		runCleanup(context.Background(), client, testCleanupResult(), false, false, false)
+		runCleanup(client, testCleanupResult(), false, false, false)
 	})
 
 	if !strings.Contains(output, "Aborted") {
@@ -163,6 +165,7 @@ func TestRunCleanupAbortsWithoutTypedYes(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // captureStdout swaps the process-wide os.Stdout.
 func TestRunCleanupProceedsWithYesFlag(t *testing.T) {
 	transport := &deleteCountingTransport{}
 	client, err := github.NewClientWithTransport(context.Background(), transport)
@@ -171,7 +174,7 @@ func TestRunCleanupProceedsWithYesFlag(t *testing.T) {
 	}
 
 	output := captureStdout(t, func() {
-		runCleanup(context.Background(), client, testCleanupResult(), false, true, false)
+		runCleanup(client, testCleanupResult(), false, true, false)
 	})
 
 	if !strings.Contains(output, "Total: 2 deleted, 0 failed") {
@@ -182,6 +185,7 @@ func TestRunCleanupProceedsWithYesFlag(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // captureStdout swaps the process-wide os.Stdout.
 func TestRunCleanupTypedYesConfirms(t *testing.T) {
 	transport := &deleteCountingTransport{}
 	client, err := github.NewClientWithTransport(context.Background(), transport)
@@ -193,7 +197,7 @@ func TestRunCleanupTypedYesConfirms(t *testing.T) {
 	defer restoreStdin()
 
 	output := captureStdout(t, func() {
-		runCleanup(context.Background(), client, testCleanupResult(), false, false, false)
+		runCleanup(client, testCleanupResult(), false, false, false)
 	})
 
 	if !strings.Contains(output, "Total: 2 deleted, 0 failed") {
@@ -225,7 +229,7 @@ func testScanResult() *orphans.NamespaceScanResult {
 func TestFormatMarkdown(t *testing.T) {
 	t.Parallel()
 
-	md := formatMarkdown(testScanResult())
+	md := formatOrphansMarkdown(testScanResult())
 
 	for _, want := range []string{
 		"# Orphaned Branches Report: acme",
@@ -243,28 +247,20 @@ func TestFormatMarkdown(t *testing.T) {
 func TestPrintTableTo(t *testing.T) {
 	t.Parallel()
 
-	var b strings.Builder
-	printTableTo(&b, testScanResult())
-	table := b.String()
-
-	for _, want := range []string{
-		"Orphaned Branches Report: acme",
-		"Total Orphaned Branches: 3",
-		"acme/widgets (3 orphans)",
-		"merged-feature [Merged PR, 0 days]",
-	} {
-		if !strings.Contains(table, want) {
-			t.Errorf("table missing %q, got:\n%s", want, table)
-		}
-	}
-
-	var empty strings.Builder
-	printTableTo(&empty, &orphans.NamespaceScanResult{Namespace: "acme"})
-	if !strings.Contains(empty.String(), "No orphaned branches found.") {
-		t.Errorf("expected the empty-state message, got:\n%s", empty.String())
-	}
+	testPrintTableRoundTrip(t,
+		func(b *strings.Builder) { printTableTo(b, testScanResult()) },
+		[]string{
+			"Orphaned Branches Report: acme",
+			"Total Orphaned Branches: 3",
+			"acme/widgets (3 orphans)",
+			"merged-feature [Merged PR, 0 days]",
+		},
+		func(b *strings.Builder) { printTableTo(b, &orphans.NamespaceScanResult{Namespace: "acme"}) },
+		"No orphaned branches found.",
+	)
 }
 
+//nolint:paralleltest // captureStdout swaps the process-wide os.Stdout.
 func TestPrintTable(t *testing.T) {
 	output := captureStdout(t, func() {
 		printTable(testScanResult())
@@ -275,27 +271,11 @@ func TestPrintTable(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // testOutputRoundTrip uses captureStdout, which swaps the process-wide os.Stdout.
 func TestOutputResult(t *testing.T) {
 	result := testScanResult()
 
-	jsonOut := captureStdout(t, func() { outputResult(result, "", "json") })
-	if !strings.Contains(jsonOut, `"namespace": "acme"`) {
-		t.Errorf("json output missing namespace field, got:\n%s", jsonOut)
-	}
-
-	mdOut := captureStdout(t, func() { outputResult(result, "", "markdown") })
-	if !strings.Contains(mdOut, "# Orphaned Branches Report") {
-		t.Errorf("markdown output missing header, got:\n%s", mdOut)
-	}
-
-	path := filepath.Join(t.TempDir(), "orphans.json")
-	captureStdout(t, func() { outputResult(result, path, "json") })
-
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("failed to read output file: %v", err)
-	}
-	if !strings.Contains(string(data), `"namespace": "acme"`) {
-		t.Errorf("output file missing namespace field, got:\n%s", data)
-	}
+	testOutputRoundTrip(t, func(outputPath, format string) {
+		outputResult(result, outputPath, format)
+	}, "# Orphaned Branches Report", "orphans.json")
 }

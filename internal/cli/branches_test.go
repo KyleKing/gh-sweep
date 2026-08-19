@@ -10,6 +10,8 @@ import (
 )
 
 func TestFormatCommitAge(t *testing.T) {
+	t.Parallel()
+
 	now := time.Date(2026, 7, 24, 12, 0, 0, 0, time.UTC)
 
 	tests := []struct {
@@ -26,6 +28,8 @@ func TestFormatCommitAge(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			if got := formatCommitAge(tt.commit, now); got != tt.want {
 				t.Errorf("formatCommitAge() = %q, want %q", got, tt.want)
 			}
@@ -34,6 +38,8 @@ func TestFormatCommitAge(t *testing.T) {
 }
 
 func TestFormatBranchPR(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name string
 		pr   *github.PullRequest
@@ -50,6 +56,8 @@ func TestFormatBranchPR(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			if got := formatBranchPR(tt.pr); got != tt.want {
 				t.Errorf("formatBranchPR() = %q, want %q", got, tt.want)
 			}
@@ -90,6 +98,7 @@ func TestRenderBranchTable(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // SetTestTransport mutates a package-level transport shared by every test.
 func TestListBranches(t *testing.T) {
 	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
 		path := req.URL.Path
@@ -125,6 +134,7 @@ func TestListBranches(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // SetTestTransport mutates a package-level transport shared by every test.
 func TestListBranchesNoBranches(t *testing.T) {
 	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
 		path := req.URL.Path

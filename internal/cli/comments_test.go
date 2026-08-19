@@ -13,7 +13,7 @@ import (
 func TestBuildThreadFilter(t *testing.T) {
 	t.Parallel()
 
-	cmd := &cobra.Command{Use: "comments"}
+	cmd := &cobra.Command{}
 	cmd.Flags().String("author", "", "")
 	cmd.Flags().String("since", "", "")
 	cmd.Flags().String("search", "", "")
@@ -44,7 +44,7 @@ func TestBuildThreadFilter(t *testing.T) {
 func TestBuildThreadFilterInvalidSince(t *testing.T) {
 	t.Parallel()
 
-	cmd := &cobra.Command{Use: "comments"}
+	cmd := &cobra.Command{}
 	cmd.Flags().String("author", "", "")
 	cmd.Flags().String("since", "", "")
 	cmd.Flags().String("search", "", "")
@@ -72,6 +72,7 @@ func TestSummarize(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // captureStdout swaps the process-wide os.Stdout.
 func TestPrintThreads(t *testing.T) {
 	threads := []github.ReviewThread{{
 		PRNumber: 7,

@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -55,28 +53,20 @@ func TestFormatPagesMarkdown(t *testing.T) {
 func TestPrintPagesTableTo(t *testing.T) {
 	t.Parallel()
 
-	var b strings.Builder
-	printPagesTableTo(&b, testPagesResult())
-	table := b.String()
-
-	for _, want := range []string{
-		"GitHub Pages Domain Audit: acme",
-		"[Dangling] acme/widgets docs.example.com: domain no longer resolves to GitHub Pages",
-		"[No live site] (reverse check) unclaimed.example.com",
-		"Total: 2 finding(s)",
-	} {
-		if !strings.Contains(table, want) {
-			t.Errorf("table missing %q, got:\n%s", want, table)
-		}
-	}
-
-	var empty strings.Builder
-	printPagesTableTo(&empty, &pages.NamespaceAuditResult{Namespace: "acme"})
-	if !strings.Contains(empty.String(), "No findings.") {
-		t.Errorf("expected the empty-state message, got:\n%s", empty.String())
-	}
+	testPrintTableRoundTrip(t,
+		func(b *strings.Builder) { printPagesTableTo(b, testPagesResult()) },
+		[]string{
+			"GitHub Pages Domain Audit: acme",
+			"[Dangling] acme/widgets docs.example.com: domain no longer resolves to GitHub Pages",
+			"[No live site] (reverse check) unclaimed.example.com",
+			"Total: 2 finding(s)",
+		},
+		func(b *strings.Builder) { printPagesTableTo(b, &pages.NamespaceAuditResult{Namespace: "acme"}) },
+		"No findings.",
+	)
 }
 
+//nolint:paralleltest // captureStdout swaps the process-wide os.Stdout.
 func TestPrintPagesTable(t *testing.T) {
 	output := captureStdout(t, func() {
 		printPagesTable(testPagesResult())
@@ -87,27 +77,11 @@ func TestPrintPagesTable(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // testOutputRoundTrip uses captureStdout, which swaps the process-wide os.Stdout.
 func TestOutputPagesResult(t *testing.T) {
 	result := testPagesResult()
 
-	jsonOut := captureStdout(t, func() { outputPagesResult(result, "", "json") })
-	if !strings.Contains(jsonOut, `"namespace": "acme"`) {
-		t.Errorf("json output missing namespace field, got:\n%s", jsonOut)
-	}
-
-	mdOut := captureStdout(t, func() { outputPagesResult(result, "", "markdown") })
-	if !strings.Contains(mdOut, "# GitHub Pages Domain Audit") {
-		t.Errorf("markdown output missing header, got:\n%s", mdOut)
-	}
-
-	path := filepath.Join(t.TempDir(), "pages.json")
-	captureStdout(t, func() { outputPagesResult(result, path, "json") })
-
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("failed to read output file: %v", err)
-	}
-	if !strings.Contains(string(data), `"namespace": "acme"`) {
-		t.Errorf("output file missing namespace field, got:\n%s", data)
-	}
+	testOutputRoundTrip(t, func(outputPath, format string) {
+		outputPagesResult(result, outputPath, format)
+	}, "# GitHub Pages Domain Audit", "pages.json")
 }

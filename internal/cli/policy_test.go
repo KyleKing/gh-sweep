@@ -9,6 +9,8 @@ import (
 	"github.com/KyleKing/gh-sweep/internal/policy"
 )
 
+var errFetchFailed = errors.New("fetch failed")
+
 func testPolicyReport() *policy.Report {
 	return &policy.Report{Repos: []policy.RepoDrift{
 		{
@@ -17,7 +19,7 @@ func testPolicyReport() *policy.Report {
 				Domain: policy.DomainSettings, Field: "has_issues", Current: "false", Desired: "true",
 			}},
 		},
-		{Repository: "acme/broken", Err: errors.New("fetch failed")},
+		{Repository: "acme/broken", Err: errFetchFailed},
 	}}
 }
 
@@ -58,6 +60,7 @@ func TestFormatPolicyMarkdown(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // captureStdout swaps the process-wide os.Stdout.
 func TestPrintReport(t *testing.T) {
 	report := testPolicyReport()
 

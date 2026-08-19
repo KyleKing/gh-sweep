@@ -50,6 +50,7 @@ func testUnwatchedRepos() []github.RepoWatchInfo {
 	}
 }
 
+//nolint:paralleltest // captureStdout swaps the process-wide os.Stdout.
 func TestRunWatchAllAbortsWithoutTypedYes(t *testing.T) {
 	transport := &subscribeCountingTransport{}
 	client, err := github.NewClientWithTransport(context.Background(), transport)
@@ -72,6 +73,7 @@ func TestRunWatchAllAbortsWithoutTypedYes(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // captureStdout swaps the process-wide os.Stdout.
 func TestRunWatchAllProceedsWithYesFlag(t *testing.T) {
 	transport := &subscribeCountingTransport{}
 	client, err := github.NewClientWithTransport(context.Background(), transport)
@@ -91,6 +93,7 @@ func TestRunWatchAllProceedsWithYesFlag(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // captureStdout swaps the process-wide os.Stdout.
 func TestRunWatchAllTypedYesConfirms(t *testing.T) {
 	transport := &subscribeCountingTransport{}
 	client, err := github.NewClientWithTransport(context.Background(), transport)

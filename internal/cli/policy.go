@@ -52,15 +52,15 @@ func init() {
 	policyCmd.Flags().String("policy", "", "Path to the policy file (default: .gh-sweep-policy.yaml)")
 	policyCmd.Flags().Bool("list", false, "CLI list mode (no TUI); exits 1 if drift is found")
 	policyCmd.Flags().Bool("apply", false, "Sync drifted repos toward the policy")
-	policyCmd.Flags().Bool("yes", false, "Skip the per-repo confirmation prompt when applying")
+	policyCmd.Flags().Bool(confirmYes, false, "Skip the per-repo confirmation prompt when applying")
 	policyCmd.Flags().String("format", "table", "Output format: table, json, markdown")
 }
 
-func runPolicy(cmd *cobra.Command, args []string) {
+func runPolicy(cmd *cobra.Command, _ []string) {
 	policyPath := stringFlag(cmd, "policy")
 	listMode := boolFlag(cmd, "list")
 	apply := boolFlag(cmd, "apply")
-	yes := boolFlag(cmd, "yes")
+	yes := boolFlag(cmd, confirmYes)
 	format := stringFlag(cmd, "format")
 
 	cfg, err := config.LoadPolicy(policyPath)
@@ -184,7 +184,7 @@ func confirm(reader *bufio.Reader, prompt string) bool {
 
 func printReport(report *policy.Report, format string) {
 	switch format {
-	case "json":
+	case formatJSON:
 		data, err := json.MarshalIndent(report, "", "  ")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: failed to marshal JSON: %v\n", err)
@@ -192,7 +192,7 @@ func printReport(report *policy.Report, format string) {
 		}
 		fmt.Println(string(data))
 
-	case "markdown":
+	case formatMarkdown:
 		fmt.Print(formatPolicyMarkdown(report))
 
 	default:

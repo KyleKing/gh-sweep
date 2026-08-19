@@ -47,6 +47,11 @@ func init() {
 	protectionCmd.Flags().Bool("list", false, "CLI table mode (no TUI)")
 }
 
+const (
+	tabWriterTabWidth = 4
+	tabWriterPadding  = 2
+)
+
 type protectionProgram struct {
 	model protectiontui.Model
 }
@@ -69,7 +74,7 @@ func (p protectionProgram) View() tea.View {
 	return v
 }
 
-func runProtection(cmd *cobra.Command, args []string) {
+func runProtection(cmd *cobra.Command, _ []string) {
 	repos := stringSliceFlag(cmd, "repos")
 	baseline := stringFlag(cmd, "baseline")
 	listMode := boolFlag(cmd, "list")
@@ -112,8 +117,8 @@ func fetchProtectionRules(client *github.Client, repos []string) map[string]*git
 	rules := make(map[string]*github.ProtectionRule)
 
 	for _, repoStr := range repos {
-		parts := strings.SplitN(repoStr, "/", 2)
-		if len(parts) != 2 {
+		owner, name, ok := splitRepo(repoStr)
+		if !ok {
 			fmt.Fprintf(
 				os.Stderr,
 				"Warning: skipping invalid repo %q (expected owner/repo)\n",
@@ -123,7 +128,7 @@ func fetchProtectionRules(client *github.Client, repos []string) map[string]*git
 			continue
 		}
 
-		rule, err := client.GetDefaultBranchProtection(parts[0], parts[1])
+		rule, err := client.GetDefaultBranchProtection(owner, name)
 		if err != nil {
 			continue
 		}
@@ -147,10 +152,9 @@ func formatProtectionTable(
 	}
 	b.WriteString("\n")
 
-	w := tabwriter.NewWriter(&b, 0, 4, 2, ' ', 0)
-	rows := []string{
-		"REPO\tBRANCH\tREVIEWS\tCODEOWNERS\tADMINS\tLINEAR\tFORCE-PUSH\tDELETIONS\tSTATUS CHECKS",
-	}
+	w := tabwriter.NewWriter(&b, 0, tabWriterTabWidth, tabWriterPadding, ' ', 0)
+	rows := make([]string, 0, 1+len(repos))
+	rows = append(rows, "REPO\tBRANCH\tREVIEWS\tCODEOWNERS\tADMINS\tLINEAR\tFORCE-PUSH\tDELETIONS\tSTATUS CHECKS")
 
 	base := rules[baseline]
 	for _, repo := range repos {

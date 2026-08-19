@@ -48,6 +48,21 @@ linters = ["tagliatelle"]
 path = "internal/git/local\\.go"
 linters = ["gosec"]
 
+[[linters.exclusions.rules]]
+# These test white-box unexported internals directly (mapReviewThreads,
+# classifyError, filterByTime, GQLClient.doer, currentTestTransport,
+# safetyTransport), so they cannot move to the external github_test package.
+path = "internal/github/(actions_test|comments_test|transport_test|watch_graphql_test)\\.go"
+linters = ["testpackage"]
+
+[[linters.exclusions.rules]]
+# Every command file's tests exercise private formatting/output helpers and
+# run* functions directly (formatCommitAge, outputResult, runCleanup, ...);
+# moving to cli_test would mean exporting CLI-internal implementation with no
+# consumer beyond the tests.
+path = "internal/cli/"
+linters = ["testpackage"]
+
 [linters.settings.cyclop]
 max-complexity = 15
 

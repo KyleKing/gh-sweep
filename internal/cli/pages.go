@@ -45,7 +45,7 @@ func init() {
 	pagesCmd.Flags().String("format", "table", "Output format: table, json, markdown")
 }
 
-func runPages(cmd *cobra.Command, args []string) {
+func runPages(cmd *cobra.Command, _ []string) {
 	ctx := context.Background()
 
 	client, err := github.NewClient(ctx)
@@ -54,26 +54,15 @@ func runPages(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	org := stringFlag(cmd, "org")
-	namespace := stringFlag(cmd, "namespace")
 	outputPath := stringFlag(cmd, "output")
 	format := stringFlag(cmd, "format")
 
 	cfg := loadConfig()
 
-	if namespace == "" {
-		namespace = org
-	}
-	if namespace == "" {
-		namespace = cfg.DefaultOrg
-	}
-	if namespace == "" {
-		username, err := client.GetAuthenticatedUser()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: failed to get authenticated user: %v\n", err)
-			os.Exit(1)
-		}
-		namespace = username
+	namespace, err := resolveNamespace(cmd, client, cfg)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
 	}
 
 	fmt.Printf("Scanning namespace: %s\n", namespace)
@@ -85,7 +74,7 @@ func runPages(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	if outputPath != "" || format == "json" || format == "markdown" {
+	if outputPath != "" || format == formatJSON || format == formatMarkdown {
 		outputPagesResult(result, outputPath, format)
 		return
 	}
@@ -94,35 +83,11 @@ func runPages(cmd *cobra.Command, args []string) {
 }
 
 func outputPagesResult(result *pages.NamespaceAuditResult, outputPath, format string) {
-	var output string
-
-	switch format {
-	case "json":
-		data, err := json.MarshalIndent(result, "", "  ")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: failed to marshal JSON: %v\n", err)
-			os.Exit(1)
-		}
-		output = string(data)
-
-	case "markdown":
-		output = formatPagesMarkdown(result)
-
-	default:
-		var b strings.Builder
-		printPagesTableTo(&b, result)
-		output = b.String()
-	}
-
-	if outputPath != "" {
-		if err := os.WriteFile(outputPath, []byte(output), 0o644); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: failed to write output file: %v\n", err)
-			os.Exit(1)
-		}
-		fmt.Printf("Output written to: %s\n", outputPath)
-	} else {
-		fmt.Print(output)
-	}
+	writeOutput(outputPath, format,
+		func() ([]byte, error) { return json.MarshalIndent(result, "", "  ") },
+		func() string { return formatPagesMarkdown(result) },
+		func(b *strings.Builder) { printPagesTableTo(b, result) },
+	)
 }
 
 func formatPagesMarkdown(result *pages.NamespaceAuditResult) string {

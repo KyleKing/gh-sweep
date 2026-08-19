@@ -1,3 +1,5 @@
+// Package cli implements gh-sweep's Cobra command tree: flag parsing, config
+// resolution, and dispatch into the TUI or CLI list mode for each subcommand.
 package cli
 
 import (
@@ -26,7 +28,7 @@ It provides interactive tools for:
   - And much more...
 
 Use 'gh-sweep <command> --help' for more information about a command.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		cfg := loadConfig()
 		opts := resolveMainOptions(
 			cfg,

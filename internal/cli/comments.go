@@ -77,7 +77,7 @@ func (p commentsProgram) View() tea.View {
 	return v
 }
 
-func runComments(cmd *cobra.Command, args []string) {
+func runComments(cmd *cobra.Command, _ []string) {
 	repo := stringFlag(cmd, "repo")
 	prNumber := intFlag(cmd, "pr")
 	listMode := boolFlag(cmd, "list")
@@ -92,12 +92,11 @@ func runComments(cmd *cobra.Command, args []string) {
 		fmt.Fprintln(os.Stderr, "Error: --repo is required (owner/repo)")
 		os.Exit(1)
 	}
-	parts := strings.Split(repo, "/")
-	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+	owner, name, ok := splitRepo(repo)
+	if !ok {
 		fmt.Fprintf(os.Stderr, "Error: invalid repo %q, expected owner/repo\n", repo)
 		os.Exit(1)
 	}
-	owner, name := parts[0], parts[1]
 
 	if !listMode {
 		theme.Init(theme.Detect())
@@ -199,10 +198,12 @@ func printThreads(repo string, threads []github.ReviewThread) {
 	fmt.Printf("Total: %d unresolved threads\n", len(threads))
 }
 
+const summaryMaxLen = 100
+
 func summarize(body string) string {
 	flat := strings.Join(strings.Fields(body), " ")
-	if len(flat) > 100 {
-		return flat[:100] + "..."
+	if len(flat) > summaryMaxLen {
+		return flat[:summaryMaxLen] + "..."
 	}
 
 	return flat

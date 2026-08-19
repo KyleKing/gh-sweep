@@ -1,11 +1,8 @@
 package cli
 
 import (
-	"bufio"
 	"context"
 	"fmt"
-	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -26,10 +23,10 @@ Examples:
 
   # Watch all repos in namespace
   gh-sweep watching --watch-all`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		unwatched := boolFlag(cmd, "unwatched")
 		watchAll := boolFlag(cmd, "watch-all")
-		yes := boolFlag(cmd, "yes")
+		yes := boolFlag(cmd, confirmYes)
 
 		ctx := context.Background()
 		client, err := github.NewClient(ctx)
@@ -107,17 +104,13 @@ func runWatchAll(client *github.Client, unwatchedRepos []github.RepoWatchInfo, y
 	}
 
 	fmt.Printf("Repositories to watch:\n\n")
-	for _, repo := range unwatchedRepos {
-		fmt.Printf("  - %s\n", repo.FullName)
+	for i := range unwatchedRepos {
+		fmt.Printf("  - %s\n", unwatchedRepos[i].FullName)
 	}
 	fmt.Println()
 
 	if !yes {
-		reader := bufio.NewReader(os.Stdin)
-		fmt.Printf("Type \"yes\" to watch these %d repositories: ", len(unwatchedRepos))
-
-		line, err := reader.ReadString('\n')
-		if err != nil || strings.TrimSpace(line) != "yes" {
+		if !confirmTypedYes(fmt.Sprintf("Type \"yes\" to watch these %d repositories: ", len(unwatchedRepos))) {
 			fmt.Println("Aborted; no repositories watched.")
 			return
 		}
@@ -125,9 +118,10 @@ func runWatchAll(client *github.Client, unwatchedRepos []github.RepoWatchInfo, y
 	}
 
 	fmt.Printf("Watching %d repositories...\n\n", len(unwatchedRepos))
-	for _, repo := range unwatchedRepos {
-		_, err := client.SetRepoSubscription(repo.Owner, repo.Name, true, false)
-		if err != nil {
+	for i := range unwatchedRepos {
+		repo := &unwatchedRepos[i]
+
+		if _, err := client.SetRepoSubscription(repo.Owner, repo.Name, true, false); err != nil {
 			fmt.Printf("  Failed to watch %s: %v\n", repo.FullName, err)
 			continue
 		}
@@ -149,5 +143,5 @@ func init() {
 
 	watchingCmd.Flags().Bool("unwatched", false, "List unwatched repositories")
 	watchingCmd.Flags().Bool("watch-all", false, "Watch all unwatched repositories")
-	watchingCmd.Flags().Bool("yes", false, "Skip the watch-all confirmation prompt")
+	watchingCmd.Flags().Bool(confirmYes, false, "Skip the watch-all confirmation prompt")
 }

@@ -75,6 +75,7 @@ func TestExportCSV(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // captureStdout swaps the process-wide os.Stdout.
 func TestPrintSummary(t *testing.T) {
 	output := captureStdout(t, func() {
 		printSummary(ghaPerfFixtureRuns())
@@ -85,6 +86,7 @@ func TestPrintSummary(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // captureStdout swaps the process-wide os.Stdout.
 func TestPrintJobSummary(t *testing.T) {
 	output := captureStdout(t, func() {
 		printJobSummary(ghaPerfFixtureRuns(), "build")
@@ -98,6 +100,7 @@ func TestPrintJobSummary(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // captureStdout swaps the process-wide os.Stdout.
 func TestPrintByBranch(t *testing.T) {
 	output := captureStdout(t, func() {
 		printByBranch(ghaPerfFixtureRuns(), "main")
@@ -111,6 +114,7 @@ func TestPrintByBranch(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // captureStdout swaps the process-wide os.Stdout.
 func TestPrintComparison(t *testing.T) {
 	runsA := ghaPerfFixtureRuns()[:1]
 	runsB := ghaPerfFixtureRuns()[1:]
