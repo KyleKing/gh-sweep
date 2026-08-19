@@ -10,6 +10,8 @@ import (
 	"github.com/KyleKing/gh-sweep/internal/github"
 )
 
+var errForbidden = errors.New("forbidden")
+
 func loadedProtectionModel() Model {
 	m := NewModel([]string{"acme/widgets", "acme/gadgets"}, "acme/widgets")
 	m, _ = m.Update(rulesLoadedMsg{
@@ -111,7 +113,7 @@ func TestRulesLoadError(t *testing.T) {
 	m, _ = m.Update(rulesLoadedMsg{
 		rules: map[string]*github.ProtectionRule{},
 		diffs: map[string][]string{},
-		err:   errors.New("forbidden"),
+		err:   errForbidden,
 	})
 
 	if !strings.Contains(m.View(), "forbidden") {

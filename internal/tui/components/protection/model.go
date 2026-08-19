@@ -1,3 +1,5 @@
+// Package protection is the TUI view that compares branch protection rules
+// across repositories against a baseline repo.
 package protection
 
 import (
@@ -10,6 +12,11 @@ import (
 
 	"github.com/KyleKing/gh-sweep/internal/github"
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
+)
+
+const (
+	repoPartsCount = 2
+	helpKeyWidth   = 16
 )
 
 // Model represents the protection rules TUI state.
@@ -63,11 +70,10 @@ func (m Model) loadRules() tea.Msg {
 	// Load protection rules for each repo
 	rules := make(map[string]*github.ProtectionRule)
 	for _, repoStr := range m.repos {
-		parts := strings.Split(repoStr, "/")
-		if len(parts) != 2 {
+		owner, repo, ok := splitRepo(repoStr)
+		if !ok {
 			continue
 		}
-		owner, repo := parts[0], parts[1]
 
 		rule, err := client.GetDefaultBranchProtection(owner, repo)
 		if err != nil {
@@ -96,7 +102,18 @@ func (m Model) loadRules() tea.Msg {
 	}
 }
 
+func splitRepo(repo string) (string, string, bool) {
+	parts := strings.SplitN(repo, "/", repoPartsCount)
+	if len(parts) != repoPartsCount {
+		return "", "", false
+	}
+
+	return parts[0], parts[1], true
+}
+
 // Update handles messages.
+//
+//nolint:unparam // matches every TUI component's Update(Model, tea.Cmd) shape
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -114,38 +131,44 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyPressMsg:
-		if m.showHelp {
-			if msg.String() == "?" || msg.String() == "esc" {
-				m.showHelp = false
-			}
+		return m.updateKeyMsg(msg)
+	}
 
-			return m, nil
+	return m, nil
+}
+
+func (m Model) updateKeyMsg(msg tea.KeyPressMsg) (Model, tea.Cmd) {
+	if m.showHelp {
+		if msg.String() == "?" || msg.String() == "esc" {
+			m.showHelp = false
 		}
 
-		switch msg.String() {
-		case "ctrl+c", "q":
-			return m, tea.Quit
+		return m, nil
+	}
 
-		case "?":
-			m.showHelp = true
+	switch msg.String() {
+	case "ctrl+c", "q":
+		return m, tea.Quit
 
-		case "g":
-			m.cursor = 0
+	case "?":
+		m.showHelp = true
 
-		case "G":
-			if len(m.repos) > 0 {
-				m.cursor = len(m.repos) - 1
-			}
+	case "g":
+		m.cursor = 0
 
-		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
-			}
+	case "G":
+		if len(m.repos) > 0 {
+			m.cursor = len(m.repos) - 1
+		}
 
-		case "down", "j":
-			if m.cursor < len(m.repos)-1 {
-				m.cursor++
-			}
+	case "up", "k":
+		if m.cursor > 0 {
+			m.cursor--
+		}
+
+	case "down", "j":
+		if m.cursor < len(m.repos)-1 {
+			m.cursor++
 		}
 	}
 
@@ -177,7 +200,7 @@ func (m Model) View() string {
 	}
 
 	if m.showHelp {
-		return m.renderHelp(&b)
+		return renderHelp(&b)
 	}
 
 	// Repository list with rules
@@ -230,7 +253,7 @@ func (m Model) View() string {
 	return b.String()
 }
 
-func (m Model) renderHelp(b *strings.Builder) string {
+func renderHelp(b *strings.Builder) string {
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Primary)
 	b.WriteString(titleStyle.Render("Keybindings"))
 	b.WriteString("\n\n")
@@ -243,7 +266,7 @@ func (m Model) renderHelp(b *strings.Builder) string {
 	}
 
 	for _, binding := range bindings {
-		keyStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Warning).Width(16)
+		keyStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Warning).Width(helpKeyWidth)
 		fmt.Fprintf(b, "%s %s\n", keyStyle.Render(binding[0]), binding[1])
 	}
 
