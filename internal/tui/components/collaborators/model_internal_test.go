@@ -10,6 +10,8 @@ import (
 	"github.com/KyleKing/gh-sweep/internal/github"
 )
 
+var errForbidden = errors.New("forbidden")
+
 func loadedCollaboratorsModel() Model {
 	m := NewModel([]string{"acme/widgets"})
 	m, _ = m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
@@ -90,7 +92,7 @@ func TestCollaboratorsLoadError(t *testing.T) {
 	m := NewModel([]string{"acme/widgets"})
 	m, _ = m.Update(collaboratorsLoadedMsg{
 		collaborators: map[string][]github.Collaborator{},
-		err:           errors.New("forbidden"),
+		err:           errForbidden,
 	})
 
 	if !strings.Contains(m.View(), "forbidden") {

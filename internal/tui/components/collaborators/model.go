@@ -1,3 +1,5 @@
+// Package collaborators is the TUI view that audits repository collaborators
+// and their permission levels, grouped either by repository or by user.
 package collaborators
 
 import (
@@ -12,6 +14,18 @@ import (
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
+const (
+	repoPartsCount  = 2
+	helpKeyWidth    = 16
+	maxPreviewItems = 3
+
+	viewModeByRepo = "byrepo"
+	viewModeByUser = "byuser"
+
+	permissionAdmin = "admin"
+	permissionWrite = "write"
+)
+
 // Model represents the collaborator management TUI state.
 type Model struct {
 	repos         []string
@@ -21,7 +35,7 @@ type Model struct {
 	height        int
 	loading       bool
 	err           error
-	viewMode      string // "byrepo", "byuser"
+	viewMode      string // viewModeByRepo, viewModeByUser
 	showHelp      bool
 }
 
@@ -31,7 +45,7 @@ func NewModel(repos []string) Model {
 		repos:         repos,
 		collaborators: make(map[string][]github.Collaborator),
 		loading:       true,
-		viewMode:      "byrepo",
+		viewMode:      viewModeByRepo,
 	}
 }
 
@@ -60,7 +74,7 @@ func (m Model) loadCollaborators() tea.Msg {
 	collaborators := make(map[string][]github.Collaborator)
 	for _, repoStr := range m.repos {
 		parts := strings.Split(repoStr, "/")
-		if len(parts) != 2 {
+		if len(parts) != repoPartsCount {
 			continue
 		}
 		owner, repo := parts[0], parts[1]
@@ -81,6 +95,8 @@ func (m Model) loadCollaborators() tea.Msg {
 }
 
 // Update handles messages.
+//
+//nolint:unparam // matches every TUI component's Update(Model, tea.Cmd) shape
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -97,57 +113,63 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyPressMsg:
-		if m.showHelp {
-			if msg.String() == "?" || msg.String() == "esc" {
-				m.showHelp = false
-			}
-
-			return m, nil
-		}
-
-		switch msg.String() {
-		case "ctrl+c", "q":
-			return m, tea.Quit
-
-		case "?":
-			m.showHelp = true
-
-		case "g":
-			m.cursor = 0
-
-		case "G":
-			maxCursor := len(m.repos) - 1
-			if m.viewMode == "byuser" {
-				maxCursor = m.getTotalCollaborators() - 1
-			}
-			if maxCursor >= 0 {
-				m.cursor = maxCursor
-			}
-
-		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
-			}
-
-		case "down", "j":
-			maxCursor := len(m.repos) - 1
-			if m.viewMode == "byuser" {
-				maxCursor = m.getTotalCollaborators() - 1
-			}
-			if m.cursor < maxCursor {
-				m.cursor++
-			}
-
-		case "1":
-			m.viewMode = "byrepo"
-			m.cursor = 0
-		case "2":
-			m.viewMode = "byuser"
-			m.cursor = 0
-		}
+		return m.updateKeyMsg(msg)
 	}
 
 	return m, nil
+}
+
+func (m Model) updateKeyMsg(msg tea.KeyPressMsg) (Model, tea.Cmd) {
+	if m.showHelp {
+		if msg.String() == "?" || msg.String() == "esc" {
+			m.showHelp = false
+		}
+
+		return m, nil
+	}
+
+	switch msg.String() {
+	case "ctrl+c", "q":
+		return m, tea.Quit
+
+	case "?":
+		m.showHelp = true
+
+	case "g":
+		m.cursor = 0
+
+	case "G":
+		if maxCursor := m.maxCursor(); maxCursor >= 0 {
+			m.cursor = maxCursor
+		}
+
+	case "up", "k":
+		if m.cursor > 0 {
+			m.cursor--
+		}
+
+	case "down", "j":
+		if m.cursor < m.maxCursor() {
+			m.cursor++
+		}
+
+	case "1":
+		m.viewMode = viewModeByRepo
+		m.cursor = 0
+	case "2":
+		m.viewMode = viewModeByUser
+		m.cursor = 0
+	}
+
+	return m, nil
+}
+
+func (m Model) maxCursor() int {
+	if m.viewMode == viewModeByUser {
+		return m.getTotalCollaborators() - 1
+	}
+
+	return len(m.repos) - 1
 }
 
 func (m Model) getTotalCollaborators() int {
@@ -183,7 +205,7 @@ func (m Model) View() string {
 	b.WriteString("\n\n")
 
 	if m.showHelp {
-		return m.renderHelp(&b)
+		return renderHelp(&b)
 	}
 
 	// View mode tabs
@@ -194,13 +216,13 @@ func (m Model) View() string {
 	inactiveTab := lipgloss.NewStyle().
 		Foreground(theme.Current().Muted)
 
-	if m.viewMode == "byrepo" {
+	if m.viewMode == viewModeByRepo {
 		b.WriteString(activeTab.Render("[1] By Repository"))
 	} else {
 		b.WriteString(inactiveTab.Render("[1] By Repository"))
 	}
 	b.WriteString("  ")
-	if m.viewMode == "byuser" {
+	if m.viewMode == viewModeByUser {
 		b.WriteString(activeTab.Render("[2] By User"))
 	} else {
 		b.WriteString(inactiveTab.Render("[2] By User"))
@@ -209,9 +231,9 @@ func (m Model) View() string {
 
 	// Content based on view mode
 	switch m.viewMode {
-	case "byrepo":
+	case viewModeByRepo:
 		b.WriteString(m.renderByRepo())
-	case "byuser":
+	case viewModeByUser:
 		b.WriteString(m.renderByUser())
 	}
 
@@ -223,7 +245,7 @@ func (m Model) View() string {
 	return b.String()
 }
 
-func (m Model) renderHelp(b *strings.Builder) string {
+func renderHelp(b *strings.Builder) string {
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Primary)
 	b.WriteString(titleStyle.Render("Keybindings"))
 	b.WriteString("\n\n")
@@ -237,7 +259,7 @@ func (m Model) renderHelp(b *strings.Builder) string {
 	}
 
 	for _, binding := range bindings {
-		keyStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Warning).Width(16)
+		keyStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Warning).Width(helpKeyWidth)
 		fmt.Fprintf(b, "%s %s\n", keyStyle.Render(binding[0]), binding[1])
 	}
 
@@ -269,15 +291,15 @@ func (m Model) renderByRepo() string {
 		// Show first few collaborators
 		var lineSb214 strings.Builder
 		for j, collab := range collabs {
-			if j >= 3 {
-				fmt.Fprintf(&lineSb214, "   ... and %d more\n", len(collabs)-3)
+			if j >= maxPreviewItems {
+				fmt.Fprintf(&lineSb214, "   ... and %d more\n", len(collabs)-maxPreviewItems)
 				break
 			}
 			permColor := theme.Current().Success
 			switch collab.Permission {
-			case "admin":
+			case permissionAdmin:
 				permColor = theme.Current().Error
-			case "write":
+			case permissionWrite:
 				permColor = theme.Current().Warning
 			}
 			permStyle := lipgloss.NewStyle().Foreground(permColor)
@@ -331,16 +353,16 @@ func (m Model) renderByUser() string {
 		// Show repos with permissions
 		var lineSb273 strings.Builder
 		for j, repo := range repos {
-			if j >= 3 {
-				fmt.Fprintf(&lineSb273, "   ... and %d more\n", len(repos)-3)
+			if j >= maxPreviewItems {
+				fmt.Fprintf(&lineSb273, "   ... and %d more\n", len(repos)-maxPreviewItems)
 				break
 			}
 			perm := userPerms[user][repo]
 			permColor := theme.Current().Success
 			switch perm {
-			case "admin":
+			case permissionAdmin:
 				permColor = theme.Current().Error
-			case "write":
+			case permissionWrite:
 				permColor = theme.Current().Warning
 			}
 			permStyle := lipgloss.NewStyle().Foreground(permColor)
