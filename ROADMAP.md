@@ -23,13 +23,7 @@ key press is a single reversible toggle (press again to undo), not a batch
 operation, so the stakes don't match the CLI paths. Revisit only if it turns
 out to bite in practice.
 
-## M3: One GHA analytics path and live unused-secrets detection
-
-`internal/github/actions.go` and `gha_perf.go` model the same `actions/runs` payload twice (`WorkflowRun` vs `RunTiming`, `WorkflowRunStats` vs `WorkflowStats`) with split consumers (analytics vs ghaperf/CLI). Merge them onto one model. Separately, `DetectUnusedSecrets` and its helpers in `internal/github/secrets.go` have no production callers, so the secrets view's Unused tab always renders empty; wire workflow scanning into the secrets component.
-
-Starting points: `internal/github/actions.go`, `internal/github/gha_perf.go`, `internal/github/secrets.go`, `internal/tui/components/secrets/model.go`.
-
-## M4: Demo GIF and generated usage docs
+## M3: Demo GIF and generated usage docs
 
 Record a demo with VHS (`.github/assets/demo.tape`, following the gh-repo-dashboard pattern) and embed it at the top of the README. If a fixture DSL for scripted TUI sessions is adopted, generate `docs/USAGE.md` from the same fixtures so the docs cannot go stale.
 
