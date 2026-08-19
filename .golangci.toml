@@ -81,6 +81,15 @@ disabled-checks = [
   "whyNoLint"
 ]
 
+[linters.settings.gosec]
+excludes = [
+  # This is a local CLI the user runs themselves against files they already
+  # have full access to: config paths, cache paths, and --output/--repos
+  # arguments are never attacker-controlled the way G304 assumes.
+  "G304",
+  "G703",  # same taint-analysis rule as G304, newer rule ID
+]
+
 [linters.settings.gocyclo]
 min-complexity = 15
 
@@ -117,7 +126,7 @@ tab-width = 4
 locale = "US"
 
 [linters.settings.mnd]
-ignored-functions = ["make", "strconv.*"]
+ignored-functions = ["make", "strconv.*", "os.WriteFile", "os.MkdirAll", "os.OpenFile"]
 
 [linters.settings.nakedret]
 max-func-lines = 30

@@ -1,12 +1,16 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
 
 	"gopkg.in/yaml.v3"
 )
+
+// ErrPolicyFileNotFound means none of the candidate policy file paths exist.
+var ErrPolicyFileNotFound = errors.New("no policy file found")
 
 // PolicyConfig declares the desired GitHub state for a set of repositories:
 // the settings gh-sweep's policy command diffs live repos against and can
@@ -116,7 +120,7 @@ func LoadPolicy(path string) (*PolicyConfig, error) {
 	}
 
 	if foundPath == "" {
-		return nil, fmt.Errorf("no policy file found (looked in %s)", strings.Join(paths, ", "))
+		return nil, fmt.Errorf("%w (looked in %s)", ErrPolicyFileNotFound, strings.Join(paths, ", "))
 	}
 
 	var cfg PolicyConfig
@@ -134,7 +138,7 @@ func (p *PolicyConfig) SavePolicy(path string) error {
 		return fmt.Errorf("failed to marshal policy: %w", err)
 	}
 
-	if err := os.WriteFile(path, data, 0o644); err != nil {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return fmt.Errorf("failed to write policy: %w", err)
 	}
 

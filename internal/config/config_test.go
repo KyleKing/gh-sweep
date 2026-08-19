@@ -1,4 +1,4 @@
-package config
+package config_test
 
 import (
 	"bytes"
@@ -7,10 +7,14 @@ import (
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/KyleKing/gh-sweep/internal/config"
 )
 
 func TestDefaultConfig(t *testing.T) {
-	cfg := DefaultConfig()
+	t.Parallel()
+
+	cfg := config.DefaultConfig()
 
 	if cfg.Cache.TTL != "1h" {
 		t.Errorf("Expected TTL to be '1h', got '%s'", cfg.Cache.TTL)
@@ -25,7 +29,7 @@ func TestDefaultConfig(t *testing.T) {
 	}
 }
 
-func TestLoadConfig(t *testing.T) {
+func TestLoadConfig(t *testing.T) { //nolint:paralleltest // t.Chdir/t.Setenv forbid t.Parallel()
 	// Create temporary config file
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, ".gh-sweep.yaml")
@@ -40,14 +44,14 @@ cache:
   path: /tmp/cache
 `
 
-	if err := os.WriteFile(configPath, []byte(configContent), 0o644); err != nil {
+	if err := os.WriteFile(configPath, []byte(configContent), 0o600); err != nil {
 		t.Fatalf("Failed to write test config: %v", err)
 	}
 
 	t.Chdir(tmpDir)
 
 	// Load config
-	cfg, err := Load()
+	cfg, err := config.Load()
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
@@ -70,7 +74,7 @@ func TestLoadMissingFile(t *testing.T) {
 	t.Chdir(tmpDir)
 	t.Setenv("HOME", tmpDir)
 
-	cfg, err := Load()
+	cfg, err := config.Load()
 	if err != nil {
 		t.Fatalf("Expected no error for missing config file, got: %v", err)
 	}
@@ -92,7 +96,7 @@ func TestLoadProjectOverridesHome(t *testing.T) {
 	if err := os.WriteFile(
 		filepath.Join(projectDir, ".gh-sweep.yaml"),
 		[]byte(projectConfig),
-		0o644,
+		0o600,
 	); err != nil {
 		t.Fatalf("Failed to write project config: %v", err)
 	}
@@ -101,7 +105,7 @@ func TestLoadProjectOverridesHome(t *testing.T) {
 	if err := os.WriteFile(
 		filepath.Join(homeDir, ".gh-sweep.yaml"),
 		[]byte(homeConfig),
-		0o644,
+		0o600,
 	); err != nil {
 		t.Fatalf("Failed to write home config: %v", err)
 	}
@@ -109,7 +113,7 @@ func TestLoadProjectOverridesHome(t *testing.T) {
 	t.Chdir(projectDir)
 	t.Setenv("HOME", homeDir)
 
-	cfg, err := Load()
+	cfg, err := config.Load()
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
@@ -127,7 +131,7 @@ func TestLoadHomeFallback(t *testing.T) {
 	if err := os.WriteFile(
 		filepath.Join(homeDir, ".gh-sweep.yaml"),
 		[]byte(homeConfig),
-		0o644,
+		0o600,
 	); err != nil {
 		t.Fatalf("Failed to write home config: %v", err)
 	}
@@ -135,7 +139,7 @@ func TestLoadHomeFallback(t *testing.T) {
 	t.Chdir(projectDir)
 	t.Setenv("HOME", homeDir)
 
-	cfg, err := Load()
+	cfg, err := config.Load()
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
@@ -146,6 +150,8 @@ func TestLoadHomeFallback(t *testing.T) {
 }
 
 func TestExampleFileMatchesStruct(t *testing.T) {
+	t.Parallel()
+
 	data, err := os.ReadFile(filepath.Join("..", "..", ".gh-sweep.yaml.example"))
 	if err != nil {
 		t.Fatalf("Failed to read example config: %v", err)
@@ -154,7 +160,7 @@ func TestExampleFileMatchesStruct(t *testing.T) {
 	decoder := yaml.NewDecoder(bytes.NewReader(data))
 	decoder.KnownFields(true)
 
-	var cfg Config
+	var cfg config.Config
 	if err := decoder.Decode(&cfg); err != nil {
 		t.Fatalf("Example config contains fields unknown to Config struct: %v", err)
 	}
@@ -176,7 +182,9 @@ func TestExampleFileMatchesStruct(t *testing.T) {
 }
 
 func TestQualifiedRepos(t *testing.T) {
-	cfg := &Config{
+	t.Parallel()
+
+	cfg := &config.Config{
 		DefaultOrg:   "acme",
 		Repositories: []string{"owner/repo1", "repo2"},
 	}
@@ -197,10 +205,12 @@ func TestQualifiedRepos(t *testing.T) {
 }
 
 func TestSaveConfig(t *testing.T) {
+	t.Parallel()
+
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")
 
-	cfg := DefaultConfig()
+	cfg := config.DefaultConfig()
 	cfg.DefaultOrg = "test-org"
 
 	if err := cfg.Save(configPath); err != nil {
@@ -220,7 +230,7 @@ func TestSaveConfig(t *testing.T) {
 
 	// Should contain default_org
 	content := string(data)
-	if len(content) == 0 {
+	if content == "" {
 		t.Error("Saved config is empty")
 	}
 }

@@ -1,3 +1,5 @@
+// Package config loads gh-sweep's flag-default config (.gh-sweep.yaml) and
+// its declarative policy config (.gh-sweep-policy.yaml).
 package config
 
 import (
@@ -8,6 +10,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 )
+
+const defaultBranchName = "main"
 
 // Config represents the application configuration.
 type Config struct {
@@ -87,6 +91,8 @@ type UIConfig struct {
 }
 
 // DefaultConfig returns a configuration with sensible defaults.
+//
+//nolint:mnd // every literal here is a self-documenting default value, named by its field
 func DefaultConfig() *Config {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -106,9 +112,9 @@ func DefaultConfig() *Config {
 			},
 		},
 		Branches: BranchConfig{
-			DefaultBranch: "main",
+			DefaultBranch: defaultBranchName,
 			ProtectedPatterns: []string{
-				"main",
+				defaultBranchName,
 				"master",
 				"develop",
 			},
@@ -119,7 +125,7 @@ func DefaultConfig() *Config {
 		},
 		GHAPerf: GHAPerfConfig{
 			DefaultLookbackDays: 30,
-			BaseBranch:          "main",
+			BaseBranch:          defaultBranchName,
 			DefaultWorkflows:    []string{},
 			CachePath:           filepath.Join(homeDir, ".cache", "gh-sweep", "gha-perf"),
 			RegressionThreshold: 20.0,
@@ -127,7 +133,7 @@ func DefaultConfig() *Config {
 		Orphans: OrphansConfig{
 			StaleDaysThreshold: 30,
 			ExcludePatterns: []string{
-				"main",
+				defaultBranchName,
 				"master",
 				"develop",
 				"release/*",
@@ -208,13 +214,14 @@ func (c *Config) Save(path string) error {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	// Create directory if needed
+	// Create directory if needed. The config can hold GitHub.Token, so keep
+	// both the directory and the file owner-only.
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
-	if err := os.WriteFile(path, data, 0o644); err != nil {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return fmt.Errorf("failed to write config: %w", err)
 	}
 
