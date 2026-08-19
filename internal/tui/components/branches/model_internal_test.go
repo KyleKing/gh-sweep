@@ -1,6 +1,7 @@
 package branches
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -12,6 +13,11 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/KyleKing/gh-sweep/internal/github"
+)
+
+var (
+	errBoom        = errors.New("boom")
+	errNetworkDown = errors.New("network down")
 )
 
 func branchStatuses() []github.BranchStatus {
@@ -36,6 +42,8 @@ func names(branches []github.BranchStatus) []string {
 }
 
 func TestCollectDeleteTargets(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name         string
 		selected     map[string]bool
@@ -96,6 +104,8 @@ func TestCollectDeleteTargets(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			eligible, blocked := collectDeleteTargets(branchStatuses(), tt.selected, tt.cursor)
 
 			assertNames(t, "eligible", names(eligible), tt.wantEligible)
@@ -190,6 +200,8 @@ func TestHelpToggle(t *testing.T) {
 }
 
 func TestSplitRepo(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name      string
 		repo      string
@@ -212,6 +224,8 @@ func TestSplitRepo(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			owner, name, ok := splitRepo(tt.repo)
 
 			if ok != tt.wantOK {
@@ -243,7 +257,7 @@ func TestUpdateWindowSizeAndBranchesLoaded(t *testing.T) {
 		t.Errorf("branches = %d, want %d", len(m.branches), len(branchStatuses()))
 	}
 
-	m, _ = m.Update(branchesLoadedMsg{err: errors.New("boom")})
+	m, _ = m.Update(branchesLoadedMsg{err: errBoom})
 	if m.err == nil {
 		t.Error("expected err set after a failed load")
 	}
@@ -318,6 +332,7 @@ func TestHandleConfirmKeysCancel(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // mutates the shared global test transport
 func TestExecuteDeleteAndBranchRemoval(t *testing.T) {
 	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
 		if req.Method == http.MethodDelete {
@@ -417,7 +432,7 @@ func TestViewLoadingErrorAndConfirmDialog(t *testing.T) {
 		t.Errorf("loading view = %q", loading.View())
 	}
 
-	failed := Model{err: errors.New("network down")}
+	failed := Model{err: errNetworkDown}
 	if !strings.Contains(failed.View(), "network down") {
 		t.Errorf("error view = %q", failed.View())
 	}
@@ -470,7 +485,8 @@ func TestGetLocalBranches(t *testing.T) {
 		{"config", "user.email", "test@example.com"},
 		{"commit", "--allow-empty", "-m", "initial"},
 	} {
-		cmd := exec.Command("git", args...)
+		//nolint:gosec // no shell; git rejects malformed ref names
+		cmd := exec.CommandContext(context.Background(), "git", args...)
 		cmd.Dir = tmpDir
 		if out, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("git %v failed: %v\n%s", args, err, out)

@@ -1,3 +1,5 @@
+// Package branches is the TUI view for reviewing local and remote git
+// branches and deleting the ones that are safe to remove.
 package branches
 
 import (
@@ -13,6 +15,19 @@ import (
 	"github.com/KyleKing/gh-sweep/internal/git"
 	"github.com/KyleKing/gh-sweep/internal/github"
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
+)
+
+const (
+	helpKeyWidth   = 16
+	hoursPerDay    = 24
+	repoPartsCount = 2
+
+	keyEsc = "esc"
+)
+
+var (
+	errNoRepository      = errors.New("no repository specified")
+	errInvalidRepoFormat = errors.New("invalid repo format, expected owner/repo")
 )
 
 // Model represents the branch management TUI state.
@@ -61,12 +76,12 @@ func (m Model) Init() tea.Cmd {
 
 func (m Model) loadBranches() tea.Msg {
 	if m.repo == "" {
-		return branchesLoadedMsg{err: errors.New("no repository specified")}
+		return branchesLoadedMsg{err: errNoRepository}
 	}
 
 	owner, name, ok := splitRepo(m.repo)
 	if !ok {
-		return branchesLoadedMsg{err: errors.New("invalid repo format, expected owner/repo")}
+		return branchesLoadedMsg{err: errInvalidRepoFormat}
 	}
 
 	ctx := context.Background()
@@ -124,7 +139,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		}
 
 		if m.showHelp {
-			if msg.String() == "?" || msg.String() == "esc" {
+			if msg.String() == "?" || msg.String() == keyEsc {
 				m.showHelp = false
 			}
 
@@ -159,7 +174,7 @@ func (m Model) handleSearchKeys(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	case "ctrl+c":
 		return m, tea.Quit
 
-	case "esc":
+	case keyEsc:
 		m.searching = false
 		m.searchQuery = ""
 		m.cursor = 0
@@ -168,7 +183,7 @@ func (m Model) handleSearchKeys(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 		m.searching = false
 
 	case "backspace":
-		if len(m.searchQuery) > 0 {
+		if m.searchQuery != "" {
 			runes := []rune(m.searchQuery)
 			m.searchQuery = string(runes[:len(runes)-1])
 			m.cursor = 0
@@ -191,10 +206,27 @@ func (m Model) handleListKeys(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 
 	case "?":
 		m.showHelp = true
+		return m, nil
 
 	case "/":
 		m.searching = true
+		return m, nil
 
+	case "d":
+		return m.handleDelete()
+
+	case "r":
+		return m.handleRefresh()
+	}
+
+	m = m.handleNavKeys(msg)
+	m = m.handleSelectionKeys(msg)
+
+	return m, nil
+}
+
+func (m Model) handleNavKeys(msg tea.KeyPressMsg) Model {
+	switch msg.String() {
 	case "g":
 		m.cursor = 0
 
@@ -212,7 +244,13 @@ func (m Model) handleListKeys(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 		if m.cursor < len(m.getVisibleBranches())-1 {
 			m.cursor++
 		}
+	}
 
+	return m
+}
+
+func (m Model) handleSelectionKeys(msg tea.KeyPressMsg) Model {
+	switch msg.String() {
 	case "space":
 		visible := m.getVisibleBranches()
 		if m.cursor < len(visible) {
@@ -231,29 +269,27 @@ func (m Model) handleListKeys(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 		for _, branch := range m.getVisibleBranches() {
 			m.selected[branch.Name] = !m.selected[branch.Name]
 		}
-
-	case "d":
-		return m.handleDelete()
-
-	case "r":
-		m.loading = true
-		m.branches = nil
-		m.err = nil
-		m.cursor = 0
-		m.statusMsg = ""
-		m.selected = make(map[string]bool)
-
-		return m, m.loadBranches
 	}
 
-	return m, nil
+	return m
+}
+
+func (m Model) handleRefresh() (Model, tea.Cmd) {
+	m.loading = true
+	m.branches = nil
+	m.err = nil
+	m.cursor = 0
+	m.statusMsg = ""
+	m.selected = make(map[string]bool)
+
+	return m, m.loadBranches
 }
 
 func (m Model) handleConfirmKeys(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	switch msg.String() {
 	case "y", "Y":
 		return m.executeDelete()
-	case "n", "N", "esc":
+	case "n", "N", keyEsc:
 		m.confirmDelete = false
 		m.deleteTargets = nil
 		m.statusMsg = "Delete canceled"
@@ -391,7 +427,7 @@ func (m Model) View() string {
 	}
 
 	if m.showHelp {
-		return m.renderHelp(&b)
+		return renderHelp(&b)
 	}
 
 	if m.searching || m.searchQuery != "" {
@@ -427,7 +463,7 @@ func (m Model) View() string {
 	return b.String()
 }
 
-func (m Model) renderHelp(b *strings.Builder) string {
+func renderHelp(b *strings.Builder) string {
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Primary)
 	b.WriteString(titleStyle.Render("Keybindings"))
 	b.WriteString("\n\n")
@@ -445,7 +481,7 @@ func (m Model) renderHelp(b *strings.Builder) string {
 	}
 
 	for _, binding := range bindings {
-		keyStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Warning).Width(16)
+		keyStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Warning).Width(helpKeyWidth)
 		fmt.Fprintf(b, "%s %s\n", keyStyle.Render(binding[0]), binding[1])
 	}
 
@@ -501,7 +537,7 @@ func branchAnnotations(branch github.BranchStatus) string {
 		parts = append(parts, fmt.Sprintf("PR #%d (%s)", branch.PR.Number, branch.PR.State))
 	}
 	if !branch.LastCommitDate.IsZero() {
-		days := int(time.Since(branch.LastCommitDate).Hours() / 24)
+		days := int(time.Since(branch.LastCommitDate).Hours() / hoursPerDay)
 		parts = append(parts, fmt.Sprintf("%dd", days))
 	}
 
@@ -530,7 +566,7 @@ func (m Model) renderConfirmDialog(b *strings.Builder) string {
 }
 
 func splitRepo(repo string) (string, string, bool) {
-	parts := strings.SplitN(repo, "/", 2)
+	parts := strings.SplitN(repo, "/", repoPartsCount)
 	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
 		return "", "", false
 	}
