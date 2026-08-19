@@ -52,6 +52,23 @@ func TestUnwatchedViewDefault(t *testing.T) {
 	}
 }
 
+func TestInvertSelection(t *testing.T) {
+	t.Parallel()
+
+	m := loadedWatchingModel()
+	m, _ = m.Update(tea.KeyPressMsg{Code: '4', Text: "4"}) // "all" view: both repos
+	m, _ = m.Update(tea.KeyPressMsg{Code: ' ', Text: " "}) // select index 0 (cursor starts at 0)
+
+	m, _ = m.Update(tea.KeyPressMsg{Code: 'I', Text: "I"})
+
+	if m.selected[0] {
+		t.Error("expected the originally-selected repo deselected after invert")
+	}
+	if !m.selected[1] {
+		t.Error("expected the other filtered repo selected after invert")
+	}
+}
+
 func TestWatchingViewModeSwitches(t *testing.T) {
 	t.Parallel()
 

@@ -152,6 +152,29 @@ func TestConfirmFlowSelectionTargets(t *testing.T) {
 	}
 }
 
+func TestInvertSelection(t *testing.T) {
+	t.Parallel()
+
+	m := loadedModel(t)
+	m, _ = m.Update(tea.KeyPressMsg{Code: ' ', Text: " "})
+
+	m, _ = press(m, "I")
+
+	filtered := m.getFilteredOrphans()
+	if len(filtered) != 3 {
+		t.Fatalf("filtered orphans = %d, want 3", len(filtered))
+	}
+
+	if m.selected[filtered[0].Key()] {
+		t.Errorf("expected the originally-selected orphan to be deselected after invert")
+	}
+	for _, orphan := range filtered[1:] {
+		if !m.selected[orphan.Key()] {
+			t.Errorf("expected %s selected after invert", orphan.Key())
+		}
+	}
+}
+
 func TestConfirmFlowExecuteReturnsBatch(t *testing.T) {
 	t.Parallel()
 

@@ -215,6 +215,12 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		case "space":
 			m.selected[m.cursor] = !m.selected[m.cursor]
 
+		case "I":
+			filtered := m.getFilteredRepos()
+			for idx := range filtered {
+				m.selected[idx] = !m.selected[idx]
+			}
+
 		case "w":
 			return m.handleWatch()
 
@@ -442,7 +448,8 @@ func (m Model) View() string {
 	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
 	b.WriteString(
 		helpStyle.Render(
-			"j/k: navigate | space: select | w: watch all activity | u: unwatch (default) | i: ignore | 1/2/3/4: view mode | esc: back",
+			"j/k: navigate | space: select | I: invert selection | w: watch all activity | u: unwatch (default) | " +
+				"i: ignore | 1/2/3/4: view mode | esc: back",
 		),
 	)
 	b.WriteString("\n")

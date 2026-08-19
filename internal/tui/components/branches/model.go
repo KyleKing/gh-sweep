@@ -149,6 +149,11 @@ func (m Model) handleListKeys(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	case "n":
 		m.selected = make(map[string]bool)
 
+	case "I":
+		for _, branch := range m.branches {
+			m.selected[branch.Name] = !m.selected[branch.Name]
+		}
+
 	case "d":
 		return m.handleDelete()
 
@@ -326,7 +331,7 @@ func (m Model) View() string {
 	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
 	b.WriteString(
 		helpStyle.Render(
-			"j/k: navigate | space: select | a/n: all/none | d: delete | r: refresh | q: quit",
+			"j/k: navigate | space: select | a/n/I: all/none/invert | d: delete | r: refresh | q: quit",
 		),
 	)
 

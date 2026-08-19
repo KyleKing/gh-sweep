@@ -4,4 +4,4 @@
   [ ] feature/login ↑3 ↓1[38;2;147;154;183m PR #42 (open) 3d[m
   [ ] chore/cleanup ↑0 ↓5[38;2;147;154;183m 10d[m
 
-[38;2;147;154;183mj/k: navigate | space: select | a/n: all/none | d: delete | r: refresh | q: quit[m
+[38;2;147;154;183mj/k: navigate | space: select | a/n/I: all/none/invert | d: delete | r: refresh | q: quit[m

@@ -171,6 +171,13 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		case "n":
 			m.selected = make(map[string]bool)
 
+		case "I":
+			filtered := m.getFilteredOrphans()
+			for _, orphan := range filtered {
+				key := orphan.Key()
+				m.selected[key] = !m.selected[key]
+			}
+
 		case "d":
 			return m.handleDelete()
 
@@ -475,7 +482,7 @@ func (m Model) View() string {
 	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
 	b.WriteString(
 		helpStyle.Render(
-			"j/k: navigate | space: select | a/n: all/none | d: delete | v: view mode | r: refresh | esc: back",
+			"j/k: navigate | space: select | a/n/I: all/none/invert | d: delete | v: view mode | r: refresh | esc: back",
 		),
 	)
 

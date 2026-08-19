@@ -40,12 +40,16 @@ the list, and `enter` opens whatever the cursor sits on.
 ## Selecting and deleting
 
 The branches and orphans views select rows with `space`, select all or none with
-`a` and `n`, and delete with `d`. A delete asks for confirmation: `y` goes ahead,
-`n` or `esc` backs out. Protected patterns from the config file never appear as
-deletable.
+`a` and `n`, invert the current selection with `I`, and delete with `d`. A delete
+asks for confirmation: `y` goes ahead, `n` or `esc` backs out. Protected patterns
+from the config file never appear as deletable.
 
 Orphans adds `1` through `4` to filter by all, merged, closed, or stale, and `v`
 to cycle grouping by repo, by type, or flat.
+
+The watching view also selects rows with `space` and inverts with `I`, then acts
+on the selection (or the row under the cursor if nothing is selected) with `w`,
+`u`, or `i`.
 
 ## Tabbed views
 

@@ -3,6 +3,8 @@ package branches
 import (
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
+
 	"github.com/KyleKing/gh-sweep/internal/github"
 )
 
@@ -106,6 +108,23 @@ func assertNames(t *testing.T, label string, got, want []string) {
 	for i := range want {
 		if got[i] != want[i] {
 			t.Errorf("%s[%d] = %s, want %s", label, i, got[i], want[i])
+		}
+	}
+}
+
+func TestInvertSelection(t *testing.T) {
+	t.Parallel()
+
+	m := Model{branches: branchStatuses(), selected: map[string]bool{"main": true}}
+
+	m, _ = m.handleListKeys(tea.KeyPressMsg{Code: 'I', Text: "I"})
+
+	if m.selected["main"] {
+		t.Error("expected the originally-selected branch deselected after invert")
+	}
+	for _, name := range []string{"feature-a", "feature-b", "release"} {
+		if !m.selected[name] {
+			t.Errorf("expected %s selected after invert", name)
 		}
 	}
 }
