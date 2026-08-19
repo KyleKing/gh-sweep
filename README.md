@@ -1,7 +1,6 @@
 # gh-sweep
 
-<!-- TODO: no demo GIF is committed yet. Record one and replace this block.
-     Tracked in ROADMAP.md. -->
+![demo](https://raw.githubusercontent.com/KyleKing/gh-sweep/main/.github/assets/demo.gif)
 
 Audit and clean up many GitHub repositories from the terminal: dead branches,
 unresolved review threads, branch-protection drift, and slow workflows. Every
