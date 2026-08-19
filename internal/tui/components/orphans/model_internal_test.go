@@ -175,6 +175,85 @@ func TestInvertSelection(t *testing.T) {
 	}
 }
 
+func TestJumpTopBottom(t *testing.T) {
+	t.Parallel()
+
+	m := loadedModel(t)
+	m, _ = press(m, "j")
+	m, _ = press(m, "j")
+
+	m, _ = press(m, "g")
+	if m.cursor != 0 {
+		t.Errorf("cursor after g = %d, want 0", m.cursor)
+	}
+
+	m, _ = press(m, "G")
+	want := len(m.getFilteredOrphans()) - 1
+	if m.cursor != want {
+		t.Errorf("cursor after G = %d, want %d", m.cursor, want)
+	}
+}
+
+func TestSortReverse(t *testing.T) {
+	t.Parallel()
+
+	m := loadedModel(t)
+	forward := m.getFilteredOrphans()
+
+	m, _ = press(m, "R")
+	reversed := m.getFilteredOrphans()
+
+	if len(forward) != len(reversed) {
+		t.Fatalf("forward = %d orphans, reversed = %d", len(forward), len(reversed))
+	}
+	for i := range forward {
+		if forward[i].Key() != reversed[len(reversed)-1-i].Key() {
+			t.Fatalf("reversed order mismatch at %d: %s vs %s", i, forward[i].Key(), reversed[len(reversed)-1-i].Key())
+		}
+	}
+}
+
+func TestSearchFiltersByName(t *testing.T) {
+	t.Parallel()
+
+	m := loadedModel(t)
+	m, _ = press(m, "/")
+	for _, r := range "cache" {
+		m, _ = m.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
+	}
+
+	filtered := m.getFilteredOrphans()
+	if len(filtered) != 1 || filtered[0].BranchName != "spike/cache" {
+		t.Fatalf("filtered = %+v, want only spike/cache", filtered)
+	}
+
+	m, _ = press(m, "esc")
+	if m.searching || m.searchQuery != "" {
+		t.Errorf("expected search cleared after esc, got searching=%v query=%q", m.searching, m.searchQuery)
+	}
+	if len(m.getFilteredOrphans()) == 1 {
+		t.Error("expected full list restored after canceling search")
+	}
+}
+
+func TestHelpToggle(t *testing.T) {
+	t.Parallel()
+
+	m := loadedModel(t)
+	m, _ = press(m, "?")
+	if !m.showHelp {
+		t.Fatal("expected showHelp true after ?")
+	}
+	if !strings.Contains(m.View(), "Keybindings") {
+		t.Error("help view missing Keybindings title")
+	}
+
+	m, _ = press(m, "esc")
+	if m.showHelp {
+		t.Error("expected showHelp false after esc")
+	}
+}
+
 func TestConfirmFlowExecuteReturnsBatch(t *testing.T) {
 	t.Parallel()
 

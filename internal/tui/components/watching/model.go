@@ -14,16 +14,19 @@ import (
 )
 
 type Model struct {
-	username  string
-	repos     []github.RepoWatchInfo
-	cursor    int
-	width     int
-	height    int
-	loading   bool
-	err       error
-	viewMode  string
-	selected  map[int]bool
-	statusMsg string
+	username    string
+	repos       []github.RepoWatchInfo
+	cursor      int
+	width       int
+	height      int
+	loading     bool
+	err         error
+	viewMode    string
+	selected    map[int]bool
+	statusMsg   string
+	searching   bool
+	searchQuery string
+	showHelp    bool
 }
 
 func NewModel() Model {
@@ -177,9 +180,35 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyPressMsg:
+		if m.searching {
+			return m.handleSearchKeys(msg)
+		}
+
+		if m.showHelp {
+			if msg.String() == "?" || msg.String() == "esc" {
+				m.showHelp = false
+			}
+
+			return m, nil
+		}
+
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
+
+		case "?":
+			m.showHelp = true
+
+		case "/":
+			m.searching = true
+
+		case "g":
+			m.cursor = 0
+
+		case "G":
+			if filtered := m.getFilteredRepos(); len(filtered) > 0 {
+				m.cursor = len(filtered) - 1
+			}
 
 		case "up", "k":
 			if m.cursor > 0 {
@@ -236,27 +265,66 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 }
 
 func (m Model) getFilteredRepos() []github.RepoWatchInfo {
+	query := strings.ToLower(m.searchQuery)
+
 	var filtered []github.RepoWatchInfo
 	for _, repo := range m.repos {
 		switch m.viewMode {
 		case "unwatched":
-			if repo.State == github.WatchStateDefault {
-				filtered = append(filtered, repo)
+			if repo.State != github.WatchStateDefault {
+				continue
 			}
 		case "watched":
-			if repo.State == github.WatchStateSubscribed {
-				filtered = append(filtered, repo)
+			if repo.State != github.WatchStateSubscribed {
+				continue
 			}
 		case "ignored":
-			if repo.State == github.WatchStateIgnored {
-				filtered = append(filtered, repo)
+			if repo.State != github.WatchStateIgnored {
+				continue
 			}
 		case "all":
-			filtered = append(filtered, repo)
+		default:
+			continue
 		}
+
+		if query != "" && !strings.Contains(strings.ToLower(repo.FullName), query) {
+			continue
+		}
+
+		filtered = append(filtered, repo)
 	}
 
 	return filtered
+}
+
+func (m Model) handleSearchKeys(msg tea.KeyPressMsg) (Model, tea.Cmd) {
+	switch msg.String() {
+	case "ctrl+c":
+		return m, tea.Quit
+
+	case "esc":
+		m.searching = false
+		m.searchQuery = ""
+		m.cursor = 0
+
+	case "enter":
+		m.searching = false
+
+	case "backspace":
+		if len(m.searchQuery) > 0 {
+			runes := []rune(m.searchQuery)
+			m.searchQuery = string(runes[:len(runes)-1])
+			m.cursor = 0
+		}
+
+	default:
+		if key := msg.String(); len([]rune(key)) == 1 {
+			m.searchQuery += key
+			m.cursor = 0
+		}
+	}
+
+	return m, nil
 }
 
 func (m Model) handleWatch() (Model, tea.Cmd) {
@@ -370,6 +438,10 @@ func (m Model) View() string {
 	b.WriteString("\n")
 	fmt.Fprintf(&b, "User: %s\n\n", m.username)
 
+	if m.showHelp {
+		return m.renderHelp(&b)
+	}
+
 	activeTab := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(theme.Current().Warning)
@@ -393,6 +465,11 @@ func (m Model) View() string {
 	b.WriteString("  ")
 	b.WriteString(tab("[4] All", "all"))
 	b.WriteString("\n\n")
+
+	if m.searching || m.searchQuery != "" {
+		searchStyle := lipgloss.NewStyle().Foreground(theme.Current().Warning)
+		fmt.Fprintf(&b, "%s %s\n\n", searchStyle.Render("Search:"), m.searchQuery)
+	}
 
 	filtered := m.getFilteredRepos()
 
@@ -449,7 +526,7 @@ func (m Model) View() string {
 	b.WriteString(
 		helpStyle.Render(
 			"j/k: navigate | space: select | I: invert selection | w: watch all activity | u: unwatch (default) | " +
-				"i: ignore | 1/2/3/4: view mode | esc: back",
+				"i: ignore | 1/2/3/4: view mode | ?: help | esc: back",
 		),
 	)
 	b.WriteString("\n")
@@ -458,6 +535,33 @@ func (m Model) View() string {
 			"GitHub's API can't see or set \"Custom\" per-notification-type settings; manage those on github.com.",
 		),
 	)
+
+	return b.String()
+}
+
+func (m Model) renderHelp(b *strings.Builder) string {
+	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Primary)
+	b.WriteString(titleStyle.Render("Keybindings"))
+	b.WriteString("\n\n")
+
+	bindings := [][2]string{
+		{"j/k, up/down", "move the cursor"},
+		{"g / G", "jump to top / bottom"},
+		{"space", "toggle selection on the cursor row"},
+		{"I", "invert selection"},
+		{"/", "search repository name"},
+		{"1-4", "unwatched, watched, ignored, all"},
+		{"w / u / i", "watch all activity / unwatch / ignore"},
+		{"?", "toggle this help"},
+		{"esc / q", "back / quit"},
+	}
+
+	for _, binding := range bindings {
+		keyStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Warning).Width(16)
+		fmt.Fprintf(b, "%s %s\n", keyStyle.Render(binding[0]), binding[1])
+	}
+
+	b.WriteString("\nPress '?' or 'esc' to close\n")
 
 	return b.String()
 }

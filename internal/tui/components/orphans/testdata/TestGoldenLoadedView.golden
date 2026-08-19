@@ -13,4 +13,4 @@ Namespace: acme
    feature/login [38;2;166;218;149m[Merged PR][m 12d #42
    spike/cache [38;2;238;212;159m[Stale][m 60d
 
-[38;2;147;154;183mj/k: navigate | space: select | a/n/I: all/none/invert | d: delete | v: view mode | r: refresh | esc: back[m
+[38;2;147;154;183mj/k: navigate | space: select | a/n/I: all/none/invert | d: delete | v: view mode | r: refresh | ?: help | esc: back[m

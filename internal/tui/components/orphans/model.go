@@ -41,6 +41,10 @@ type Model struct {
 	height        int
 	confirmDelete bool
 	deleteTargets []orphans.OrphanedBranch
+	searching     bool
+	searchQuery   string
+	sortReverse   bool
+	showHelp      bool
 }
 
 func NewModel(namespace string, options orphans.ScanOptions) Model {
@@ -140,9 +144,38 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			return m.handleConfirmKeys(msg)
 		}
 
+		if m.searching {
+			return m.handleSearchKeys(msg)
+		}
+
+		if m.showHelp {
+			if msg.String() == "?" || msg.String() == "esc" {
+				m.showHelp = false
+			}
+
+			return m, nil
+		}
+
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
+
+		case "?":
+			m.showHelp = true
+
+		case "/":
+			m.searching = true
+
+		case "g":
+			m.cursor = 0
+
+		case "G":
+			if filtered := m.getFilteredOrphans(); len(filtered) > 0 {
+				m.cursor = len(filtered) - 1
+			}
+
+		case "R":
+			m.sortReverse = !m.sortReverse
 
 		case "up", "k":
 			if m.cursor > 0 {
@@ -219,6 +252,36 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			m.selected = make(map[string]bool)
 
 			return m, m.startScan
+		}
+	}
+
+	return m, nil
+}
+
+func (m Model) handleSearchKeys(msg tea.KeyPressMsg) (Model, tea.Cmd) {
+	switch msg.String() {
+	case "ctrl+c":
+		return m, tea.Quit
+
+	case "esc":
+		m.searching = false
+		m.searchQuery = ""
+		m.cursor = 0
+
+	case "enter":
+		m.searching = false
+
+	case "backspace":
+		if len(m.searchQuery) > 0 {
+			runes := []rune(m.searchQuery)
+			m.searchQuery = string(runes[:len(runes)-1])
+			m.cursor = 0
+		}
+
+	default:
+		if key := msg.String(); len([]rune(key)) == 1 {
+			m.searchQuery += key
+			m.cursor = 0
 		}
 	}
 
@@ -322,8 +385,15 @@ func (m Model) getFilteredOrphans() []orphans.OrphanedBranch {
 
 	var filtered []orphans.OrphanedBranch
 
+	query := strings.ToLower(m.searchQuery)
+
 	for _, orphan := range m.result.AllOrphans() {
 		if m.filterType != nil && orphan.Type != *m.filterType {
+			continue
+		}
+		if query != "" &&
+			!strings.Contains(strings.ToLower(orphan.BranchName), query) &&
+			!strings.Contains(strings.ToLower(orphan.Repository), query) {
 			continue
 		}
 		filtered = append(filtered, orphan)
@@ -350,6 +420,12 @@ func (m Model) getFilteredOrphans() []orphans.OrphanedBranch {
 
 			return filtered[i].BranchName < filtered[j].BranchName
 		})
+	}
+
+	if m.sortReverse {
+		for i, j := 0, len(filtered)-1; i < j; i, j = i+1, j-1 {
+			filtered[i], filtered[j] = filtered[j], filtered[i]
+		}
 	}
 
 	return filtered
@@ -388,6 +464,10 @@ func (m Model) View() string {
 		return m.renderConfirmDialog(&b)
 	}
 
+	if m.showHelp {
+		return m.renderHelp(&b)
+	}
+
 	activeTab := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(theme.Current().Warning)
@@ -424,8 +504,17 @@ func (m Model) View() string {
 	b.WriteString("\n\n")
 
 	summaryStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
-	b.WriteString(summaryStyle.Render(fmt.Sprintf("Repos: %d | Orphans: %d | View: %s\n\n",
-		m.result.TotalRepos, m.result.TotalOrphans, m.viewMode)))
+	sortLabel := ""
+	if m.sortReverse {
+		sortLabel = " | sort: reversed"
+	}
+	b.WriteString(summaryStyle.Render(fmt.Sprintf("Repos: %d | Orphans: %d | View: %s%s\n\n",
+		m.result.TotalRepos, m.result.TotalOrphans, m.viewMode, sortLabel)))
+
+	if m.searching || m.searchQuery != "" {
+		searchStyle := lipgloss.NewStyle().Foreground(theme.Current().Warning)
+		fmt.Fprintf(&b, "%s %s\n\n", searchStyle.Render("Search:"), m.searchQuery)
+	}
 
 	filtered := m.getFilteredOrphans()
 
@@ -482,7 +571,8 @@ func (m Model) View() string {
 	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
 	b.WriteString(
 		helpStyle.Render(
-			"j/k: navigate | space: select | a/n/I: all/none/invert | d: delete | v: view mode | r: refresh | esc: back",
+			"j/k: navigate | space: select | a/n/I: all/none/invert | d: delete | v: view mode | " +
+				"r: refresh | ?: help | esc: back",
 		),
 	)
 
@@ -502,6 +592,36 @@ func (m Model) renderConfirmDialog(b *strings.Builder) string {
 
 	b.WriteString("\n")
 	b.WriteString("Press 'y' to confirm, 'n' or 'esc' to cancel\n")
+
+	return b.String()
+}
+
+func (m Model) renderHelp(b *strings.Builder) string {
+	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Primary)
+	b.WriteString(titleStyle.Render("Keybindings"))
+	b.WriteString("\n\n")
+
+	bindings := [][2]string{
+		{"j/k, up/down", "move the cursor"},
+		{"g / G", "jump to top / bottom"},
+		{"space", "toggle selection on the cursor row"},
+		{"a / n / I", "select all / none / invert selection"},
+		{"/", "search branch or repository name"},
+		{"1-4", "filter by all, merged, closed, or stale"},
+		{"v", "cycle grouping: by repo, by type, flat"},
+		{"R", "reverse the current sort order"},
+		{"d", "delete the selection (or the cursor row)"},
+		{"r", "refresh"},
+		{"?", "toggle this help"},
+		{"esc / q", "back / quit"},
+	}
+
+	for _, binding := range bindings {
+		keyStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Warning).Width(16)
+		fmt.Fprintf(b, "%s %s\n", keyStyle.Render(binding[0]), binding[1])
+	}
+
+	b.WriteString("\nPress '?' or 'esc' to close\n")
 
 	return b.String()
 }

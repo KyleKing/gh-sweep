@@ -69,6 +69,65 @@ func TestInvertSelection(t *testing.T) {
 	}
 }
 
+func TestJumpTopBottom(t *testing.T) {
+	t.Parallel()
+
+	m := loadedWatchingModel()
+	m, _ = m.Update(tea.KeyPressMsg{Code: '4', Text: "4"})
+
+	m, _ = m.Update(tea.KeyPressMsg{Code: 'G', Text: "G"})
+	if want := len(m.getFilteredRepos()) - 1; m.cursor != want {
+		t.Errorf("cursor after G = %d, want %d", m.cursor, want)
+	}
+
+	m, _ = m.Update(tea.KeyPressMsg{Code: 'g', Text: "g"})
+	if m.cursor != 0 {
+		t.Errorf("cursor after g = %d, want 0", m.cursor)
+	}
+}
+
+func TestSearchFiltersByName(t *testing.T) {
+	t.Parallel()
+
+	m := loadedWatchingModel()
+	m, _ = m.Update(tea.KeyPressMsg{Code: '4', Text: "4"})
+	m, _ = m.Update(tea.KeyPressMsg{Code: '/', Text: "/"})
+	for _, r := range "gadgets" {
+		m, _ = m.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
+	}
+
+	filtered := m.getFilteredRepos()
+	if len(filtered) != 1 || filtered[0].FullName != "acme/gadgets" {
+		t.Fatalf("filtered = %+v, want only acme/gadgets", filtered)
+	}
+
+	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
+	if m.searching || m.searchQuery != "" {
+		t.Errorf("expected search cleared after esc, got searching=%v query=%q", m.searching, m.searchQuery)
+	}
+	if len(m.getFilteredRepos()) != 2 {
+		t.Error("expected full list restored after canceling search")
+	}
+}
+
+func TestHelpToggle(t *testing.T) {
+	t.Parallel()
+
+	m := loadedWatchingModel()
+	m, _ = m.Update(tea.KeyPressMsg{Code: '?', Text: "?"})
+	if !m.showHelp {
+		t.Fatal("expected showHelp true after ?")
+	}
+	if !strings.Contains(m.View(), "Keybindings") {
+		t.Error("help view missing Keybindings title")
+	}
+
+	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
+	if m.showHelp {
+		t.Error("expected showHelp false after esc")
+	}
+}
+
 func TestWatchingViewModeSwitches(t *testing.T) {
 	t.Parallel()
 

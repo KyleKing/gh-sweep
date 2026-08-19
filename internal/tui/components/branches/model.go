@@ -29,6 +29,9 @@ type Model struct {
 	statusMsg     string
 	confirmDelete bool
 	deleteTargets []github.BranchStatus
+	searching     bool
+	searchQuery   string
+	showHelp      bool
 }
 
 // NewModel creates a new branch management model.
@@ -114,7 +117,66 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			return m.handleConfirmKeys(msg)
 		}
 
+		if m.searching {
+			return m.handleSearchKeys(msg)
+		}
+
+		if m.showHelp {
+			if msg.String() == "?" || msg.String() == "esc" {
+				m.showHelp = false
+			}
+
+			return m, nil
+		}
+
 		return m.handleListKeys(msg)
+	}
+
+	return m, nil
+}
+
+func (m Model) getVisibleBranches() []github.BranchStatus {
+	if m.searchQuery == "" {
+		return m.branches
+	}
+
+	query := strings.ToLower(m.searchQuery)
+
+	var visible []github.BranchStatus
+	for _, branch := range m.branches {
+		if strings.Contains(strings.ToLower(branch.Name), query) {
+			visible = append(visible, branch)
+		}
+	}
+
+	return visible
+}
+
+func (m Model) handleSearchKeys(msg tea.KeyPressMsg) (Model, tea.Cmd) {
+	switch msg.String() {
+	case "ctrl+c":
+		return m, tea.Quit
+
+	case "esc":
+		m.searching = false
+		m.searchQuery = ""
+		m.cursor = 0
+
+	case "enter":
+		m.searching = false
+
+	case "backspace":
+		if len(m.searchQuery) > 0 {
+			runes := []rune(m.searchQuery)
+			m.searchQuery = string(runes[:len(runes)-1])
+			m.cursor = 0
+		}
+
+	default:
+		if key := msg.String(); len([]rune(key)) == 1 {
+			m.searchQuery += key
+			m.cursor = 0
+		}
 	}
 
 	return m, nil
@@ -125,24 +187,38 @@ func (m Model) handleListKeys(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	case "ctrl+c", "q":
 		return m, tea.Quit
 
+	case "?":
+		m.showHelp = true
+
+	case "/":
+		m.searching = true
+
+	case "g":
+		m.cursor = 0
+
+	case "G":
+		if visible := m.getVisibleBranches(); len(visible) > 0 {
+			m.cursor = len(visible) - 1
+		}
+
 	case "up", "k":
 		if m.cursor > 0 {
 			m.cursor--
 		}
 
 	case "down", "j":
-		if m.cursor < len(m.branches)-1 {
+		if m.cursor < len(m.getVisibleBranches())-1 {
 			m.cursor++
 		}
 
 	case "space":
-		if m.cursor < len(m.branches) {
-			name := m.branches[m.cursor].Name
-			m.selected[name] = !m.selected[name]
+		visible := m.getVisibleBranches()
+		if m.cursor < len(visible) {
+			m.selected[visible[m.cursor].Name] = !m.selected[visible[m.cursor].Name]
 		}
 
 	case "a":
-		for _, branch := range m.branches {
+		for _, branch := range m.getVisibleBranches() {
 			m.selected[branch.Name] = true
 		}
 
@@ -150,7 +226,7 @@ func (m Model) handleListKeys(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 		m.selected = make(map[string]bool)
 
 	case "I":
-		for _, branch := range m.branches {
+		for _, branch := range m.getVisibleBranches() {
 			m.selected[branch.Name] = !m.selected[branch.Name]
 		}
 
@@ -187,7 +263,7 @@ func (m Model) handleConfirmKeys(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 }
 
 func (m Model) handleDelete() (Model, tea.Cmd) {
-	eligible, blocked := collectDeleteTargets(m.branches, m.selected, m.cursor)
+	eligible, blocked := collectDeleteTargets(m.getVisibleBranches(), m.selected, m.cursor)
 
 	if len(blocked) > 0 {
 		m.statusMsg = describeBlocked(blocked)
@@ -312,10 +388,21 @@ func (m Model) View() string {
 		return m.renderConfirmDialog(&b)
 	}
 
-	if len(m.branches) == 0 {
+	if m.showHelp {
+		return m.renderHelp(&b)
+	}
+
+	if m.searching || m.searchQuery != "" {
+		searchStyle := lipgloss.NewStyle().Foreground(theme.Current().Warning)
+		fmt.Fprintf(&b, "%s %s\n\n", searchStyle.Render("Search:"), m.searchQuery)
+	}
+
+	visible := m.getVisibleBranches()
+
+	if len(visible) == 0 {
 		b.WriteString("No branches found.\n")
 	} else {
-		for i, branch := range m.branches {
+		for i, branch := range visible {
 			m.renderBranchLine(&b, i, branch)
 		}
 	}
@@ -331,9 +418,36 @@ func (m Model) View() string {
 	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
 	b.WriteString(
 		helpStyle.Render(
-			"j/k: navigate | space: select | a/n/I: all/none/invert | d: delete | r: refresh | q: quit",
+			"j/k: navigate | space: select | a/n/I: all/none/invert | d: delete | r: refresh | ?: help | q: quit",
 		),
 	)
+
+	return b.String()
+}
+
+func (m Model) renderHelp(b *strings.Builder) string {
+	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Primary)
+	b.WriteString(titleStyle.Render("Keybindings"))
+	b.WriteString("\n\n")
+
+	bindings := [][2]string{
+		{"j/k, up/down", "move the cursor"},
+		{"g / G", "jump to top / bottom"},
+		{"space", "toggle selection on the cursor row"},
+		{"a / n / I", "select all / none / invert selection"},
+		{"/", "search branch name"},
+		{"d", "delete the selection (or the cursor row)"},
+		{"r", "refresh"},
+		{"?", "toggle this help"},
+		{"esc / q", "back / quit"},
+	}
+
+	for _, binding := range bindings {
+		keyStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Warning).Width(16)
+		fmt.Fprintf(b, "%s %s\n", keyStyle.Render(binding[0]), binding[1])
+	}
+
+	b.WriteString("\nPress '?' or 'esc' to close\n")
 
 	return b.String()
 }

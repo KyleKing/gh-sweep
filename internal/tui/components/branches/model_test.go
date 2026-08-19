@@ -1,6 +1,7 @@
 package branches
 
 import (
+	"strings"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
@@ -126,6 +127,60 @@ func TestInvertSelection(t *testing.T) {
 		if !m.selected[name] {
 			t.Errorf("expected %s selected after invert", name)
 		}
+	}
+}
+
+func TestJumpTopBottom(t *testing.T) {
+	t.Parallel()
+
+	m := Model{branches: branchStatuses(), selected: map[string]bool{}, cursor: 2}
+
+	m, _ = m.handleListKeys(tea.KeyPressMsg{Code: 'g', Text: "g"})
+	if m.cursor != 0 {
+		t.Errorf("cursor after g = %d, want 0", m.cursor)
+	}
+
+	m, _ = m.handleListKeys(tea.KeyPressMsg{Code: 'G', Text: "G"})
+	if want := len(m.branches) - 1; m.cursor != want {
+		t.Errorf("cursor after G = %d, want %d", m.cursor, want)
+	}
+}
+
+func TestSearchFiltersByName(t *testing.T) {
+	t.Parallel()
+
+	m := Model{branches: branchStatuses(), selected: map[string]bool{}}
+
+	m, _ = m.handleListKeys(tea.KeyPressMsg{Code: '/', Text: "/"})
+	for _, r := range "release" {
+		m, _ = m.handleSearchKeys(tea.KeyPressMsg{Code: r, Text: string(r)})
+	}
+
+	visible := m.getVisibleBranches()
+	if len(visible) != 1 || visible[0].Name != "release" {
+		t.Fatalf("visible = %+v, want only release", visible)
+	}
+
+	m, _ = m.handleSearchKeys(tea.KeyPressMsg{Code: tea.KeyEscape})
+	if m.searching || m.searchQuery != "" {
+		t.Errorf("expected search cleared after esc, got searching=%v query=%q", m.searching, m.searchQuery)
+	}
+	if len(m.getVisibleBranches()) != len(m.branches) {
+		t.Error("expected full list restored after canceling search")
+	}
+}
+
+func TestHelpToggle(t *testing.T) {
+	t.Parallel()
+
+	m := Model{branches: branchStatuses(), selected: map[string]bool{}}
+
+	m, _ = m.handleListKeys(tea.KeyPressMsg{Code: '?', Text: "?"})
+	if !m.showHelp {
+		t.Fatal("expected showHelp true after ?")
+	}
+	if !strings.Contains(m.View(), "Keybindings") {
+		t.Error("help view missing Keybindings title")
 	}
 }
 
