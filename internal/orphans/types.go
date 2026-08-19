@@ -31,15 +31,15 @@ func (t OrphanType) Label() string {
 }
 
 type OrphanedBranch struct {
-	Repository        string
-	BranchName        string
-	SHA               string
-	LastCommitDate    time.Time
-	Type              OrphanType
-	PRNumber          *int
-	PRTitle           *string
-	DaysSinceActivity int
-	Protected         bool
+	Repository        string     `json:"repository"`
+	BranchName        string     `json:"branch_name"`
+	SHA               string     `json:"sha"`
+	LastCommitDate    time.Time  `json:"last_commit_date"`
+	Type              OrphanType `json:"type"`
+	PRNumber          *int       `json:"pr_number,omitempty"`
+	PRTitle           *string    `json:"pr_title,omitempty"`
+	DaysSinceActivity int        `json:"days_since_activity"`
+	Protected         bool       `json:"protected"`
 }
 
 func (o OrphanedBranch) Key() string {
@@ -47,18 +47,18 @@ func (o OrphanedBranch) Key() string {
 }
 
 type ScanResult struct {
-	Repository    github.Repository
-	Orphans       []OrphanedBranch
-	DefaultBranch string
-	Error         error
+	Repository    github.Repository `json:"repository"`
+	Orphans       []OrphanedBranch  `json:"orphans"`
+	DefaultBranch string            `json:"default_branch"`
+	Error         error             `json:"error,omitempty"`
 }
 
 type NamespaceScanResult struct {
-	Namespace    string
-	IsOrg        bool
-	Results      []ScanResult
-	TotalRepos   int
-	TotalOrphans int
+	Namespace    string       `json:"namespace"`
+	IsOrg        bool         `json:"is_org"`
+	Results      []ScanResult `json:"results"`
+	TotalRepos   int          `json:"total_repos"`
+	TotalOrphans int          `json:"total_orphans"`
 }
 
 func (r *NamespaceScanResult) AllOrphans() []OrphanedBranch {

@@ -105,11 +105,12 @@ func (m *MemoryManager) CleanExpired() error {
 }
 
 // Stats returns cache statistics.
-func (m *MemoryManager) Stats() (total, expired int, err error) {
+func (m *MemoryManager) Stats() (int, int, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	total = len(m.data)
+	total := len(m.data)
+	expired := 0
 	now := time.Now()
 
 	for _, entry := range m.data {

@@ -33,10 +33,7 @@ func TestParseRepository(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			repo, err := ParseRepository(tt.input)
-			if err != nil {
-				t.Fatalf("ParseRepository(%q) error = %v", tt.input, err)
-			}
+			repo := ParseRepository(tt.input)
 
 			if tt.wantNil {
 				if repo != nil {

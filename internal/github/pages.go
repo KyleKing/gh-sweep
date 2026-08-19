@@ -2,9 +2,13 @@ package github
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strings"
 )
+
+// ErrPagesNotFound means the repo has no GitHub Pages site configured.
+var ErrPagesNotFound = errors.New("pages not configured for this repository")
 
 // PagesInfo is a repository's GitHub Pages configuration.
 type PagesInfo struct {
@@ -25,14 +29,14 @@ type pagesResponse struct {
 }
 
 // GetPagesInfo fetches a repo's GitHub Pages configuration. It returns
-// nil, nil when Pages isn't enabled for the repo (a 404 from the API).
+// ErrPagesNotFound when Pages isn't enabled for the repo (a 404 from the API).
 func (c *Client) GetPagesInfo(owner, repo string) (*PagesInfo, error) {
 	path := fmt.Sprintf("repos/%s/%s/pages", owner, repo)
 
 	var response pagesResponse
 	if err := c.Get(path, &response); err != nil {
 		if strings.Contains(err.Error(), "404") {
-			return nil, nil
+			return nil, ErrPagesNotFound
 		}
 
 		return nil, fmt.Errorf("failed to get pages info: %w", err)

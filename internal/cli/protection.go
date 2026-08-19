@@ -119,6 +119,7 @@ func fetchProtectionRules(client *github.Client, repos []string) map[string]*git
 				"Warning: skipping invalid repo %q (expected owner/repo)\n",
 				repoStr,
 			)
+
 			continue
 		}
 

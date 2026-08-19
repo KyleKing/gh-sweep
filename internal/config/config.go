@@ -92,6 +92,7 @@ func DefaultConfig() *Config {
 	if err != nil {
 		homeDir = "."
 	}
+
 	return &Config{
 		Cache: CacheConfig{
 			TTL:  "1h",

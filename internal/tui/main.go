@@ -484,6 +484,7 @@ func (m MainModel) activateItem(item menuItem) (tea.Model, tea.Cmd) {
 			}
 
 			m.ghaPerfModel = ghaperf.NewModel(m.repo, opts...)
+
 			return m, m.ghaPerfModel.Init()
 		}
 

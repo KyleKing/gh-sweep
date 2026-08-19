@@ -12,6 +12,8 @@ import (
 )
 
 // Client wraps the GitHub API client.
+//
+//nolint:containedctx // deferred: threading ctx through every method and caller is a larger change
 type Client struct {
 	httpClient *http.Client
 	apiClient  *api.RESTClient

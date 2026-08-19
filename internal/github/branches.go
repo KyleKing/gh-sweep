@@ -97,7 +97,7 @@ func (c *Client) fillCommitDates(owner, repo string, branches []Branch) {
 }
 
 // CompareBranches compares two branches and returns ahead/behind counts.
-func (c *Client) CompareBranches(owner, repo, base, head string) (ahead, behind int, err error) {
+func (c *Client) CompareBranches(owner, repo, base, head string) (int, int, error) {
 	var response struct {
 		AheadBy  int `json:"ahead_by"`
 		BehindBy int `json:"behind_by"`

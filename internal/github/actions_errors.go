@@ -80,7 +80,7 @@ func (c *Client) fetchJobLogLines(owner, repo string, jobID int) ([]string, erro
 		jobID,
 	)
 
-	req, err := http.NewRequestWithContext(c.ctx, http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(c.ctx, http.MethodGet, url, http.NoBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build job log request: %w", err)
 	}

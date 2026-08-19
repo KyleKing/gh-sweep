@@ -161,6 +161,8 @@ func (m Model) exportErrors() tea.Msg {
 }
 
 // Update handles messages.
+//
+//nolint:unparam // matches every TUI component's Update(Model, tea.Cmd) shape
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -356,6 +358,7 @@ func (m Model) renderErrors() string {
 	if len(m.errorContexts) == 0 {
 		fmt.Fprintf(&b, "No errors extracted from the last %d failed runs\n",
 			min(maxFailedRunsToExtract, countFailedRuns(m.runs)))
+
 		return b.String()
 	}
 

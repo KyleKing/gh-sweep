@@ -2,6 +2,7 @@ package pages
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -86,7 +87,7 @@ func (s *Scanner) scanRepo(ctx context.Context, repo github.Repository) RepoAudi
 	audit := RepoAudit{Repository: repo.FullName}
 
 	info, err := s.client.GetPagesInfo(repo.Owner, repo.Name)
-	if err != nil {
+	if err != nil && !errors.Is(err, github.ErrPagesNotFound) {
 		return audit
 	}
 

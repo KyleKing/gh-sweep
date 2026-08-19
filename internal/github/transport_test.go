@@ -108,10 +108,7 @@ func TestSafetyTransportPanicsOnMutation(t *testing.T) {
 
 			guard := safetyTransport{base: recordingTransport(`{}`, nil)}
 			req, err := http.NewRequestWithContext(
-				context.Background(),
-				method,
-				"https://api.github.com/repos/acme/widgets/git/refs/heads/x",
-				nil,
+				context.Background(), method, "https://api.github.com/repos/acme/widgets/git/refs/heads/x", http.NoBody,
 			)
 			if err != nil {
 				t.Fatalf("NewRequestWithContext() error = %v", err)
@@ -135,10 +132,7 @@ func TestSafetyTransportAllowsReads(t *testing.T) {
 
 	guard := safetyTransport{base: recordingTransport(`{"ok":true}`, nil)}
 	req, err := http.NewRequestWithContext(
-		context.Background(),
-		http.MethodGet,
-		"https://api.github.com/user",
-		nil,
+		context.Background(), http.MethodGet, "https://api.github.com/user", http.NoBody,
 	)
 	if err != nil {
 		t.Fatalf("NewRequestWithContext() error = %v", err)

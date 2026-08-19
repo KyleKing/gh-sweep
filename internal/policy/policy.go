@@ -31,24 +31,24 @@ const (
 
 // Diff is one field where a repo's live value doesn't match the policy.
 type Diff struct {
-	Domain  Domain
-	Field   string
-	Desired string
-	Current string
+	Domain  Domain `json:"domain"`
+	Field   string `json:"field"`
+	Desired string `json:"desired"`
+	Current string `json:"current"`
 }
 
 // RepoDrift holds every diff found for one repository, or the error that
 // stopped evaluation partway through (a later domain's fetch failing doesn't
 // discard diffs already found in an earlier one).
 type RepoDrift struct {
-	Repository string
-	Diffs      []Diff
-	Err        error
+	Repository string `json:"repository"`
+	Diffs      []Diff `json:"diffs"`
+	Err        error  `json:"error,omitempty"`
 }
 
 // Report is the result of evaluating a policy against a set of repos.
 type Report struct {
-	Repos []RepoDrift
+	Repos []RepoDrift `json:"repos"`
 }
 
 // HasDrift reports whether any repo has at least one diff.

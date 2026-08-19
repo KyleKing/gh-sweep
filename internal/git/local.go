@@ -90,7 +90,7 @@ func (r *LocalRepo) GetCurrentBranch() (string, error) {
 }
 
 // CompareBranches compares two branches and returns ahead/behind counts.
-func (r *LocalRepo) CompareBranches(base, head string) (ahead, behind int, err error) {
+func (r *LocalRepo) CompareBranches(base, head string) (int, int, error) {
 	// Run: git rev-list --left-right --count base...head
 	cmd := exec.Command(
 		"git",
@@ -114,11 +114,11 @@ func (r *LocalRepo) CompareBranches(base, head string) (ahead, behind int, err e
 		return 0, 0, fmt.Errorf("unexpected git output: %s", out.String())
 	}
 
-	behind, err = strconv.Atoi(parts[0])
+	behind, err := strconv.Atoi(parts[0])
 	if err != nil {
 		return 0, 0, fmt.Errorf("unexpected git output: %s", out.String())
 	}
-	ahead, err = strconv.Atoi(parts[1])
+	ahead, err := strconv.Atoi(parts[1])
 	if err != nil {
 		return 0, 0, fmt.Errorf("unexpected git output: %s", out.String())
 	}

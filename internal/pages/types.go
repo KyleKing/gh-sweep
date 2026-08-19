@@ -42,26 +42,26 @@ func (t FindingType) Label() string {
 // Finding is one domain audit result. Repository is empty for reverse-check
 // findings, which aren't tied to a specific scanned repo.
 type Finding struct {
-	Repository string
-	Domain     string
-	Type       FindingType
-	Detail     string
+	Repository string      `json:"repository,omitempty"`
+	Domain     string      `json:"domain"`
+	Type       FindingType `json:"type"`
+	Detail     string      `json:"detail"`
 }
 
 // RepoAudit is the Pages configuration and findings for one repository.
 type RepoAudit struct {
-	Repository string
-	CNAME      string
-	Enabled    bool
-	Findings   []Finding
+	Repository string    `json:"repository"`
+	CNAME      string    `json:"cname"`
+	Enabled    bool      `json:"enabled"`
+	Findings   []Finding `json:"findings"`
 }
 
 // NamespaceAuditResult is the outcome of auditing every repo in a namespace.
 type NamespaceAuditResult struct {
-	Namespace       string
-	TotalRepos      int
-	Repos           []RepoAudit
-	ReverseFindings []Finding
+	Namespace       string      `json:"namespace"`
+	TotalRepos      int         `json:"total_repos"`
+	Repos           []RepoAudit `json:"repos"`
+	ReverseFindings []Finding   `json:"reverse_findings"`
 }
 
 // AllFindings returns every per-repo finding plus reverse-check findings.

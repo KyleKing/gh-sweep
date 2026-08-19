@@ -35,6 +35,12 @@ linters = ["cyclop", "goconst"]
 path = "internal/cli/"
 linters = ["gochecknoinits"]
 
+[[linters.exclusions.rules]]
+# GraphQL is camelCase by spec, unlike GitHub's snake_case REST API; these
+# structs decode the wire response as-is, so the tags cannot be renamed.
+path = "_graphql\\.go"
+linters = ["tagliatelle"]
+
 [linters.settings.cyclop]
 max-complexity = 15
 
@@ -128,7 +134,10 @@ checks = ["all", "-ST1000"]
 
 [linters.settings.tagliatelle]
 case.rules.json = "snake"
-case.rules.yaml = "kebab"
+# gh-sweep's config schema (.gh-sweep.yaml, .gh-sweep-policy.yaml) is
+# snake_case throughout, documented and shipped in .gh-sweep.yaml.example;
+# kebab-case is the template's default but would rename every existing key.
+case.rules.yaml = "snake"
 
 [linters.settings.testifylint]
 enable-all = true

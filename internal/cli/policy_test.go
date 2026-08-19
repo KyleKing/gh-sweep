@@ -62,7 +62,7 @@ func TestPrintReport(t *testing.T) {
 	report := testPolicyReport()
 
 	jsonOut := captureStdout(t, func() { printReport(report, "json") })
-	if !strings.Contains(jsonOut, `"Repository": "acme/widgets"`) {
+	if !strings.Contains(jsonOut, `"repository": "acme/widgets"`) {
 		t.Errorf("json output missing repository field, got:\n%s", jsonOut)
 	}
 

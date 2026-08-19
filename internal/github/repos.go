@@ -6,12 +6,12 @@ import (
 )
 
 type Repository struct {
-	Name          string
-	FullName      string
-	Owner         string
-	Private       bool
-	Archived      bool
-	DefaultBranch string
+	Name          string `json:"name"`
+	FullName      string `json:"full_name"`
+	Owner         string `json:"owner"`
+	Private       bool   `json:"private"`
+	Archived      bool   `json:"archived"`
+	DefaultBranch string `json:"default_branch"`
 }
 
 type repoListItemResponse struct {

@@ -8,6 +8,8 @@ import (
 )
 
 func setupTestRepo(t *testing.T) string {
+	t.Helper()
+
 	tmpDir := t.TempDir()
 
 	// Initialize git repo

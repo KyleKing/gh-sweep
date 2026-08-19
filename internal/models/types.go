@@ -13,8 +13,9 @@ func (r Repository) FullName() string {
 	return r.Owner + "/" + r.Name
 }
 
-// ParseRepository parses a repository string into owner and name.
-func ParseRepository(repo string) (*Repository, error) {
+// ParseRepository parses a repository string into owner and name, or returns
+// nil when repo isn't in "owner/name" format.
+func ParseRepository(repo string) *Repository {
 	// Simple parsing, can be enhanced
 	parts := []string{}
 	current := ""
@@ -31,13 +32,13 @@ func ParseRepository(repo string) (*Repository, error) {
 	}
 
 	if len(parts) != 2 {
-		return nil, nil // Return nil for invalid format
+		return nil
 	}
 
 	return &Repository{
 		Owner: parts[0],
 		Name:  parts[1],
-	}, nil
+	}
 }
 
 // BranchNode represents a node in the branch tree.

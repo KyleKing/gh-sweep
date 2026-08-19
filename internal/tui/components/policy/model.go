@@ -72,6 +72,8 @@ func (m Model) loadReport() tea.Msg {
 }
 
 // Update handles messages.
+//
+//nolint:unparam // matches every TUI component's Update(Model, tea.Cmd) shape
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:

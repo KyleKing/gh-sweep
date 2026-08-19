@@ -91,7 +91,7 @@ func TestOutputPagesResult(t *testing.T) {
 	result := testPagesResult()
 
 	jsonOut := captureStdout(t, func() { outputPagesResult(result, "", "json") })
-	if !strings.Contains(jsonOut, `"Namespace": "acme"`) {
+	if !strings.Contains(jsonOut, `"namespace": "acme"`) {
 		t.Errorf("json output missing namespace field, got:\n%s", jsonOut)
 	}
 
@@ -107,7 +107,7 @@ func TestOutputPagesResult(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to read output file: %v", err)
 	}
-	if !strings.Contains(string(data), `"Namespace": "acme"`) {
+	if !strings.Contains(string(data), `"namespace": "acme"`) {
 		t.Errorf("output file missing namespace field, got:\n%s", data)
 	}
 }

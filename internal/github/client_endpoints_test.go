@@ -409,8 +409,8 @@ func TestGetPagesInfo(t *testing.T) {
 	}
 
 	info, err = client.GetPagesInfo("acme", "nopages")
-	if err != nil {
-		t.Fatalf("GetPagesInfo() error = %v", err)
+	if !errors.Is(err, ErrPagesNotFound) {
+		t.Fatalf("GetPagesInfo() error = %v, want ErrPagesNotFound", err)
 	}
 
 	if info != nil {
