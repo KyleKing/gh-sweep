@@ -23,12 +23,6 @@ key press is a single reversible toggle (press again to undo), not a batch
 operation, so the stakes don't match the CLI paths. Revisit only if it turns
 out to bite in practice.
 
-## M2: Terminal plotting for gha-perf
-
-Port the duration and trend charts the deleted Python `gha_perf.py` prototype rendered with plotext: per-workflow duration over time, branch comparison bars, and regression markers, inside the ghaperf TUI view.
-
-Starting points: `internal/tui/components/ghaperf/model.go`, possibly [ntcharts](https://github.com/NimbleMarkets/ntcharts) for Bubble Tea-native plots.
-
 ## M3: Coverage to 70% and component refactor
 
 Raise total coverage to the 70% bar the `test:coverage-min` task already defines, and remove the `.golangci.toml` legacy exclusion block (30 linters suppressed across all of `internal/`, marked `TODO(v1)`).
