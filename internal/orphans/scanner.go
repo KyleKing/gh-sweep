@@ -8,11 +8,16 @@ import (
 	"github.com/KyleKing/gh-sweep/internal/github"
 )
 
+// NamespaceScanner scans every non-archived repository in a GitHub user or
+// organization namespace for orphaned branches, concurrently up to its
+// ScanOptions.Concurrency limit.
 type NamespaceScanner struct {
 	client  *github.Client
 	options ScanOptions
 }
 
+// NewNamespaceScanner returns a NamespaceScanner that scans repositories via
+// client using options.
 func NewNamespaceScanner(client *github.Client, options ScanOptions) *NamespaceScanner {
 	return &NamespaceScanner{
 		client:  client,
@@ -20,6 +25,8 @@ func NewNamespaceScanner(client *github.Client, options ScanOptions) *NamespaceS
 	}
 }
 
+// ScanProgress reports a NamespaceScanner's progress as it works through a
+// namespace's repositories.
 type ScanProgress struct {
 	Current     int
 	Total       int
@@ -27,6 +34,8 @@ type ScanProgress struct {
 	Orphans     int
 }
 
+// ScanNamespace scans every repository in namespace and returns the
+// aggregated result.
 func (s *NamespaceScanner) ScanNamespace(
 	ctx context.Context,
 	namespace string,
@@ -34,6 +43,10 @@ func (s *NamespaceScanner) ScanNamespace(
 	return s.ScanNamespaceWithProgress(ctx, namespace, nil)
 }
 
+// ScanNamespaceWithProgress scans every repository in namespace concurrently,
+// sending a ScanProgress update after each repository completes when
+// progressCh is non-nil. Updates are dropped rather than blocking if the
+// channel isn't ready to receive.
 func (s *NamespaceScanner) ScanNamespaceWithProgress(
 	ctx context.Context,
 	namespace string,
@@ -117,6 +130,9 @@ func (s *NamespaceScanner) ScanNamespaceWithProgress(
 	return result, nil
 }
 
+// ScanRepo scans repo's non-default branches and returns the ScanResult,
+// stopping early (with whatever orphans were already found) if ctx is
+// canceled mid-scan.
 func (s *NamespaceScanner) ScanRepo(ctx context.Context, repo github.Repository) ScanResult {
 	result := ScanResult{
 		Repository:    repo,

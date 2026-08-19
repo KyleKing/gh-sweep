@@ -1,15 +1,18 @@
-package orphans
+package orphans_test
 
 import (
 	"testing"
 	"time"
 
 	"github.com/KyleKing/gh-sweep/internal/github"
+	"github.com/KyleKing/gh-sweep/internal/orphans"
 )
 
 func TestDetector_ClassifyBranch_MergedPR(t *testing.T) {
-	opts := DefaultScanOptions()
-	detector := NewDetector(opts)
+	t.Parallel()
+
+	opts := orphans.DefaultScanOptions()
+	detector := orphans.NewDetector(opts)
 
 	repo := github.Repository{
 		Name:          "test-repo",
@@ -42,8 +45,8 @@ func TestDetector_ClassifyBranch_MergedPR(t *testing.T) {
 		t.Fatal("expected orphan, got nil")
 	}
 
-	if orphan.Type != OrphanTypeMergedPR {
-		t.Errorf("expected type %s, got %s", OrphanTypeMergedPR, orphan.Type)
+	if orphan.Type != orphans.OrphanTypeMergedPR {
+		t.Errorf("expected type %s, got %s", orphans.OrphanTypeMergedPR, orphan.Type)
 	}
 
 	if orphan.PRNumber == nil || *orphan.PRNumber != 1 {
@@ -52,8 +55,10 @@ func TestDetector_ClassifyBranch_MergedPR(t *testing.T) {
 }
 
 func TestDetector_ClassifyBranch_ClosedPR(t *testing.T) {
-	opts := DefaultScanOptions()
-	detector := NewDetector(opts)
+	t.Parallel()
+
+	opts := orphans.DefaultScanOptions()
+	detector := orphans.NewDetector(opts)
 
 	repo := github.Repository{
 		Name:          "test-repo",
@@ -87,14 +92,16 @@ func TestDetector_ClassifyBranch_ClosedPR(t *testing.T) {
 		t.Fatal("expected orphan, got nil")
 	}
 
-	if orphan.Type != OrphanTypeClosedPR {
-		t.Errorf("expected type %s, got %s", OrphanTypeClosedPR, orphan.Type)
+	if orphan.Type != orphans.OrphanTypeClosedPR {
+		t.Errorf("expected type %s, got %s", orphans.OrphanTypeClosedPR, orphan.Type)
 	}
 }
 
 func TestDetector_ClassifyBranch_OpenPR(t *testing.T) {
-	opts := DefaultScanOptions()
-	detector := NewDetector(opts)
+	t.Parallel()
+
+	opts := orphans.DefaultScanOptions()
+	detector := orphans.NewDetector(opts)
 
 	repo := github.Repository{
 		Name:          "test-repo",
@@ -127,9 +134,11 @@ func TestDetector_ClassifyBranch_OpenPR(t *testing.T) {
 }
 
 func TestDetector_ClassifyBranch_Stale(t *testing.T) {
-	opts := DefaultScanOptions()
+	t.Parallel()
+
+	opts := orphans.DefaultScanOptions()
 	opts.StaleDaysThreshold = 7
-	detector := NewDetector(opts)
+	detector := orphans.NewDetector(opts)
 
 	repo := github.Repository{
 		Name:          "test-repo",
@@ -151,8 +160,8 @@ func TestDetector_ClassifyBranch_Stale(t *testing.T) {
 		t.Fatal("expected orphan, got nil")
 	}
 
-	if orphan.Type != OrphanTypeStale {
-		t.Errorf("expected type %s, got %s", OrphanTypeStale, orphan.Type)
+	if orphan.Type != orphans.OrphanTypeStale {
+		t.Errorf("expected type %s, got %s", orphans.OrphanTypeStale, orphan.Type)
 	}
 
 	if orphan.DaysSinceActivity < 14 {
@@ -161,10 +170,12 @@ func TestDetector_ClassifyBranch_Stale(t *testing.T) {
 }
 
 func TestDetector_ClassifyBranch_RecentNoPR(t *testing.T) {
-	opts := DefaultScanOptions()
+	t.Parallel()
+
+	opts := orphans.DefaultScanOptions()
 	opts.StaleDaysThreshold = 7
 	opts.IncludeRecentNoPR = true
-	detector := NewDetector(opts)
+	detector := orphans.NewDetector(opts)
 
 	repo := github.Repository{
 		Name:          "test-repo",
@@ -186,16 +197,18 @@ func TestDetector_ClassifyBranch_RecentNoPR(t *testing.T) {
 		t.Fatal("expected orphan, got nil")
 	}
 
-	if orphan.Type != OrphanTypeRecentNoPR {
-		t.Errorf("expected type %s, got %s", OrphanTypeRecentNoPR, orphan.Type)
+	if orphan.Type != orphans.OrphanTypeRecentNoPR {
+		t.Errorf("expected type %s, got %s", orphans.OrphanTypeRecentNoPR, orphan.Type)
 	}
 }
 
 func TestDetector_ClassifyBranch_RecentNoPR_Disabled(t *testing.T) {
-	opts := DefaultScanOptions()
+	t.Parallel()
+
+	opts := orphans.DefaultScanOptions()
 	opts.StaleDaysThreshold = 7
 	opts.IncludeRecentNoPR = false
-	detector := NewDetector(opts)
+	detector := orphans.NewDetector(opts)
 
 	repo := github.Repository{
 		Name:          "test-repo",
@@ -218,60 +231,53 @@ func TestDetector_ClassifyBranch_RecentNoPR_Disabled(t *testing.T) {
 	}
 }
 
-func TestDetector_ClassifyBranch_ExcludePattern(t *testing.T) {
-	opts := DefaultScanOptions()
-	detector := NewDetector(opts)
+func TestDetector_ClassifyBranch_Excluded(t *testing.T) {
+	t.Parallel()
 
-	repo := github.Repository{
-		Name:          "test-repo",
-		FullName:      "owner/test-repo",
-		Owner:         "owner",
-		DefaultBranch: "main",
+	tests := []struct {
+		name       string
+		branchName string
+	}{
+		{"literal pattern", "main"},
+		{"wildcard pattern", "release/v1.0"},
 	}
 
-	branch := github.Branch{
-		Name:           "main",
-		SHA:            "abc123",
-		Protected:      false,
-		LastCommitDate: time.Now().Add(-30 * 24 * time.Hour),
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	orphan := detector.ClassifyBranch(repo, branch, nil)
+			opts := orphans.DefaultScanOptions()
+			detector := orphans.NewDetector(opts)
 
-	if orphan != nil {
-		t.Errorf("expected nil for excluded branch 'main', got %+v", orphan)
-	}
-}
+			repo := github.Repository{
+				Name:          "test-repo",
+				FullName:      "owner/test-repo",
+				Owner:         "owner",
+				DefaultBranch: "main",
+			}
 
-func TestDetector_ClassifyBranch_ExcludeWildcard(t *testing.T) {
-	opts := DefaultScanOptions()
-	detector := NewDetector(opts)
+			branch := github.Branch{
+				Name:           tt.branchName,
+				SHA:            "abc123",
+				Protected:      false,
+				LastCommitDate: time.Now().Add(-30 * 24 * time.Hour),
+			}
 
-	repo := github.Repository{
-		Name:          "test-repo",
-		FullName:      "owner/test-repo",
-		Owner:         "owner",
-		DefaultBranch: "main",
-	}
+			orphan := detector.ClassifyBranch(repo, branch, nil)
 
-	branch := github.Branch{
-		Name:           "release/v1.0",
-		SHA:            "abc123",
-		Protected:      false,
-		LastCommitDate: time.Now().Add(-30 * 24 * time.Hour),
-	}
-
-	orphan := detector.ClassifyBranch(repo, branch, nil)
-
-	if orphan != nil {
-		t.Errorf("expected nil for excluded branch 'release/*', got %+v", orphan)
+			if orphan != nil {
+				t.Errorf("expected nil for excluded branch %q, got %+v", tt.branchName, orphan)
+			}
+		})
 	}
 }
 
 func TestDetector_ClassifyBranch_ProtectedSkipped(t *testing.T) {
-	opts := DefaultScanOptions()
+	t.Parallel()
+
+	opts := orphans.DefaultScanOptions()
 	opts.IncludeProtected = false
-	detector := NewDetector(opts)
+	detector := orphans.NewDetector(opts)
 
 	repo := github.Repository{
 		Name:          "test-repo",
@@ -295,10 +301,12 @@ func TestDetector_ClassifyBranch_ProtectedSkipped(t *testing.T) {
 }
 
 func TestDetector_ClassifyBranch_ProtectedIncluded(t *testing.T) {
-	opts := DefaultScanOptions()
+	t.Parallel()
+
+	opts := orphans.DefaultScanOptions()
 	opts.IncludeProtected = true
 	opts.ExcludePatterns = []string{}
-	detector := NewDetector(opts)
+	detector := orphans.NewDetector(opts)
 
 	repo := github.Repository{
 		Name:          "test-repo",
@@ -326,18 +334,22 @@ func TestDetector_ClassifyBranch_ProtectedIncluded(t *testing.T) {
 }
 
 func TestOrphanType_Label(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
-		orphanType OrphanType
+		orphanType orphans.OrphanType
 		expected   string
 	}{
-		{OrphanTypeMergedPR, "Merged PR"},
-		{OrphanTypeClosedPR, "Closed PR"},
-		{OrphanTypeStale, "Stale"},
-		{OrphanTypeRecentNoPR, "Recent (no PR)"},
+		{orphans.OrphanTypeMergedPR, "Merged PR"},
+		{orphans.OrphanTypeClosedPR, "Closed PR"},
+		{orphans.OrphanTypeStale, "Stale"},
+		{orphans.OrphanTypeRecentNoPR, "Recent (no PR)"},
 	}
 
 	for _, tt := range tests {
 		t.Run(string(tt.orphanType), func(t *testing.T) {
+			t.Parallel()
+
 			if got := tt.orphanType.Label(); got != tt.expected {
 				t.Errorf("Label() = %s, want %s", got, tt.expected)
 			}
@@ -346,7 +358,9 @@ func TestOrphanType_Label(t *testing.T) {
 }
 
 func TestOrphanedBranch_Key(t *testing.T) {
-	orphan := OrphanedBranch{
+	t.Parallel()
+
+	orphan := orphans.OrphanedBranch{
 		Repository: "owner/repo",
 		BranchName: "feature",
 	}
@@ -358,7 +372,9 @@ func TestOrphanedBranch_Key(t *testing.T) {
 }
 
 func TestDefaultScanOptions(t *testing.T) {
-	opts := DefaultScanOptions()
+	t.Parallel()
+
+	opts := orphans.DefaultScanOptions()
 
 	if opts.StaleDaysThreshold != 30 {
 		t.Errorf("StaleDaysThreshold = %d, want 30", opts.StaleDaysThreshold)

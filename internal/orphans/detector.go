@@ -7,14 +7,22 @@ import (
 	"github.com/KyleKing/gh-sweep/internal/github"
 )
 
+const hoursPerDay = 24
+
+// Detector classifies individual branches as orphaned according to a fixed
+// ScanOptions.
 type Detector struct {
 	options ScanOptions
 }
 
+// NewDetector returns a Detector that classifies branches using options.
 func NewDetector(options ScanOptions) *Detector {
 	return &Detector{options: options}
 }
 
+// ClassifyBranch returns branch's OrphanedBranch classification, or nil when
+// branch is excluded, protected, has an open PR, or doesn't otherwise
+// qualify as orphaned.
 func (d *Detector) ClassifyBranch(
 	repo github.Repository,
 	branch github.Branch,
@@ -28,7 +36,7 @@ func (d *Detector) ClassifyBranch(
 		return nil
 	}
 
-	daysSince := int(time.Since(branch.LastCommitDate).Hours() / 24)
+	daysSince := int(time.Since(branch.LastCommitDate).Hours() / hoursPerDay)
 
 	var mergedPR, closedPR, openPR *github.PullRequest
 	for i := range prs {
@@ -37,7 +45,7 @@ func (d *Detector) ClassifyBranch(
 			switch {
 			case pr.MergedAt != nil:
 				mergedPR = pr
-			case pr.State == "closed":
+			case pr.State == prStateClosed:
 				closedPR = pr
 			case pr.State == "open":
 				openPR = pr
