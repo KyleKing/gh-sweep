@@ -11,6 +11,8 @@ import (
 	"github.com/KyleKing/gh-sweep/internal/github"
 )
 
+var errForbidden = errors.New("forbidden")
+
 func loadedReleasesModel() Model {
 	m := NewModel([]string{"acme/widgets", "acme/gadgets"})
 	m, _ = m.Update(releasesLoadedMsg{
@@ -122,7 +124,7 @@ func TestReleasesLoadError(t *testing.T) {
 	m, _ = m.Update(releasesLoadedMsg{
 		releases: map[string][]github.Release{},
 		latest:   map[string]*github.Release{},
-		err:      errors.New("forbidden"),
+		err:      errForbidden,
 	})
 
 	if !strings.Contains(m.View(), "forbidden") {

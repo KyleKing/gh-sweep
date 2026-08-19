@@ -1,3 +1,5 @@
+// Package releases is the TUI view that overviews repository releases: the
+// latest per repo, the full history, and which repos have gone stale.
 package releases
 
 import (
@@ -11,6 +13,20 @@ import (
 
 	"github.com/KyleKing/gh-sweep/internal/github"
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
+)
+
+const (
+	repoPartsCount = 2
+	helpKeyWidth   = 16
+	hoursPerDay    = 24
+
+	outdatedThresholdDays = 90
+	agingThresholdDays    = 30
+	maxReleasesShown      = 5
+
+	viewModeLatest   = "latest"
+	viewModeAll      = "all"
+	viewModeOutdated = "outdated"
 )
 
 // Model represents the releases overview TUI state.
@@ -34,7 +50,7 @@ func NewModel(repos []string) Model {
 		releases: make(map[string][]github.Release),
 		latest:   make(map[string]*github.Release),
 		loading:  true,
-		viewMode: "latest",
+		viewMode: viewModeLatest,
 	}
 }
 
@@ -66,11 +82,10 @@ func (m Model) loadReleases() tea.Msg {
 	latest := make(map[string]*github.Release)
 
 	for _, repoStr := range m.repos {
-		parts := strings.Split(repoStr, "/")
-		if len(parts) != 2 {
+		owner, repo, ok := splitRepo(repoStr)
+		if !ok {
 			continue
 		}
-		owner, repo := parts[0], parts[1]
 
 		// Get all releases
 		repoReleases, err := client.ListReleases(owner, repo)
@@ -96,7 +111,18 @@ func (m Model) loadReleases() tea.Msg {
 	}
 }
 
+func splitRepo(repo string) (string, string, bool) {
+	parts := strings.SplitN(repo, "/", repoPartsCount)
+	if len(parts) != repoPartsCount {
+		return "", "", false
+	}
+
+	return parts[0], parts[1], true
+}
+
 // Update handles messages.
+//
+//nolint:unparam // matches every TUI component's Update(Model, tea.Cmd) shape
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -114,53 +140,72 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyPressMsg:
-		if m.showHelp {
-			if msg.String() == "?" || msg.String() == "esc" {
-				m.showHelp = false
-			}
-
-			return m, nil
-		}
-
-		switch msg.String() {
-		case "ctrl+c", "q":
-			return m, tea.Quit
-
-		case "?":
-			m.showHelp = true
-
-		case "g":
-			m.cursor = 0
-
-		case "G":
-			if len(m.repos) > 0 {
-				m.cursor = len(m.repos) - 1
-			}
-
-		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
-			}
-
-		case "down", "j":
-			maxCursor := len(m.repos) - 1
-			if m.cursor < maxCursor {
-				m.cursor++
-			}
-
-		case "1":
-			m.viewMode = "latest"
-			m.cursor = 0
-		case "2":
-			m.viewMode = "all"
-			m.cursor = 0
-		case "3":
-			m.viewMode = "outdated"
-			m.cursor = 0
-		}
+		return m.updateKeyMsg(msg)
 	}
 
 	return m, nil
+}
+
+func (m Model) updateKeyMsg(msg tea.KeyPressMsg) (Model, tea.Cmd) {
+	if m.showHelp {
+		if msg.String() == "?" || msg.String() == "esc" {
+			m.showHelp = false
+		}
+
+		return m, nil
+	}
+
+	switch msg.String() {
+	case "ctrl+c", "q":
+		return m, tea.Quit
+
+	case "?":
+		m.showHelp = true
+
+	case "1", "2", "3":
+		m.updateViewMode(msg.String())
+
+	default:
+		m.updateCursor(msg.String())
+	}
+
+	return m, nil
+}
+
+func (m *Model) updateViewMode(key string) {
+	switch key {
+	case "1":
+		m.viewMode = viewModeLatest
+	case "2":
+		m.viewMode = viewModeAll
+	case "3":
+		m.viewMode = viewModeOutdated
+	}
+
+	m.cursor = 0
+}
+
+func (m *Model) updateCursor(key string) {
+	switch key {
+	case "g":
+		m.cursor = 0
+
+	case "G":
+		if len(m.repos) > 0 {
+			m.cursor = len(m.repos) - 1
+		}
+
+	case "up", "k":
+		if m.cursor > 0 {
+			m.cursor--
+		}
+
+	case "down", "j":
+		maxCursor := len(m.repos) - 1
+		if m.cursor < maxCursor {
+			m.cursor++
+		}
+	}
 }
 
 // View renders the model.
@@ -184,7 +229,7 @@ func (m Model) View() string {
 	b.WriteString("\n\n")
 
 	if m.showHelp {
-		return m.renderHelp(&b)
+		return renderHelp(&b)
 	}
 
 	// View mode tabs
@@ -195,19 +240,19 @@ func (m Model) View() string {
 	inactiveTab := lipgloss.NewStyle().
 		Foreground(theme.Current().Muted)
 
-	if m.viewMode == "latest" {
+	if m.viewMode == viewModeLatest {
 		b.WriteString(activeTab.Render("[1] Latest"))
 	} else {
 		b.WriteString(inactiveTab.Render("[1] Latest"))
 	}
 	b.WriteString("  ")
-	if m.viewMode == "all" {
+	if m.viewMode == viewModeAll {
 		b.WriteString(activeTab.Render("[2] All Releases"))
 	} else {
 		b.WriteString(inactiveTab.Render("[2] All Releases"))
 	}
 	b.WriteString("  ")
-	if m.viewMode == "outdated" {
+	if m.viewMode == viewModeOutdated {
 		b.WriteString(activeTab.Render("[3] Outdated"))
 	} else {
 		b.WriteString(inactiveTab.Render("[3] Outdated"))
@@ -216,11 +261,11 @@ func (m Model) View() string {
 
 	// Content based on view mode
 	switch m.viewMode {
-	case "latest":
+	case viewModeLatest:
 		b.WriteString(m.renderLatest())
-	case "all":
+	case viewModeAll:
 		b.WriteString(m.renderAll())
-	case "outdated":
+	case viewModeOutdated:
 		b.WriteString(m.renderOutdated())
 	}
 
@@ -232,7 +277,7 @@ func (m Model) View() string {
 	return b.String()
 }
 
-func (m Model) renderHelp(b *strings.Builder) string {
+func renderHelp(b *strings.Builder) string {
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Primary)
 	b.WriteString(titleStyle.Render("Keybindings"))
 	b.WriteString("\n\n")
@@ -246,7 +291,7 @@ func (m Model) renderHelp(b *strings.Builder) string {
 	}
 
 	for _, binding := range bindings {
-		keyStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Warning).Width(16)
+		keyStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Warning).Width(helpKeyWidth)
 		fmt.Fprintf(b, "%s %s\n", keyStyle.Render(binding[0]), binding[1])
 	}
 
@@ -286,11 +331,11 @@ func (m Model) renderLatest() string {
 		}
 
 		// Calculate days since release
-		daysSince := int(time.Since(release.PublishedAt).Hours() / 24)
+		daysSince := int(time.Since(release.PublishedAt).Hours() / hoursPerDay)
 		ageColor := theme.Current().Success
-		if daysSince > 90 {
+		if daysSince > outdatedThresholdDays {
 			ageColor = theme.Current().Error
-		} else if daysSince > 30 {
+		} else if daysSince > agingThresholdDays {
 			ageColor = theme.Current().Warning
 		}
 		ageStyle := lipgloss.NewStyle().Foreground(ageColor)
@@ -331,11 +376,12 @@ func (m Model) renderAll() string {
 
 		// Show first few releases
 		var lineSb281 strings.Builder
-		for j, release := range releases {
-			if j >= 5 {
-				fmt.Fprintf(&lineSb281, "   ... and %d more\n", len(releases)-5)
+		for j := range releases {
+			if j >= maxReleasesShown {
+				fmt.Fprintf(&lineSb281, "   ... and %d more\n", len(releases)-maxReleasesShown)
 				break
 			}
+			release := releases[j]
 			fmt.Fprintf(&lineSb281, "   - %s (%s)\n",
 				release.TagName,
 				release.PublishedAt.Format("2006-01-02"))
@@ -361,8 +407,8 @@ func (m Model) renderOutdated() string {
 			continue
 		}
 
-		daysSince := int(time.Since(release.PublishedAt).Hours() / 24)
-		if daysSince <= 90 {
+		daysSince := int(time.Since(release.PublishedAt).Hours() / hoursPerDay)
+		if daysSince <= outdatedThresholdDays {
 			continue
 		}
 
