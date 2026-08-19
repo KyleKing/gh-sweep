@@ -10,6 +10,11 @@ import (
 	"github.com/KyleKing/gh-sweep/internal/github"
 )
 
+var (
+	errBoom         = errors.New("boom")
+	errUnauthorized = errors.New("unauthorized")
+)
+
 func loadedWatchingModel() Model {
 	m := NewModel()
 	m, _ = m.Update(dataLoadedMsg{
@@ -164,7 +169,7 @@ func TestWatchResultUpdatesStatus(t *testing.T) {
 		t.Errorf("statusMsg = %q", m.statusMsg)
 	}
 
-	m, _ = m.Update(unwatchResultMsg{repo: "acme/widgets", err: errors.New("boom")})
+	m, _ = m.Update(unwatchResultMsg{repo: "acme/widgets", err: errBoom})
 	if !strings.Contains(m.statusMsg, "boom") && !strings.Contains(m.statusMsg, "Failed") {
 		t.Errorf("statusMsg = %q", m.statusMsg)
 	}
@@ -174,7 +179,7 @@ func TestWatchResultUpdatesStatus(t *testing.T) {
 		t.Errorf("statusMsg = %q", m.statusMsg)
 	}
 
-	m, _ = m.Update(openResultMsg{repo: "acme/widgets", err: errors.New("boom")})
+	m, _ = m.Update(openResultMsg{repo: "acme/widgets", err: errBoom})
 	if !strings.Contains(m.statusMsg, "boom") && !strings.Contains(m.statusMsg, "Failed") {
 		t.Errorf("statusMsg = %q", m.statusMsg)
 	}
@@ -200,7 +205,7 @@ func TestWatchingLoadError(t *testing.T) {
 	t.Parallel()
 
 	m := NewModel()
-	m, _ = m.Update(dataLoadedMsg{err: errors.New("unauthorized")})
+	m, _ = m.Update(dataLoadedMsg{err: errUnauthorized})
 
 	if !strings.Contains(m.View(), "unauthorized") {
 		t.Errorf("view = %q", m.View())

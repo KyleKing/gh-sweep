@@ -1,3 +1,5 @@
+// Package watching is the TUI view for auditing and changing GitHub
+// repository watch/notification status.
 package watching
 
 import (
@@ -14,6 +16,16 @@ import (
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
+const (
+	helpKeyWidth = 16
+
+	viewModeUnwatched = "unwatched"
+	viewModeWatched   = "watched"
+	viewModeIgnored   = "ignored"
+	viewModeAll       = "all"
+)
+
+// Model represents the watch status audit TUI state.
 type Model struct {
 	username    string
 	repos       []github.RepoWatchInfo
@@ -30,11 +42,12 @@ type Model struct {
 	showHelp    bool
 }
 
+// NewModel creates a new watch status model.
 func NewModel() Model {
 	return Model{
 		selected: make(map[int]bool),
 		loading:  true,
-		viewMode: "unwatched",
+		viewMode: viewModeUnwatched,
 	}
 }
 
@@ -64,11 +77,12 @@ type openResultMsg struct {
 	err  error
 }
 
-func (m Model) Init() tea.Cmd {
-	return m.loadData
+// Init initializes the model.
+func (Model) Init() tea.Cmd {
+	return loadData
 }
 
-func (m Model) loadData() tea.Msg {
+func loadData() tea.Msg {
 	client, err := github.NewGQLClient()
 	if err != nil {
 		return dataLoadedMsg{err: fmt.Errorf("failed to create GitHub GraphQL client: %w", err)}
@@ -82,7 +96,7 @@ func (m Model) loadData() tea.Msg {
 	return dataLoadedMsg{username: username, repos: repos, err: nil}
 }
 
-func (m Model) watchRepo(repo github.RepoWatchInfo) tea.Cmd {
+func watchRepo(repo github.RepoWatchInfo) tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
 		client, err := github.NewClient(ctx)
@@ -98,14 +112,14 @@ func (m Model) watchRepo(repo github.RepoWatchInfo) tea.Cmd {
 	}
 }
 
-func (m Model) openRepo(repo github.RepoWatchInfo) tea.Cmd {
+func openRepo(repo github.RepoWatchInfo) tea.Cmd {
 	return func() tea.Msg {
 		err := browser.OpenURL("https://github.com/" + repo.FullName)
 		return openResultMsg{repo: repo.FullName, err: err}
 	}
 }
 
-func (m Model) unwatchRepo(repo github.RepoWatchInfo) tea.Cmd {
+func unwatchRepo(repo github.RepoWatchInfo) tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
 		client, err := github.NewClient(ctx)
@@ -121,7 +135,7 @@ func (m Model) unwatchRepo(repo github.RepoWatchInfo) tea.Cmd {
 	}
 }
 
-func (m Model) ignoreRepo(repo github.RepoWatchInfo) tea.Cmd {
+func ignoreRepo(repo github.RepoWatchInfo) tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
 		client, err := github.NewClient(ctx)
@@ -146,6 +160,9 @@ func (m Model) setState(fullName string, state github.WatchState) {
 	}
 }
 
+// Update handles messages.
+//
+//nolint:unparam // matches every TUI component's Update(Model, tea.Cmd) shape
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -163,129 +180,171 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, nil
 
 	case watchResultMsg:
-		if msg.err != nil {
-			m.statusMsg = fmt.Sprintf("Failed to watch %s: %v", msg.repo, msg.err)
-		} else {
-			m.statusMsg = "Watching " + msg.repo
-			m.setState(msg.repo, github.WatchStateSubscribed)
-		}
-
-		return m, nil
+		return m.handleWatchResult(msg), nil
 
 	case unwatchResultMsg:
-		if msg.err != nil {
-			m.statusMsg = fmt.Sprintf("Failed to unwatch %s: %v", msg.repo, msg.err)
-		} else {
-			m.statusMsg = "Unwatched " + msg.repo
-			m.setState(msg.repo, github.WatchStateDefault)
-		}
-
-		return m, nil
+		return m.handleUnwatchResult(msg), nil
 
 	case ignoreResultMsg:
-		if msg.err != nil {
-			m.statusMsg = fmt.Sprintf("Failed to ignore %s: %v", msg.repo, msg.err)
-		} else {
-			m.statusMsg = "Ignoring " + msg.repo
-			m.setState(msg.repo, github.WatchStateIgnored)
-		}
-
-		return m, nil
+		return m.handleIgnoreResult(msg), nil
 
 	case openResultMsg:
-		if msg.err != nil {
-			m.statusMsg = fmt.Sprintf("Failed to open %s: %v", msg.repo, msg.err)
-		} else {
-			m.statusMsg = "Opened " + msg.repo
-		}
-
-		return m, nil
+		return m.handleOpenResult(msg), nil
 
 	case tea.KeyPressMsg:
 		if m.searching {
 			return m.handleSearchKeys(msg)
 		}
 
-		if m.showHelp {
-			if msg.String() == "?" || msg.String() == "esc" {
-				m.showHelp = false
-			}
+		return m.updateKeyMsg(msg)
+	}
 
-			return m, nil
+	return m, nil
+}
+
+func (m Model) handleWatchResult(msg watchResultMsg) Model {
+	if msg.err != nil {
+		m.statusMsg = fmt.Sprintf("Failed to watch %s: %v", msg.repo, msg.err)
+	} else {
+		m.statusMsg = "Watching " + msg.repo
+		m.setState(msg.repo, github.WatchStateSubscribed)
+	}
+
+	return m
+}
+
+func (m Model) handleUnwatchResult(msg unwatchResultMsg) Model {
+	if msg.err != nil {
+		m.statusMsg = fmt.Sprintf("Failed to unwatch %s: %v", msg.repo, msg.err)
+	} else {
+		m.statusMsg = "Unwatched " + msg.repo
+		m.setState(msg.repo, github.WatchStateDefault)
+	}
+
+	return m
+}
+
+func (m Model) handleIgnoreResult(msg ignoreResultMsg) Model {
+	if msg.err != nil {
+		m.statusMsg = fmt.Sprintf("Failed to ignore %s: %v", msg.repo, msg.err)
+	} else {
+		m.statusMsg = "Ignoring " + msg.repo
+		m.setState(msg.repo, github.WatchStateIgnored)
+	}
+
+	return m
+}
+
+func (m Model) handleOpenResult(msg openResultMsg) Model {
+	if msg.err != nil {
+		m.statusMsg = fmt.Sprintf("Failed to open %s: %v", msg.repo, msg.err)
+	} else {
+		m.statusMsg = "Opened " + msg.repo
+	}
+
+	return m
+}
+
+func (m Model) updateKeyMsg(msg tea.KeyPressMsg) (Model, tea.Cmd) {
+	if m.showHelp {
+		if msg.String() == "?" || msg.String() == "esc" {
+			m.showHelp = false
 		}
 
-		switch msg.String() {
-		case "ctrl+c", "q":
-			return m, tea.Quit
+		return m, nil
+	}
 
-		case "?":
-			m.showHelp = true
+	switch msg.String() {
+	case "ctrl+c", "q":
+		return m, tea.Quit
 
-		case "/":
-			m.searching = true
+	case "?":
+		m.showHelp = true
 
-		case "g":
-			m.cursor = 0
+	case "/":
+		m.searching = true
 
-		case "G":
-			if filtered := m.getFilteredRepos(); len(filtered) > 0 {
-				m.cursor = len(filtered) - 1
-			}
+	case "g", "G", "up", "k", "down", "j":
+		m.updateCursor(msg.String())
 
-		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
-			}
+	case "1", "2", "3", "4":
+		m.updateViewMode(msg.String())
 
-		case "down", "j":
-			filtered := m.getFilteredRepos()
-			if m.cursor < len(filtered)-1 {
-				m.cursor++
-			}
+	case "space":
+		m.selected[m.cursor] = !m.selected[m.cursor]
 
-		case "1":
-			m.viewMode = "unwatched"
-			m.cursor = 0
-			m.selected = make(map[int]bool)
+	case "I":
+		m.invertSelection()
 
-		case "2":
-			m.viewMode = "watched"
-			m.cursor = 0
-			m.selected = make(map[int]bool)
+	case "w":
+		return m.handleAction(watchRepo)
 
-		case "3":
-			m.viewMode = "ignored"
-			m.cursor = 0
-			m.selected = make(map[int]bool)
+	case "u":
+		return m.handleAction(unwatchRepo)
 
-		case "4":
-			m.viewMode = "all"
-			m.cursor = 0
-			m.selected = make(map[int]bool)
+	case "i":
+		return m.handleAction(ignoreRepo)
 
-		case "space":
-			m.selected[m.cursor] = !m.selected[m.cursor]
+	case "o":
+		return m.openCursorRepo()
+	}
 
-		case "I":
-			filtered := m.getFilteredRepos()
-			for idx := range filtered {
-				m.selected[idx] = !m.selected[idx]
-			}
+	return m, nil
+}
 
-		case "w":
-			return m.handleWatch()
+func (m *Model) updateCursor(key string) {
+	filtered := m.getFilteredRepos()
 
-		case "u":
-			return m.handleUnwatch()
+	switch key {
+	case "g":
+		m.cursor = 0
 
-		case "i":
-			return m.handleIgnore()
-
-		case "o":
-			if filtered := m.getFilteredRepos(); m.cursor < len(filtered) {
-				return m, m.openRepo(filtered[m.cursor])
-			}
+	case "G":
+		if len(filtered) > 0 {
+			m.cursor = len(filtered) - 1
 		}
+
+	case "up", "k":
+		if m.cursor > 0 {
+			m.cursor--
+		}
+
+	case "down", "j":
+		if m.cursor < len(filtered)-1 {
+			m.cursor++
+		}
+	}
+}
+
+func (m *Model) updateViewMode(key string) {
+	switch key {
+	case "1":
+		m.setViewMode(viewModeUnwatched)
+	case "2":
+		m.setViewMode(viewModeWatched)
+	case "3":
+		m.setViewMode(viewModeIgnored)
+	case "4":
+		m.setViewMode(viewModeAll)
+	}
+}
+
+func (m *Model) setViewMode(mode string) {
+	m.viewMode = mode
+	m.cursor = 0
+	m.selected = make(map[int]bool)
+}
+
+func (m *Model) invertSelection() {
+	filtered := m.getFilteredRepos()
+	for idx := range filtered {
+		m.selected[idx] = !m.selected[idx]
+	}
+}
+
+func (m Model) openCursorRepo() (Model, tea.Cmd) {
+	if filtered := m.getFilteredRepos(); m.cursor < len(filtered) {
+		return m, openRepo(filtered[m.cursor])
 	}
 
 	return m, nil
@@ -295,21 +354,23 @@ func (m Model) getFilteredRepos() []github.RepoWatchInfo {
 	query := strings.ToLower(m.searchQuery)
 
 	var filtered []github.RepoWatchInfo
-	for _, repo := range m.repos {
+	for i := range m.repos {
+		repo := &m.repos[i]
+
 		switch m.viewMode {
-		case "unwatched":
+		case viewModeUnwatched:
 			if repo.State != github.WatchStateDefault {
 				continue
 			}
-		case "watched":
+		case viewModeWatched:
 			if repo.State != github.WatchStateSubscribed {
 				continue
 			}
-		case "ignored":
+		case viewModeIgnored:
 			if repo.State != github.WatchStateIgnored {
 				continue
 			}
-		case "all":
+		case viewModeAll:
 		default:
 			continue
 		}
@@ -318,7 +379,7 @@ func (m Model) getFilteredRepos() []github.RepoWatchInfo {
 			continue
 		}
 
-		filtered = append(filtered, repo)
+		filtered = append(filtered, *repo)
 	}
 
 	return filtered
@@ -338,7 +399,7 @@ func (m Model) handleSearchKeys(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 		m.searching = false
 
 	case "backspace":
-		if len(m.searchQuery) > 0 {
+		if m.searchQuery != "" {
 			runes := []rune(m.searchQuery)
 			m.searchQuery = string(runes[:len(runes)-1])
 			m.cursor = 0
@@ -354,7 +415,7 @@ func (m Model) handleSearchKeys(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleWatch() (Model, tea.Cmd) {
+func (m Model) handleAction(action func(github.RepoWatchInfo) tea.Cmd) (Model, tea.Cmd) {
 	filtered := m.getFilteredRepos()
 	var cmds []tea.Cmd
 
@@ -362,54 +423,12 @@ func (m Model) handleWatch() (Model, tea.Cmd) {
 	for idx := range m.selected {
 		if m.selected[idx] && idx < len(filtered) {
 			hasSelection = true
-			cmds = append(cmds, m.watchRepo(filtered[idx]))
+			cmds = append(cmds, action(filtered[idx]))
 		}
 	}
 
 	if !hasSelection && m.cursor < len(filtered) {
-		cmds = append(cmds, m.watchRepo(filtered[m.cursor]))
-	}
-
-	m.selected = make(map[int]bool)
-
-	return m, tea.Batch(cmds...)
-}
-
-func (m Model) handleUnwatch() (Model, tea.Cmd) {
-	filtered := m.getFilteredRepos()
-	var cmds []tea.Cmd
-
-	hasSelection := false
-	for idx := range m.selected {
-		if m.selected[idx] && idx < len(filtered) {
-			hasSelection = true
-			cmds = append(cmds, m.unwatchRepo(filtered[idx]))
-		}
-	}
-
-	if !hasSelection && m.cursor < len(filtered) {
-		cmds = append(cmds, m.unwatchRepo(filtered[m.cursor]))
-	}
-
-	m.selected = make(map[int]bool)
-
-	return m, tea.Batch(cmds...)
-}
-
-func (m Model) handleIgnore() (Model, tea.Cmd) {
-	filtered := m.getFilteredRepos()
-	var cmds []tea.Cmd
-
-	hasSelection := false
-	for idx := range m.selected {
-		if m.selected[idx] && idx < len(filtered) {
-			hasSelection = true
-			cmds = append(cmds, m.ignoreRepo(filtered[idx]))
-		}
-	}
-
-	if !hasSelection && m.cursor < len(filtered) {
-		cmds = append(cmds, m.ignoreRepo(filtered[m.cursor]))
+		cmds = append(cmds, action(filtered[m.cursor]))
 	}
 
 	m.selected = make(map[int]bool)
@@ -442,6 +461,18 @@ func repoMetadata(repo github.RepoWatchInfo) string {
 	return strings.Join(tags, " | ")
 }
 
+func repoStatus(state github.WatchState) (string, lipgloss.Style) {
+	switch state {
+	case github.WatchStateSubscribed:
+		return "all activity", lipgloss.NewStyle().Foreground(theme.Current().Success)
+	case github.WatchStateIgnored:
+		return "ignored", lipgloss.NewStyle().Foreground(theme.Current().Warning)
+	default:
+		return "default (participating/@mentions)", lipgloss.NewStyle().Foreground(theme.Current().Muted)
+	}
+}
+
+// View renders the model.
 func (m Model) View() string {
 	if m.loading {
 		return "Loading watch status...\n"
@@ -462,32 +493,10 @@ func (m Model) View() string {
 	fmt.Fprintf(&b, "User: %s\n\n", m.username)
 
 	if m.showHelp {
-		return m.renderHelp(&b)
+		return renderHelp(&b)
 	}
 
-	activeTab := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(theme.Current().Warning)
-
-	inactiveTab := lipgloss.NewStyle().
-		Foreground(theme.Current().Muted)
-
-	tab := func(label, mode string) string {
-		if m.viewMode == mode {
-			return activeTab.Render(label)
-		}
-
-		return inactiveTab.Render(label)
-	}
-
-	b.WriteString(tab("[1] Default", "unwatched"))
-	b.WriteString("  ")
-	b.WriteString(tab("[2] Watched", "watched"))
-	b.WriteString("  ")
-	b.WriteString(tab("[3] Ignored", "ignored"))
-	b.WriteString("  ")
-	b.WriteString(tab("[4] All", "all"))
-	b.WriteString("\n\n")
+	m.renderTabs(&b)
 
 	if m.searching || m.searchQuery != "" {
 		searchStyle := lipgloss.NewStyle().Foreground(theme.Current().Warning)
@@ -495,47 +504,7 @@ func (m Model) View() string {
 	}
 
 	filtered := m.getFilteredRepos()
-
-	if len(filtered) == 0 {
-		b.WriteString("No repositories in this view.\n")
-	} else {
-		for i, repo := range filtered {
-			cursor := " "
-			if m.cursor == i {
-				cursor = ">"
-			}
-
-			selectMark := " "
-			if m.selected[i] {
-				selectMark = "*"
-			}
-
-			status := "default (participating/@mentions)"
-			statusStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
-			switch repo.State {
-			case github.WatchStateSubscribed:
-				status = "all activity"
-				statusStyle = lipgloss.NewStyle().Foreground(theme.Current().Success)
-			case github.WatchStateIgnored:
-				status = "ignored"
-				statusStyle = lipgloss.NewStyle().Foreground(theme.Current().Warning)
-			}
-
-			lineStyle := lipgloss.NewStyle()
-			if m.cursor == i {
-				lineStyle = lineStyle.Bold(true).Foreground(theme.Current().Warning)
-			}
-
-			line := fmt.Sprintf("%s%s %s ", cursor, selectMark, repo.FullName)
-			b.WriteString(lineStyle.Render(line))
-			b.WriteString(statusStyle.Render(fmt.Sprintf("[%s]", status)))
-
-			metaStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
-			b.WriteString(" ")
-			b.WriteString(metaStyle.Render(repoMetadata(repo)))
-			b.WriteString("\n")
-		}
-	}
+	m.renderRepoList(&b, filtered)
 
 	if m.statusMsg != "" {
 		b.WriteString("\n")
@@ -562,7 +531,70 @@ func (m Model) View() string {
 	return b.String()
 }
 
-func (m Model) renderHelp(b *strings.Builder) string {
+func (m Model) renderTabs(b *strings.Builder) {
+	activeTab := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(theme.Current().Warning)
+
+	inactiveTab := lipgloss.NewStyle().
+		Foreground(theme.Current().Muted)
+
+	tab := func(label, mode string) string {
+		if m.viewMode == mode {
+			return activeTab.Render(label)
+		}
+
+		return inactiveTab.Render(label)
+	}
+
+	b.WriteString(tab("[1] Default", viewModeUnwatched))
+	b.WriteString("  ")
+	b.WriteString(tab("[2] Watched", viewModeWatched))
+	b.WriteString("  ")
+	b.WriteString(tab("[3] Ignored", viewModeIgnored))
+	b.WriteString("  ")
+	b.WriteString(tab("[4] All", viewModeAll))
+	b.WriteString("\n\n")
+}
+
+func (m Model) renderRepoList(b *strings.Builder, filtered []github.RepoWatchInfo) {
+	if len(filtered) == 0 {
+		b.WriteString("No repositories in this view.\n")
+		return
+	}
+
+	for i := range filtered {
+		repo := &filtered[i]
+
+		cursor := " "
+		if m.cursor == i {
+			cursor = ">"
+		}
+
+		selectMark := " "
+		if m.selected[i] {
+			selectMark = "*"
+		}
+
+		status, statusStyle := repoStatus(repo.State)
+
+		lineStyle := lipgloss.NewStyle()
+		if m.cursor == i {
+			lineStyle = lineStyle.Bold(true).Foreground(theme.Current().Warning)
+		}
+
+		line := fmt.Sprintf("%s%s %s ", cursor, selectMark, repo.FullName)
+		b.WriteString(lineStyle.Render(line))
+		b.WriteString(statusStyle.Render(fmt.Sprintf("[%s]", status)))
+
+		metaStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
+		b.WriteString(" ")
+		b.WriteString(metaStyle.Render(repoMetadata(*repo)))
+		b.WriteString("\n")
+	}
+}
+
+func renderHelp(b *strings.Builder) string {
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Primary)
 	b.WriteString(titleStyle.Render("Keybindings"))
 	b.WriteString("\n\n")
@@ -581,7 +613,7 @@ func (m Model) renderHelp(b *strings.Builder) string {
 	}
 
 	for _, binding := range bindings {
-		keyStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Warning).Width(16)
+		keyStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Warning).Width(helpKeyWidth)
 		fmt.Fprintf(b, "%s %s\n", keyStyle.Render(binding[0]), binding[1])
 	}
 
