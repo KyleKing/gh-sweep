@@ -1,3 +1,5 @@
+// Package tui implements the top-level Bubble Tea application: the home
+// menu and navigation between each view's sub-model.
 package tui
 
 import (
@@ -28,6 +30,7 @@ import (
 // ViewMode represents different TUI views.
 type ViewMode int
 
+// View modes for MainModel, one per home-menu entry plus the home menu itself.
 const (
 	ViewHome ViewMode = iota
 	ViewBranches
@@ -43,6 +46,13 @@ const (
 	ViewReleases
 	ViewOrphans
 	ViewPolicy
+)
+
+const (
+	keyEsc        = "esc"
+	keyCtrlC      = "ctrl+c"
+	sectionPhase1 = "Phase 1: Core Management"
+	sectionPhase3 = "Phase 3: Access & Releases"
 )
 
 // menuItem describes one selectable entry in the home menu list.
@@ -114,7 +124,7 @@ func NewMainModel(opts MainModelOptions) MainModel {
 }
 
 // Init initializes the model.
-func (m MainModel) Init() tea.Cmd {
+func (MainModel) Init() tea.Cmd {
 	return nil
 }
 
@@ -148,7 +158,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		// Handle back navigation
-		if msg.String() == "esc" {
+		if msg.String() == keyEsc {
 			m.mode = ViewHome
 			return m, nil
 		}
@@ -167,10 +177,15 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // buildMenuItems returns the full home menu, marking items whose repo/org
 // preconditions aren't met as disabled.
 func (m MainModel) buildMenuItems() []menuItem {
-	hasRepo := m.repo != ""
-	hasRepos := len(m.repos) > 0
-	hasOrgAndRepos := m.org != "" && hasRepos
+	items := m.buildNamespaceAuditItems()
+	items = append(items, m.buildPhase1Items()...)
+	items = append(items, m.buildPhase2Items()...)
+	items = append(items, m.buildPhase3Items()...)
 
+	return items
+}
+
+func (MainModel) buildNamespaceAuditItems() []menuItem {
 	return []menuItem{
 		{
 			key:     "0",
@@ -190,12 +205,20 @@ func (m MainModel) buildMenuItems() []menuItem {
 			view:    ViewOrphans,
 			enabled: true,
 		},
+	}
+}
+
+func (m MainModel) buildPhase1Items() []menuItem {
+	hasRepo := m.repo != ""
+	hasRepos := len(m.repos) > 0
+
+	return []menuItem{
 		{
 			key:     "1",
 			icon:    "🌳",
 			label:   "Branch Management",
 			desc:    "Interactive branch operations",
-			section: "Phase 1: Core Management",
+			section: sectionPhase1,
 			view:    ViewBranches,
 			enabled: hasRepo,
 		},
@@ -204,7 +227,7 @@ func (m MainModel) buildMenuItems() []menuItem {
 			icon:    "🛡️ ",
 			label:   "Branch Protection",
 			desc:    "Compare and sync protection rules",
-			section: "Phase 1: Core Management",
+			section: sectionPhase1,
 			view:    ViewProtection,
 			enabled: hasRepos,
 		},
@@ -213,7 +236,7 @@ func (m MainModel) buildMenuItems() []menuItem {
 			icon:    "💬",
 			label:   "PR Comments",
 			desc:    "Review unresolved comments",
-			section: "Phase 1: Core Management",
+			section: sectionPhase1,
 			view:    ViewComments,
 			enabled: hasRepo,
 		},
@@ -222,7 +245,7 @@ func (m MainModel) buildMenuItems() []menuItem {
 			icon:    "📊",
 			label:   "Analytics",
 			desc:    "CI/CD and repository statistics",
-			section: "Phase 1: Core Management",
+			section: sectionPhase1,
 			view:    ViewAnalytics,
 			enabled: hasRepo,
 		},
@@ -231,10 +254,17 @@ func (m MainModel) buildMenuItems() []menuItem {
 			icon:    "⏱️ ",
 			label:   "GHA Performance",
 			desc:    "Workflow timing analysis",
-			section: "Phase 1: Core Management",
+			section: sectionPhase1,
 			view:    ViewGHAPerf,
 			enabled: hasRepo,
 		},
+	}
+}
+
+func (m MainModel) buildPhase2Items() []menuItem {
+	hasRepos := len(m.repos) > 0
+
+	return []menuItem{
 		{
 			key:     "5",
 			icon:    "⚙️ ",
@@ -253,12 +283,20 @@ func (m MainModel) buildMenuItems() []menuItem {
 			view:    ViewWebhooks,
 			enabled: hasRepos,
 		},
+	}
+}
+
+func (m MainModel) buildPhase3Items() []menuItem {
+	hasRepos := len(m.repos) > 0
+	hasOrgAndRepos := m.org != "" && hasRepos
+
+	return []menuItem{
 		{
 			key:     "7",
 			icon:    "👥",
 			label:   "Collaborators",
 			desc:    "Manage repository access",
-			section: "Phase 3: Access & Releases",
+			section: sectionPhase3,
 			view:    ViewCollaborators,
 			enabled: hasRepos,
 		},
@@ -267,7 +305,7 @@ func (m MainModel) buildMenuItems() []menuItem {
 			icon:    "🔐",
 			label:   "Secrets Audit",
 			desc:    "Review secrets usage (read-only)",
-			section: "Phase 3: Access & Releases",
+			section: sectionPhase3,
 			view:    ViewSecrets,
 			enabled: hasOrgAndRepos,
 		},
@@ -276,7 +314,7 @@ func (m MainModel) buildMenuItems() []menuItem {
 			icon:    "📦",
 			label:   "Releases",
 			desc:    "Release version overview",
-			section: "Phase 3: Access & Releases",
+			section: sectionPhase3,
 			view:    ViewReleases,
 			enabled: hasRepos,
 		},
@@ -285,7 +323,7 @@ func (m MainModel) buildMenuItems() []menuItem {
 			icon:    "📐",
 			label:   "Policy",
 			desc:    "Diff and sync settings against a policy file",
-			section: "Phase 3: Access & Releases",
+			section: sectionPhase3,
 			view:    ViewPolicy,
 			enabled: true,
 		},
@@ -360,47 +398,53 @@ func (m MainModel) menuItemIndexForKey(key string) int {
 // normal navigation mode (j/k, arrows, direct shortcuts) and while typing a
 // fuzzy filter (entered with "/").
 func (m MainModel) updateHome(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
-	key := msg.String()
-
 	if m.menuFiltering {
-		switch key {
-		case "ctrl+c":
-			return m, tea.Quit
-
-		case "esc":
-			m.menuFiltering = false
-			m.menuFilter = ""
-			m.menuCursor = 0
-
-		case "enter":
-			m.menuFiltering = false
-			return m.activateSelected()
-
-		case "backspace":
-			if len(m.menuFilter) > 0 {
-				runes := []rune(m.menuFilter)
-				m.menuFilter = string(runes[:len(runes)-1])
-				m.menuCursor = 0
-			}
-
-		case "up", "ctrl+p":
-			m.moveMenuCursor(-1)
-
-		case "down", "ctrl+n":
-			m.moveMenuCursor(1)
-
-		default:
-			if runes := []rune(key); len(runes) == 1 {
-				m.menuFilter += key
-				m.menuCursor = 0
-			}
-		}
-
-		return m, nil
+		return m.updateHomeFiltering(msg.String())
 	}
 
+	return m.updateHomeNormal(msg.String())
+}
+
+func (m MainModel) updateHomeFiltering(key string) (tea.Model, tea.Cmd) {
 	switch key {
-	case "ctrl+c", "q":
+	case keyCtrlC:
+		return m, tea.Quit
+
+	case keyEsc:
+		m.menuFiltering = false
+		m.menuFilter = ""
+		m.menuCursor = 0
+
+	case "enter":
+		m.menuFiltering = false
+		return m.activateSelected()
+
+	case "backspace":
+		if m.menuFilter != "" {
+			runes := []rune(m.menuFilter)
+			m.menuFilter = string(runes[:len(runes)-1])
+			m.menuCursor = 0
+		}
+
+	case "up", "ctrl+p":
+		m.moveMenuCursor(-1)
+
+	case "down", "ctrl+n":
+		m.moveMenuCursor(1)
+
+	default:
+		if runes := []rune(key); len(runes) == 1 {
+			m.menuFilter += key
+			m.menuCursor = 0
+		}
+	}
+
+	return m, nil
+}
+
+func (m MainModel) updateHomeNormal(key string) (tea.Model, tea.Cmd) {
+	switch key {
+	case keyCtrlC, "q":
 		return m, tea.Quit
 
 	case "/":
@@ -449,91 +493,160 @@ func (m MainModel) activateItem(item menuItem) (tea.Model, tea.Cmd) {
 
 	switch item.view {
 	case ViewWatching:
-		m.watchingModel = watching.NewModel()
-		return m, m.watchingModel.Init()
-
+		return m.activateWatching()
 	case ViewBranches:
-		if m.repo != "" {
-			m.branchesModel = branches.NewModel(m.repo, "")
-			return m, m.branchesModel.Init()
-		}
-
+		return m.activateBranches()
 	case ViewProtection:
-		if len(m.repos) > 0 {
-			m.protectionModel = protection.NewModel(m.repos, m.baseline)
-			return m, m.protectionModel.Init()
-		}
-
+		return m.activateProtection()
 	case ViewComments:
-		if m.repo != "" {
-			m.commentsModel = comments.NewModel(m.repo)
-			return m, m.commentsModel.Init()
-		}
-
+		return m.activateComments()
 	case ViewAnalytics:
-		if m.repo != "" {
-			m.analyticsModel = analytics.NewModel(m.repo)
-			return m, m.analyticsModel.Init()
-		}
-
+		return m.activateAnalytics()
 	case ViewGHAPerf:
-		if m.repo != "" {
-			opts := []ghaperf.Option{}
-			if m.regressionThreshold > 0 {
-				opts = append(opts, ghaperf.WithRegressionThreshold(m.regressionThreshold))
-			}
-
-			m.ghaPerfModel = ghaperf.NewModel(m.repo, opts...)
-
-			return m, m.ghaPerfModel.Init()
-		}
-
+		return m.activateGHAPerf()
 	case ViewSettings:
-		if len(m.repos) > 0 {
-			m.settingsModel = settings.NewModel(m.repos, m.baseline)
-			return m, m.settingsModel.Init()
-		}
-
+		return m.activateSettings()
 	case ViewWebhooks:
-		if len(m.repos) > 0 {
-			m.webhooksModel = webhooks.NewModel(m.repos)
-			return m, m.webhooksModel.Init()
-		}
-
+		return m.activateWebhooks()
 	case ViewCollaborators:
-		if len(m.repos) > 0 {
-			m.collaboratorsModel = collaborators.NewModel(m.repos)
-			return m, m.collaboratorsModel.Init()
-		}
-
+		return m.activateCollaborators()
 	case ViewSecrets:
-		if m.org != "" && len(m.repos) > 0 {
-			m.secretsModel = secrets.NewModel(m.org, m.repos)
-			return m, m.secretsModel.Init()
-		}
-
+		return m.activateSecrets()
 	case ViewReleases:
-		if len(m.repos) > 0 {
-			m.releasesModel = releases.NewModel(m.repos)
-			return m, m.releasesModel.Init()
-		}
-
+		return m.activateReleases()
 	case ViewOrphans:
-		m.orphansModel = orphanstui.NewModel(m.org, orphans.DefaultScanOptions())
-		return m, m.orphansModel.Init()
-
+		return m.activateOrphans()
 	case ViewPolicy:
-		policyCfg, err := config.LoadPolicy("")
-		if err != nil {
-			m.policyModel = policytui.NewModelWithConfigError(err)
-		} else {
-			m.policyModel = policytui.NewModel(policyCfg)
-		}
+		return m.activatePolicy()
+	default:
+		return m, nil
+	}
+}
 
-		return m, m.policyModel.Init()
+func (m MainModel) activateWatching() (tea.Model, tea.Cmd) {
+	m.watchingModel = watching.NewModel()
+	return m, m.watchingModel.Init()
+}
+
+func (m MainModel) activateBranches() (tea.Model, tea.Cmd) {
+	if m.repo == "" {
+		return m, nil
 	}
 
-	return m, nil
+	m.branchesModel = branches.NewModel(m.repo, "")
+
+	return m, m.branchesModel.Init()
+}
+
+func (m MainModel) activateProtection() (tea.Model, tea.Cmd) {
+	if len(m.repos) == 0 {
+		return m, nil
+	}
+
+	m.protectionModel = protection.NewModel(m.repos, m.baseline)
+
+	return m, m.protectionModel.Init()
+}
+
+func (m MainModel) activateComments() (tea.Model, tea.Cmd) {
+	if m.repo == "" {
+		return m, nil
+	}
+
+	m.commentsModel = comments.NewModel(m.repo)
+
+	return m, m.commentsModel.Init()
+}
+
+func (m MainModel) activateAnalytics() (tea.Model, tea.Cmd) {
+	if m.repo == "" {
+		return m, nil
+	}
+
+	m.analyticsModel = analytics.NewModel(m.repo)
+
+	return m, m.analyticsModel.Init()
+}
+
+func (m MainModel) activateGHAPerf() (tea.Model, tea.Cmd) {
+	if m.repo == "" {
+		return m, nil
+	}
+
+	opts := []ghaperf.Option{}
+	if m.regressionThreshold > 0 {
+		opts = append(opts, ghaperf.WithRegressionThreshold(m.regressionThreshold))
+	}
+
+	m.ghaPerfModel = ghaperf.NewModel(m.repo, opts...)
+
+	return m, m.ghaPerfModel.Init()
+}
+
+func (m MainModel) activateSettings() (tea.Model, tea.Cmd) {
+	if len(m.repos) == 0 {
+		return m, nil
+	}
+
+	m.settingsModel = settings.NewModel(m.repos, m.baseline)
+
+	return m, m.settingsModel.Init()
+}
+
+func (m MainModel) activateWebhooks() (tea.Model, tea.Cmd) {
+	if len(m.repos) == 0 {
+		return m, nil
+	}
+
+	m.webhooksModel = webhooks.NewModel(m.repos)
+
+	return m, m.webhooksModel.Init()
+}
+
+func (m MainModel) activateCollaborators() (tea.Model, tea.Cmd) {
+	if len(m.repos) == 0 {
+		return m, nil
+	}
+
+	m.collaboratorsModel = collaborators.NewModel(m.repos)
+
+	return m, m.collaboratorsModel.Init()
+}
+
+func (m MainModel) activateSecrets() (tea.Model, tea.Cmd) {
+	if m.org == "" || len(m.repos) == 0 {
+		return m, nil
+	}
+
+	m.secretsModel = secrets.NewModel(m.org, m.repos)
+
+	return m, m.secretsModel.Init()
+}
+
+func (m MainModel) activateReleases() (tea.Model, tea.Cmd) {
+	if len(m.repos) == 0 {
+		return m, nil
+	}
+
+	m.releasesModel = releases.NewModel(m.repos)
+
+	return m, m.releasesModel.Init()
+}
+
+func (m MainModel) activateOrphans() (tea.Model, tea.Cmd) {
+	m.orphansModel = orphanstui.NewModel(m.org, orphans.DefaultScanOptions())
+	return m, m.orphansModel.Init()
+}
+
+func (m MainModel) activatePolicy() (tea.Model, tea.Cmd) {
+	policyCfg, err := config.LoadPolicy("")
+	if err != nil {
+		m.policyModel = policytui.NewModelWithConfigError(err)
+	} else {
+		m.policyModel = policytui.NewModel(policyCfg)
+	}
+
+	return m, m.policyModel.Init()
 }
 
 func (m MainModel) updateActive(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -578,6 +691,8 @@ func (m MainModel) updateActive(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case ViewPolicy:
 		m.policyModel, cmd = m.policyModel.Update(msg)
+
+	default:
 	}
 
 	return m, cmd
@@ -591,42 +706,35 @@ func (m MainModel) View() tea.View {
 	return v
 }
 
+// viewRenderers maps each non-home view to the function that renders its
+// sub-model, so renderContent can dispatch with a lookup instead of a
+// 13-case switch.
+var viewRenderers = map[ViewMode]func(MainModel) string{
+	ViewBranches:      func(m MainModel) string { return m.branchesModel.View() },
+	ViewProtection:    func(m MainModel) string { return m.protectionModel.View() },
+	ViewComments:      func(m MainModel) string { return m.commentsModel.View() },
+	ViewAnalytics:     func(m MainModel) string { return m.analyticsModel.View() },
+	ViewGHAPerf:       func(m MainModel) string { return m.ghaPerfModel.View() },
+	ViewSettings:      func(m MainModel) string { return m.settingsModel.View() },
+	ViewWebhooks:      func(m MainModel) string { return m.webhooksModel.View() },
+	ViewCollaborators: func(m MainModel) string { return m.collaboratorsModel.View() },
+	ViewSecrets:       func(m MainModel) string { return m.secretsModel.View() },
+	ViewReleases:      func(m MainModel) string { return m.releasesModel.View() },
+	ViewWatching:      func(m MainModel) string { return m.watchingModel.View() },
+	ViewOrphans:       func(m MainModel) string { return m.orphansModel.View() },
+	ViewPolicy:        func(m MainModel) string { return m.policyModel.View() },
+}
+
 func (m MainModel) renderContent() string {
 	if !m.ready {
 		return "Initializing..."
 	}
 
-	// Render active view
-	switch m.mode {
-	case ViewBranches:
-		return m.branchesModel.View()
-	case ViewProtection:
-		return m.protectionModel.View()
-	case ViewComments:
-		return m.commentsModel.View()
-	case ViewAnalytics:
-		return m.analyticsModel.View()
-	case ViewGHAPerf:
-		return m.ghaPerfModel.View()
-	case ViewSettings:
-		return m.settingsModel.View()
-	case ViewWebhooks:
-		return m.webhooksModel.View()
-	case ViewCollaborators:
-		return m.collaboratorsModel.View()
-	case ViewSecrets:
-		return m.secretsModel.View()
-	case ViewReleases:
-		return m.releasesModel.View()
-	case ViewWatching:
-		return m.watchingModel.View()
-	case ViewOrphans:
-		return m.orphansModel.View()
-	case ViewPolicy:
-		return m.policyModel.View()
-	default:
-		return m.renderHome()
+	if render, ok := viewRenderers[m.mode]; ok {
+		return render(m)
 	}
+
+	return m.renderHome()
 }
 
 func (m MainModel) renderHome() string {
