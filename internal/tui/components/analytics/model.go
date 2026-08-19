@@ -1,3 +1,5 @@
+// Package analytics is the TUI view for CI/CD workflow-run statistics: an
+// overview tab, flaky-test detection, and extracted failure errors.
 package analytics
 
 import (
@@ -15,7 +17,25 @@ import (
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
-const maxFailedRunsToExtract = 3
+const (
+	maxFailedRunsToExtract = 3
+	maxErrorLinesShown     = 5
+	repoPartsCount         = 2
+	percentMultiplier      = 100
+
+	viewModeOverview = "overview"
+	viewModeFlaky    = "flaky"
+	viewModeErrors   = "errors"
+
+	conclusionFailure = "failure"
+
+	reportFilePerm = 0o600
+)
+
+var (
+	errNoRepository      = errors.New("no repository specified")
+	errInvalidRepoFormat = errors.New("invalid repo format, expected owner/repo")
+)
 
 // Model represents the analytics TUI state.
 type Model struct {
@@ -41,7 +61,7 @@ func NewModel(repo string) Model {
 	return Model{
 		repo:     repo,
 		loading:  true,
-		viewMode: "overview",
+		viewMode: viewModeOverview,
 	}
 }
 
@@ -63,23 +83,27 @@ type errorsExportedMsg struct {
 }
 
 // Init initializes the model.
+//
+//nolint:gocritic // tea.Model requires value-receiver Init/Update/View; Model cannot switch to pointer receivers
 func (m Model) Init() tea.Cmd {
 	return m.loadAnalytics
 }
 
+//nolint:gocritic // nonamedreturns forbids naming these; both are strings already documented at each call site
 func splitRepo(repo string) (string, string, error) {
 	if repo == "" {
-		return "", "", errors.New("no repository specified")
+		return "", "", errNoRepository
 	}
 
 	parts := strings.Split(repo, "/")
-	if len(parts) != 2 {
-		return "", "", errors.New("invalid repo format, expected owner/repo")
+	if len(parts) != repoPartsCount {
+		return "", "", errInvalidRepoFormat
 	}
 
 	return parts[0], parts[1], nil
 }
 
+//nolint:gocritic // tea.Model requires value-receiver Init/Update/View; Model cannot switch to pointer receivers
 func (m Model) loadAnalytics() tea.Msg {
 	owner, repo, err := splitRepo(m.repo)
 	if err != nil {
@@ -113,6 +137,7 @@ func (m Model) loadAnalytics() tea.Msg {
 	}
 }
 
+//nolint:gocritic // tea.Model requires value-receiver Init/Update/View; Model cannot switch to pointer receivers
 func (m Model) loadErrors() tea.Msg {
 	owner, repo, err := splitRepo(m.repo)
 	if err != nil {
@@ -129,8 +154,9 @@ func (m Model) loadErrors() tea.Msg {
 	contexts := make([]*github.ErrorContext, 0)
 	extracted := 0
 
-	for _, run := range m.runs {
-		if run.Conclusion != "failure" {
+	for i := range m.runs {
+		run := &m.runs[i]
+		if run.Conclusion != conclusionFailure {
 			continue
 		}
 		if extracted >= maxFailedRunsToExtract {
@@ -149,11 +175,12 @@ func (m Model) loadErrors() tea.Msg {
 	return errorsLoadedMsg{contexts: contexts}
 }
 
+//nolint:gocritic // tea.Model requires value-receiver Init/Update/View; Model cannot switch to pointer receivers
 func (m Model) exportErrors() tea.Msg {
 	path := fmt.Sprintf("gha-errors-%s.md", strings.ReplaceAll(m.repo, "/", "-"))
 	report := github.FormatAsMarkdown(m.errorContexts)
 
-	if err := os.WriteFile(path, []byte(report), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(report), reportFilePerm); err != nil {
 		return errorsExportedMsg{err: fmt.Errorf("failed to write error report: %w", err)}
 	}
 
@@ -201,26 +228,27 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	return m, nil
 }
 
+//nolint:gocritic // mirrors Update's Model-by-value signature to keep the immutable-update chain consistent
 func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	switch msg.String() {
 	case "ctrl+c", "q":
 		return m, tea.Quit
 
 	case "1":
-		m.viewMode = "overview"
+		m.viewMode = viewModeOverview
 
 	case "2":
-		m.viewMode = "flaky"
+		m.viewMode = viewModeFlaky
 
 	case "3":
-		m.viewMode = "errors"
+		m.viewMode = viewModeErrors
 		if !m.errorsLoaded && !m.errorsLoading && !m.loading {
 			m.errorsLoading = true
 			return m, m.loadErrors
 		}
 
 	case "s":
-		if m.viewMode == "errors" && m.errorsLoaded && len(m.errorContexts) > 0 {
+		if m.viewMode == viewModeErrors && m.errorsLoaded && len(m.errorContexts) > 0 {
 			return m, m.exportErrors
 		}
 	}
@@ -229,6 +257,8 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 }
 
 // View renders the model.
+//
+//nolint:gocritic // tea.Model requires value-receiver Init/Update/View; Model cannot switch to pointer receivers
 func (m Model) View() string {
 	if m.loading {
 		return "Loading analytics...\n"
@@ -261,7 +291,7 @@ func (m Model) View() string {
 	}
 
 	for i, tab := range tabs {
-		viewModes := []string{"overview", "flaky", "errors"}
+		viewModes := []string{viewModeOverview, viewModeFlaky, viewModeErrors}
 		if m.viewMode == viewModes[i] {
 			b.WriteString(activeTab.Render(tab))
 		} else {
@@ -272,18 +302,18 @@ func (m Model) View() string {
 	b.WriteString("\n\n")
 
 	switch m.viewMode {
-	case "overview":
+	case viewModeOverview:
 		b.WriteString(m.renderOverview())
-	case "flaky":
+	case viewModeFlaky:
 		b.WriteString(m.renderFlaky())
-	case "errors":
+	case viewModeErrors:
 		b.WriteString(m.renderErrors())
 	}
 
 	b.WriteString("\n")
 	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
 	help := "1/2/3: switch view | q: quit"
-	if m.viewMode == "errors" && m.errorsLoaded && len(m.errorContexts) > 0 {
+	if m.viewMode == viewModeErrors && m.errorsLoaded && len(m.errorContexts) > 0 {
 		help = "1/2/3: switch view | s: export markdown | q: quit"
 	}
 	b.WriteString(helpStyle.Render(help))
@@ -291,6 +321,7 @@ func (m Model) View() string {
 	return b.String()
 }
 
+//nolint:gocritic // mirrors View's Model-by-value receiver
 func (m Model) renderOverview() string {
 	if m.stats == nil || m.stats.TotalRuns == 0 {
 		return "No workflow runs found\n"
@@ -314,6 +345,7 @@ func (m Model) renderOverview() string {
 	return b.String()
 }
 
+//nolint:gocritic // mirrors View's Model-by-value receiver
 func (m Model) renderFlaky() string {
 	var b strings.Builder
 
@@ -329,7 +361,7 @@ func (m Model) renderFlaky() string {
 	for i, test := range m.flaky {
 		fmt.Fprintf(&b, "%d. %s\n", i+1, test.Name)
 		fmt.Fprintf(&b, "   Failure rate: %.0f%% (%d/%d runs)\n",
-			test.FailureRate*100, test.FailureCount, test.TotalRuns)
+			test.FailureRate*percentMultiplier, test.FailureCount, test.TotalRuns)
 		fmt.Fprintf(&b, "   Pattern: %s | Flips: %d\n", test.Pattern, test.FlipCount)
 		if !test.LastFlip.IsZero() {
 			fmt.Fprintf(&b, "   Last flip: %s\n", test.LastFlip.Format("2006-01-02 15:04"))
@@ -340,6 +372,7 @@ func (m Model) renderFlaky() string {
 	return b.String()
 }
 
+//nolint:gocritic // mirrors View's Model-by-value receiver
 func (m Model) renderErrors() string {
 	var b strings.Builder
 
@@ -368,7 +401,7 @@ func (m Model) renderErrors() string {
 			ctx.WorkflowName, ctx.ErrorType, ctx.Timestamp.Format("2006-01-02 15:04"))
 
 		for j, line := range ctx.ErrorLines {
-			if j >= 5 {
+			if j >= maxErrorLinesShown {
 				fmt.Fprintf(&b, "   ... %d more error line(s)\n", len(ctx.ErrorLines)-j)
 				break
 			}
@@ -388,8 +421,8 @@ func (m Model) renderErrors() string {
 
 func countFailedRuns(runs []github.WorkflowRun) int {
 	count := 0
-	for _, run := range runs {
-		if run.Conclusion == "failure" {
+	for i := range runs {
+		if runs[i].Conclusion == conclusionFailure {
 			count++
 		}
 	}

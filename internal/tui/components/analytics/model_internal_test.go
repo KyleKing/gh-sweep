@@ -11,6 +11,8 @@ import (
 	"github.com/KyleKing/gh-sweep/internal/github"
 )
 
+var errBoom = errors.New("boom")
+
 func loadedAnalyticsModel() Model {
 	m := NewModel("acme/widgets")
 	m, _ = m.Update(analyticsLoadedMsg{
@@ -65,7 +67,7 @@ func TestLoadErrorRendered(t *testing.T) {
 	t.Parallel()
 
 	m := NewModel("acme/widgets")
-	m, _ = m.Update(analyticsLoadedMsg{err: errors.New("boom")})
+	m, _ = m.Update(analyticsLoadedMsg{err: errBoom})
 
 	if !strings.Contains(m.View(), "boom") {
 		t.Errorf("view = %q", m.View())
