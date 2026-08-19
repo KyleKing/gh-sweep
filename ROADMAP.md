@@ -23,19 +23,6 @@ key press is a single reversible toggle (press again to undo), not a batch
 operation, so the stakes don't match the CLI paths. Revisit only if it turns
 out to bite in practice.
 
-## M1: Pages CNAME subdomain-takeover audit
-
-A new `gh-sweep pages` command that cross-checks GitHub Pages custom domains against live DNS, in both directions.
-
-Scope:
-
-- For each repo, query the Pages API (`GET /repos/{o}/{r}/pages` returns `cname`, verification state, and HTTPS enforcement) and read the repo's `CNAME` file
-- Resolve DNS for each custom domain (CNAME/A/ALIAS records) and flag: domains that no longer resolve to `<user>.github.io` (dangling), Pages disabled while DNS still points at GitHub (takeover risk, since anyone can claim the subdomain on their own Pages site), and unverified domains
-- Reverse check: given a list of DNS-configured subdomains, verify each has a live Pages site backing it
-- Needs a domain list input: a `pages_domains` config key first, a zone file or DNS-provider API later
-
-Starting points: `internal/github/client.go` (transport seam), `internal/cli/watching.go` (simplest command shape to copy), a new `internal/dns` package around `net.Resolver`.
-
 ## M2: Terminal plotting for gha-perf
 
 Port the duration and trend charts the deleted Python `gha_perf.py` prototype rendered with plotext: per-workflow duration over time, branch comparison bars, and regression markers, inside the ghaperf TUI view.
@@ -67,6 +54,9 @@ Record a demo with VHS (`.github/assets/demo.tape`, following the gh-repo-dashbo
 
 Low priority; pick up when convenient.
 
+- Pages audit: detect a domain proxied through Cloudflare or another CDN (its
+  A records fall outside GitHub's documented Pages ranges) and report it as
+  unverifiable rather than a false "dangling" finding
 - Stacked-PR creation from selected branches (dependency detection via merge-base, PR chains with linked descriptions); parent-resolution heuristics are the open question
 - Linear and mani integrations: the packages were removed because both are large surface areas better served by their own tools until a concrete need returns
 - SQLite cache with TTL and ETags for offline comment browsing; the JSON gha-perf cache covers the current need
