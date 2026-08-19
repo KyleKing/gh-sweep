@@ -161,9 +161,6 @@ func redactAuthorization(i *cassette.Interaction) error {
 	return nil
 }
 
-// same-type-result heuristic instead
-//
-//nolint:gocritic // named results would trip nonamedreturns; unnamed trips gocritic's
 func splitRepo(fullName string) (string, string, bool) {
 	for idx := range fullName {
 		if fullName[idx] == '/' {

@@ -263,9 +263,6 @@ func equalStringSets(a, b []string) bool {
 	return true
 }
 
-// same-type-result heuristic instead. Picking unnamed since nonamedreturns is enforced project-wide.
-//
-//nolint:gocritic // named results would trip nonamedreturns; unnamed trips gocritic's
 func splitRepo(fullName string) (string, string, bool) {
 	parts := strings.SplitN(fullName, "/", repoNameParts)
 	if len(parts) != repoNameParts || parts[0] == "" || parts[1] == "" {

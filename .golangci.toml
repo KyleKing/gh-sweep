@@ -41,6 +41,13 @@ linters = ["gochecknoinits"]
 path = "_graphql\\.go"
 linters = ["tagliatelle"]
 
+[[linters.exclusions.rules]]
+# Every command here runs "git" with caller-supplied ref names as separate
+# argv entries, never through a shell, so shell injection isn't possible;
+# git itself rejects malformed ref names.
+path = "internal/git/local\\.go"
+linters = ["gosec"]
+
 [linters.settings.cyclop]
 max-complexity = 15
 
@@ -70,6 +77,7 @@ min-occurrences = 3
 enabled-tags = ["diagnostic", "style", "performance", "experimental", "opinionated"]
 disabled-checks = [
   "hugeParam",  # BubbleTea root Models are large by design; value receivers keep Update/View copy semantics
+  "unnamedResult",  # contradicts nonamedreturns, which is also enabled and wins
   "whyNoLint"
 ]
 

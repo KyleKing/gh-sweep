@@ -1,10 +1,13 @@
-package git
+package git_test
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
+
+	"github.com/KyleKing/gh-sweep/internal/git"
 )
 
 func setupTestRepo(t *testing.T) string {
@@ -13,27 +16,27 @@ func setupTestRepo(t *testing.T) string {
 	tmpDir := t.TempDir()
 
 	// Initialize git repo
-	cmd := exec.Command("git", "init")
+	cmd := exec.CommandContext(context.Background(), "git", "init")
 	cmd.Dir = tmpDir
 	if err := cmd.Run(); err != nil {
 		t.Fatalf("Failed to init git repo: %v", err)
 	}
 
 	// Configure git
-	configName := exec.Command("git", "config", "user.name", "Test User")
+	configName := exec.CommandContext(context.Background(), "git", "config", "user.name", "Test User")
 	configName.Dir = tmpDir
 	if err := configName.Run(); err != nil {
 		t.Fatalf("Failed to configure user.name: %v", err)
 	}
 
-	configEmail := exec.Command("git", "config", "user.email", "test@example.com")
+	configEmail := exec.CommandContext(context.Background(), "git", "config", "user.email", "test@example.com")
 	configEmail.Dir = tmpDir
 	if err := configEmail.Run(); err != nil {
 		t.Fatalf("Failed to configure user.email: %v", err)
 	}
 
 	// Disable commit signing for tests
-	configSign := exec.Command("git", "config", "commit.gpgsign", "false")
+	configSign := exec.CommandContext(context.Background(), "git", "config", "commit.gpgsign", "false")
 	configSign.Dir = tmpDir
 	if err := configSign.Run(); err != nil {
 		t.Fatalf("Failed to disable commit signing: %v", err)
@@ -41,17 +44,17 @@ func setupTestRepo(t *testing.T) string {
 
 	// Create initial commit
 	testFile := filepath.Join(tmpDir, "test.txt")
-	if err := os.WriteFile(testFile, []byte("test"), 0o644); err != nil {
+	if err := os.WriteFile(testFile, []byte("test"), 0o600); err != nil {
 		t.Fatalf("Failed to write test file: %v", err)
 	}
 
-	cmd = exec.Command("git", "add", "test.txt")
+	cmd = exec.CommandContext(context.Background(), "git", "add", "test.txt")
 	cmd.Dir = tmpDir
 	if err := cmd.Run(); err != nil {
 		t.Fatalf("Failed to stage test file: %v", err)
 	}
 
-	cmd = exec.Command("git", "commit", "-m", "Initial commit")
+	cmd = exec.CommandContext(context.Background(), "git", "commit", "-m", "Initial commit")
 	cmd.Dir = tmpDir
 	if err := cmd.Run(); err != nil {
 		t.Fatalf("Failed to create initial commit: %v", err)
@@ -61,8 +64,10 @@ func setupTestRepo(t *testing.T) string {
 }
 
 func TestListBranches(t *testing.T) {
+	t.Parallel()
+
 	repoPath := setupTestRepo(t)
-	repo := NewLocalRepo(repoPath)
+	repo := git.NewLocalRepo(repoPath)
 
 	branches, err := repo.ListBranches()
 	if err != nil {
@@ -88,8 +93,10 @@ func TestListBranches(t *testing.T) {
 }
 
 func TestGetCurrentBranch(t *testing.T) {
+	t.Parallel()
+
 	repoPath := setupTestRepo(t)
-	repo := NewLocalRepo(repoPath)
+	repo := git.NewLocalRepo(repoPath)
 
 	branch, err := repo.GetCurrentBranch()
 	if err != nil {
@@ -102,8 +109,10 @@ func TestGetCurrentBranch(t *testing.T) {
 }
 
 func TestIsInsideWorkTree(t *testing.T) {
+	t.Parallel()
+
 	repoPath := setupTestRepo(t)
-	repo := NewLocalRepo(repoPath)
+	repo := git.NewLocalRepo(repoPath)
 
 	if !repo.IsInsideWorkTree() {
 		t.Error("Expected to be inside work tree")
@@ -111,7 +120,7 @@ func TestIsInsideWorkTree(t *testing.T) {
 
 	// Test with non-repo directory
 	tmpDir := t.TempDir()
-	nonRepo := NewLocalRepo(tmpDir)
+	nonRepo := git.NewLocalRepo(tmpDir)
 
 	if nonRepo.IsInsideWorkTree() {
 		t.Error("Expected NOT to be inside work tree")
@@ -119,8 +128,10 @@ func TestIsInsideWorkTree(t *testing.T) {
 }
 
 func TestGetDefaultBranch(t *testing.T) {
+	t.Parallel()
+
 	repoPath := setupTestRepo(t)
-	repo := NewLocalRepo(repoPath)
+	repo := git.NewLocalRepo(repoPath)
 
 	defaultBranch, err := repo.GetDefaultBranch()
 	if err != nil {
@@ -135,7 +146,8 @@ func TestGetDefaultBranch(t *testing.T) {
 func runGit(t *testing.T, dir string, args ...string) {
 	t.Helper()
 
-	cmd := exec.Command("git", args...)
+	//nolint:gosec // no shell; git rejects malformed ref names
+	cmd := exec.CommandContext(context.Background(), "git", args...)
 	cmd.Dir = dir
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("git %v failed: %v\n%s", args, err, out)
@@ -143,15 +155,17 @@ func runGit(t *testing.T, dir string, args ...string) {
 }
 
 func TestCompareBranches(t *testing.T) {
+	t.Parallel()
+
 	repoPath := setupTestRepo(t)
-	repo := NewLocalRepo(repoPath)
+	repo := git.NewLocalRepo(repoPath)
 	base, err := repo.GetCurrentBranch()
 	if err != nil {
 		t.Fatalf("GetCurrentBranch() error = %v", err)
 	}
 
 	runGit(t, repoPath, "checkout", "-b", "feature")
-	if err := os.WriteFile(filepath.Join(repoPath, "feature.txt"), []byte("feature"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(repoPath, "feature.txt"), []byte("feature"), 0o600); err != nil {
 		t.Fatalf("failed to write feature file: %v", err)
 	}
 	runGit(t, repoPath, "add", "feature.txt")
@@ -167,8 +181,10 @@ func TestCompareBranches(t *testing.T) {
 }
 
 func TestGetMergeBase(t *testing.T) {
+	t.Parallel()
+
 	repoPath := setupTestRepo(t)
-	repo := NewLocalRepo(repoPath)
+	repo := git.NewLocalRepo(repoPath)
 	base, err := repo.GetCurrentBranch()
 	if err != nil {
 		t.Fatalf("GetCurrentBranch() error = %v", err)
@@ -180,7 +196,7 @@ func TestGetMergeBase(t *testing.T) {
 	}
 
 	runGit(t, repoPath, "checkout", "-b", "feature")
-	if err := os.WriteFile(filepath.Join(repoPath, "feature.txt"), []byte("feature"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(repoPath, "feature.txt"), []byte("feature"), 0o600); err != nil {
 		t.Fatalf("failed to write feature file: %v", err)
 	}
 	runGit(t, repoPath, "add", "feature.txt")
@@ -196,8 +212,10 @@ func TestGetMergeBase(t *testing.T) {
 }
 
 func TestDeleteBranch(t *testing.T) {
+	t.Parallel()
+
 	repoPath := setupTestRepo(t)
-	repo := NewLocalRepo(repoPath)
+	repo := git.NewLocalRepo(repoPath)
 
 	runGit(t, repoPath, "branch", "throwaway")
 
