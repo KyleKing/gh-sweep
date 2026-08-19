@@ -83,13 +83,10 @@ type errorsExportedMsg struct {
 }
 
 // Init initializes the model.
-//
-//nolint:gocritic // tea.Model requires value-receiver Init/Update/View; Model cannot switch to pointer receivers
 func (m Model) Init() tea.Cmd {
 	return m.loadAnalytics
 }
 
-//nolint:gocritic // nonamedreturns forbids naming these; both are strings already documented at each call site
 func splitRepo(repo string) (string, string, error) {
 	if repo == "" {
 		return "", "", errNoRepository
@@ -103,7 +100,6 @@ func splitRepo(repo string) (string, string, error) {
 	return parts[0], parts[1], nil
 }
 
-//nolint:gocritic // tea.Model requires value-receiver Init/Update/View; Model cannot switch to pointer receivers
 func (m Model) loadAnalytics() tea.Msg {
 	owner, repo, err := splitRepo(m.repo)
 	if err != nil {
@@ -137,7 +133,6 @@ func (m Model) loadAnalytics() tea.Msg {
 	}
 }
 
-//nolint:gocritic // tea.Model requires value-receiver Init/Update/View; Model cannot switch to pointer receivers
 func (m Model) loadErrors() tea.Msg {
 	owner, repo, err := splitRepo(m.repo)
 	if err != nil {
@@ -175,7 +170,6 @@ func (m Model) loadErrors() tea.Msg {
 	return errorsLoadedMsg{contexts: contexts}
 }
 
-//nolint:gocritic // tea.Model requires value-receiver Init/Update/View; Model cannot switch to pointer receivers
 func (m Model) exportErrors() tea.Msg {
 	path := fmt.Sprintf("gha-errors-%s.md", strings.ReplaceAll(m.repo, "/", "-"))
 	report := github.FormatAsMarkdown(m.errorContexts)
@@ -228,7 +222,6 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	return m, nil
 }
 
-//nolint:gocritic // mirrors Update's Model-by-value signature to keep the immutable-update chain consistent
 func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	switch msg.String() {
 	case "ctrl+c", "q":
@@ -257,8 +250,6 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 }
 
 // View renders the model.
-//
-//nolint:gocritic // tea.Model requires value-receiver Init/Update/View; Model cannot switch to pointer receivers
 func (m Model) View() string {
 	if m.loading {
 		return "Loading analytics...\n"
@@ -321,7 +312,6 @@ func (m Model) View() string {
 	return b.String()
 }
 
-//nolint:gocritic // mirrors View's Model-by-value receiver
 func (m Model) renderOverview() string {
 	if m.stats == nil || m.stats.TotalRuns == 0 {
 		return "No workflow runs found\n"
@@ -345,7 +335,6 @@ func (m Model) renderOverview() string {
 	return b.String()
 }
 
-//nolint:gocritic // mirrors View's Model-by-value receiver
 func (m Model) renderFlaky() string {
 	var b strings.Builder
 
@@ -372,7 +361,6 @@ func (m Model) renderFlaky() string {
 	return b.String()
 }
 
-//nolint:gocritic // mirrors View's Model-by-value receiver
 func (m Model) renderErrors() string {
 	var b strings.Builder
 
