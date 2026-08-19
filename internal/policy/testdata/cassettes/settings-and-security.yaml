@@ -1,0 +1,906 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: api.github.com
+        headers:
+            Accept:
+                - application/vnd.github.merge-info-preview+json, application/vnd.github.nebula-preview
+            Content-Type:
+                - application/json; charset=utf-8
+            Time-Zone:
+                - America/Mexico_City
+            User-Agent:
+                - go-gh
+        url: https://api.github.com/repos/KyleKing/gh-sweep
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"id":1102234541,"node_id":"R_kgDOQbLDrQ","name":"gh-sweep","full_name":"KyleKing/gh-sweep","private":false,"owner":{"login":"KyleKing","id":3784339,"node_id":"MDQ6VXNlcjM3ODQzMzk=","avatar_url":"https://avatars.githubusercontent.com/u/3784339?v=4","gravatar_id":"","url":"https://api.github.com/users/KyleKing","html_url":"https://github.com/KyleKing","followers_url":"https://api.github.com/users/KyleKing/followers","following_url":"https://api.github.com/users/KyleKing/following{/other_user}","gists_url":"https://api.github.com/users/KyleKing/gists{/gist_id}","starred_url":"https://api.github.com/users/KyleKing/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/KyleKing/subscriptions","organizations_url":"https://api.github.com/users/KyleKing/orgs","repos_url":"https://api.github.com/users/KyleKing/repos","events_url":"https://api.github.com/users/KyleKing/events{/privacy}","received_events_url":"https://api.github.com/users/KyleKing/received_events","type":"User","user_view_type":"public","site_admin":false},"html_url":"https://github.com/KyleKing/gh-sweep","description":"A gh cli plugin for a mix of administrative tools (branch pruning, unresolved comment followup, etc.)","fork":false,"url":"https://api.github.com/repos/KyleKing/gh-sweep","forks_url":"https://api.github.com/repos/KyleKing/gh-sweep/forks","keys_url":"https://api.github.com/repos/KyleKing/gh-sweep/keys{/key_id}","collaborators_url":"https://api.github.com/repos/KyleKing/gh-sweep/collaborators{/collaborator}","teams_url":"https://api.github.com/repos/KyleKing/gh-sweep/teams","hooks_url":"https://api.github.com/repos/KyleKing/gh-sweep/hooks","issue_events_url":"https://api.github.com/repos/KyleKing/gh-sweep/issues/events{/number}","events_url":"https://api.github.com/repos/KyleKing/gh-sweep/events","assignees_url":"https://api.github.com/repos/KyleKing/gh-sweep/assignees{/user}","branches_url":"https://api.github.com/repos/KyleKing/gh-sweep/branches{/branch}","tags_url":"https://api.github.com/repos/KyleKing/gh-sweep/tags","blobs_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/blobs{/sha}","git_tags_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/tags{/sha}","git_refs_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/refs{/sha}","trees_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/trees{/sha}","statuses_url":"https://api.github.com/repos/KyleKing/gh-sweep/statuses/{sha}","languages_url":"https://api.github.com/repos/KyleKing/gh-sweep/languages","stargazers_url":"https://api.github.com/repos/KyleKing/gh-sweep/stargazers","contributors_url":"https://api.github.com/repos/KyleKing/gh-sweep/contributors","subscribers_url":"https://api.github.com/repos/KyleKing/gh-sweep/subscribers","subscription_url":"https://api.github.com/repos/KyleKing/gh-sweep/subscription","commits_url":"https://api.github.com/repos/KyleKing/gh-sweep/commits{/sha}","git_commits_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/commits{/sha}","comments_url":"https://api.github.com/repos/KyleKing/gh-sweep/comments{/number}","issue_comment_url":"https://api.github.com/repos/KyleKing/gh-sweep/issues/comments{/number}","contents_url":"https://api.github.com/repos/KyleKing/gh-sweep/contents/{+path}","compare_url":"https://api.github.com/repos/KyleKing/gh-sweep/compare/{base}...{head}","merges_url":"https://api.github.com/repos/KyleKing/gh-sweep/merges","archive_url":"https://api.github.com/repos/KyleKing/gh-sweep/{archive_format}{/ref}","downloads_url":"https://api.github.com/repos/KyleKing/gh-sweep/downloads","issues_url":"https://api.github.com/repos/KyleKing/gh-sweep/issues{/number}","pulls_url":"https://api.github.com/repos/KyleKing/gh-sweep/pulls{/number}","milestones_url":"https://api.github.com/repos/KyleKing/gh-sweep/milestones{/number}","notifications_url":"https://api.github.com/repos/KyleKing/gh-sweep/notifications{?since,all,participating}","labels_url":"https://api.github.com/repos/KyleKing/gh-sweep/labels{/name}","releases_url":"https://api.github.com/repos/KyleKing/gh-sweep/releases{/id}","deployments_url":"https://api.github.com/repos/KyleKing/gh-sweep/deployments","created_at":"2025-11-23T04:13:47Z","updated_at":"2026-08-19T04:33:04Z","pushed_at":"2026-08-16T02:43:41Z","git_url":"git://github.com/KyleKing/gh-sweep.git","ssh_url":"git@github.com:KyleKing/gh-sweep.git","clone_url":"https://github.com/KyleKing/gh-sweep.git","svn_url":"https://github.com/KyleKing/gh-sweep","homepage":null,"size":430,"stargazers_count":1,"watchers_count":1,"language":"Go","has_issues":true,"has_projects":false,"has_downloads":false,"has_wiki":false,"has_pages":false,"has_discussions":false,"forks_count":1,"mirror_url":null,"archived":false,"disabled":false,"open_issues_count":2,"license":{"key":"mit","name":"MIT License","spdx_id":"MIT","url":"https://api.github.com/licenses/mit","node_id":"MDc6TGljZW5zZTEz"},"allow_forking":true,"is_template":false,"web_commit_signoff_required":false,"has_pull_requests":true,"pull_request_creation_policy":"all","topics":[],"visibility":"public","forks":1,"open_issues":2,"watchers":1,"default_branch":"main","permissions":{"admin":true,"maintain":true,"push":true,"triage":true,"pull":true},"temp_clone_token":"","allow_squash_merge":true,"allow_merge_commit":true,"allow_rebase_merge":true,"allow_auto_merge":false,"delete_branch_on_merge":false,"allow_update_branch":false,"use_squash_pr_title_as_default":false,"squash_merge_commit_message":"COMMIT_MESSAGES","squash_merge_commit_title":"COMMIT_OR_PR_TITLE","merge_commit_message":"PR_TITLE","merge_commit_title":"MERGE_MESSAGE","security_and_analysis":{"secret_scanning":{"status":"enabled"},"secret_scanning_push_protection":{"status":"enabled"},"dependabot_security_updates":{"status":"disabled"},"secret_scanning_non_provider_patterns":{"status":"disabled"},"secret_scanning_validity_checks":{"status":"disabled"}},"network_count":1,"subscribers_count":0}'
+        headers:
+            Access-Control-Allow-Origin:
+                - '*'
+            Access-Control-Expose-Headers:
+                - ETag, Link, Location, Retry-After, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Used, X-RateLimit-Resource, X-RateLimit-Reset, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval, X-GitHub-Media-Type, X-GitHub-SSO, X-GitHub-Request-Id, Deprecation, Sunset, Warning
+            Cache-Control:
+                - private, max-age=60, s-maxage=60
+            Content-Security-Policy:
+                - default-src 'none'
+            Content-Type:
+                - application/json; charset=utf-8
+            Date:
+                - Wed, 19 Aug 2026 04:34:41 GMT
+            Etag:
+                - W/"b4da222539f17762df14be1fc20b4d6580fab5e8e8b5b9c5a08a3017154ceadf"
+            Last-Modified:
+                - Wed, 19 Aug 2026 04:33:04 GMT
+            Referrer-Policy:
+                - origin-when-cross-origin, strict-origin-when-cross-origin
+            Server:
+                - github.com
+            Strict-Transport-Security:
+                - max-age=31536000; includeSubdomains; preload
+            Vary:
+                - Accept, Authorization, Cookie, X-GitHub-OTP,Accept-Encoding, Accept, X-Requested-With
+            X-Accepted-Oauth-Scopes:
+                - repo
+            X-Content-Type-Options:
+                - nosniff
+            X-Frame-Options:
+                - deny
+            X-Github-Api-Version-Selected:
+                - "2022-11-28"
+            X-Github-Edge-Region:
+                - iad
+            X-Github-Media-Type:
+                - github.v3; param=merge-info-preview.nebula-preview; format=json
+            X-Github-Request-Id:
+                - E41D:1337FA:23EBBF0:76F737E:6A853261
+            X-Oauth-Client-Id:
+                - 178c6fc778ccc68e1d6a
+            X-Oauth-Scopes:
+                - gist, read:org, repo
+            X-Ratelimit-Limit:
+                - "5000"
+            X-Ratelimit-Remaining:
+                - "4934"
+            X-Ratelimit-Reset:
+                - "1787114510"
+            X-Ratelimit-Resource:
+                - core
+            X-Ratelimit-Used:
+                - "66"
+            X-Xss-Protection:
+                - "0"
+        status: 200 OK
+        code: 200
+        duration: 729.108125ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 17
+        host: api.github.com
+        body: '{"has_wiki":true}'
+        headers:
+            Accept:
+                - application/vnd.github.merge-info-preview+json, application/vnd.github.nebula-preview
+            Content-Type:
+                - application/json; charset=utf-8
+            Time-Zone:
+                - America/Mexico_City
+            User-Agent:
+                - go-gh
+        url: https://api.github.com/repos/KyleKing/gh-sweep
+        method: PATCH
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"id":1102234541,"node_id":"R_kgDOQbLDrQ","name":"gh-sweep","full_name":"KyleKing/gh-sweep","private":false,"owner":{"login":"KyleKing","id":3784339,"node_id":"MDQ6VXNlcjM3ODQzMzk=","avatar_url":"https://avatars.githubusercontent.com/u/3784339?v=4","gravatar_id":"","url":"https://api.github.com/users/KyleKing","html_url":"https://github.com/KyleKing","followers_url":"https://api.github.com/users/KyleKing/followers","following_url":"https://api.github.com/users/KyleKing/following{/other_user}","gists_url":"https://api.github.com/users/KyleKing/gists{/gist_id}","starred_url":"https://api.github.com/users/KyleKing/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/KyleKing/subscriptions","organizations_url":"https://api.github.com/users/KyleKing/orgs","repos_url":"https://api.github.com/users/KyleKing/repos","events_url":"https://api.github.com/users/KyleKing/events{/privacy}","received_events_url":"https://api.github.com/users/KyleKing/received_events","type":"User","user_view_type":"public","site_admin":false},"html_url":"https://github.com/KyleKing/gh-sweep","description":"A gh cli plugin for a mix of administrative tools (branch pruning, unresolved comment followup, etc.)","fork":false,"url":"https://api.github.com/repos/KyleKing/gh-sweep","forks_url":"https://api.github.com/repos/KyleKing/gh-sweep/forks","keys_url":"https://api.github.com/repos/KyleKing/gh-sweep/keys{/key_id}","collaborators_url":"https://api.github.com/repos/KyleKing/gh-sweep/collaborators{/collaborator}","teams_url":"https://api.github.com/repos/KyleKing/gh-sweep/teams","hooks_url":"https://api.github.com/repos/KyleKing/gh-sweep/hooks","issue_events_url":"https://api.github.com/repos/KyleKing/gh-sweep/issues/events{/number}","events_url":"https://api.github.com/repos/KyleKing/gh-sweep/events","assignees_url":"https://api.github.com/repos/KyleKing/gh-sweep/assignees{/user}","branches_url":"https://api.github.com/repos/KyleKing/gh-sweep/branches{/branch}","tags_url":"https://api.github.com/repos/KyleKing/gh-sweep/tags","blobs_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/blobs{/sha}","git_tags_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/tags{/sha}","git_refs_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/refs{/sha}","trees_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/trees{/sha}","statuses_url":"https://api.github.com/repos/KyleKing/gh-sweep/statuses/{sha}","languages_url":"https://api.github.com/repos/KyleKing/gh-sweep/languages","stargazers_url":"https://api.github.com/repos/KyleKing/gh-sweep/stargazers","contributors_url":"https://api.github.com/repos/KyleKing/gh-sweep/contributors","subscribers_url":"https://api.github.com/repos/KyleKing/gh-sweep/subscribers","subscription_url":"https://api.github.com/repos/KyleKing/gh-sweep/subscription","commits_url":"https://api.github.com/repos/KyleKing/gh-sweep/commits{/sha}","git_commits_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/commits{/sha}","comments_url":"https://api.github.com/repos/KyleKing/gh-sweep/comments{/number}","issue_comment_url":"https://api.github.com/repos/KyleKing/gh-sweep/issues/comments{/number}","contents_url":"https://api.github.com/repos/KyleKing/gh-sweep/contents/{+path}","compare_url":"https://api.github.com/repos/KyleKing/gh-sweep/compare/{base}...{head}","merges_url":"https://api.github.com/repos/KyleKing/gh-sweep/merges","archive_url":"https://api.github.com/repos/KyleKing/gh-sweep/{archive_format}{/ref}","downloads_url":"https://api.github.com/repos/KyleKing/gh-sweep/downloads","issues_url":"https://api.github.com/repos/KyleKing/gh-sweep/issues{/number}","pulls_url":"https://api.github.com/repos/KyleKing/gh-sweep/pulls{/number}","milestones_url":"https://api.github.com/repos/KyleKing/gh-sweep/milestones{/number}","notifications_url":"https://api.github.com/repos/KyleKing/gh-sweep/notifications{?since,all,participating}","labels_url":"https://api.github.com/repos/KyleKing/gh-sweep/labels{/name}","releases_url":"https://api.github.com/repos/KyleKing/gh-sweep/releases{/id}","deployments_url":"https://api.github.com/repos/KyleKing/gh-sweep/deployments","created_at":"2025-11-23T04:13:47Z","updated_at":"2026-08-19T04:34:42Z","pushed_at":"2026-08-16T02:43:41Z","git_url":"git://github.com/KyleKing/gh-sweep.git","ssh_url":"git@github.com:KyleKing/gh-sweep.git","clone_url":"https://github.com/KyleKing/gh-sweep.git","svn_url":"https://github.com/KyleKing/gh-sweep","homepage":null,"size":430,"stargazers_count":1,"watchers_count":1,"language":"Go","has_issues":true,"has_projects":false,"has_downloads":false,"has_wiki":true,"has_pages":false,"has_discussions":false,"forks_count":1,"mirror_url":null,"archived":false,"disabled":false,"open_issues_count":2,"license":{"key":"mit","name":"MIT License","spdx_id":"MIT","url":"https://api.github.com/licenses/mit","node_id":"MDc6TGljZW5zZTEz"},"allow_forking":true,"is_template":false,"web_commit_signoff_required":false,"has_pull_requests":true,"pull_request_creation_policy":"all","topics":[],"visibility":"public","forks":1,"open_issues":2,"watchers":1,"default_branch":"main","permissions":{"admin":true,"maintain":true,"push":true,"triage":true,"pull":true},"allow_squash_merge":true,"allow_merge_commit":true,"allow_rebase_merge":true,"allow_auto_merge":false,"delete_branch_on_merge":false,"allow_update_branch":false,"use_squash_pr_title_as_default":false,"squash_merge_commit_message":"COMMIT_MESSAGES","squash_merge_commit_title":"COMMIT_OR_PR_TITLE","merge_commit_message":"PR_TITLE","merge_commit_title":"MERGE_MESSAGE","security_and_analysis":{"secret_scanning":{"status":"enabled"},"secret_scanning_push_protection":{"status":"enabled"},"dependabot_security_updates":{"status":"disabled"},"secret_scanning_non_provider_patterns":{"status":"disabled"},"secret_scanning_validity_checks":{"status":"disabled"}},"network_count":1,"subscribers_count":0}'
+        headers:
+            Access-Control-Allow-Origin:
+                - '*'
+            Access-Control-Expose-Headers:
+                - ETag, Link, Location, Retry-After, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Used, X-RateLimit-Resource, X-RateLimit-Reset, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval, X-GitHub-Media-Type, X-GitHub-SSO, X-GitHub-Request-Id, Deprecation, Sunset, Warning
+            Cache-Control:
+                - private, max-age=60, s-maxage=60
+            Content-Security-Policy:
+                - default-src 'none'
+            Content-Type:
+                - application/json; charset=utf-8
+            Date:
+                - Wed, 19 Aug 2026 04:34:42 GMT
+            Etag:
+                - W/"21efd7990611a748056efa8876775c9aee6cbd9bdf2ef10d44537ed2bc87a839"
+            Referrer-Policy:
+                - origin-when-cross-origin, strict-origin-when-cross-origin
+            Server:
+                - github.com
+            Strict-Transport-Security:
+                - max-age=31536000; includeSubdomains; preload
+            Vary:
+                - Accept, Authorization, Cookie, X-GitHub-OTP,Accept-Encoding, Accept, X-Requested-With
+            X-Accepted-Oauth-Scopes:
+                - ""
+            X-Content-Type-Options:
+                - nosniff
+            X-Frame-Options:
+                - deny
+            X-Github-Api-Version-Selected:
+                - "2022-11-28"
+            X-Github-Edge-Region:
+                - iad
+            X-Github-Media-Type:
+                - github.v3; param=merge-info-preview.nebula-preview; format=json
+            X-Github-Request-Id:
+                - E41D:1337FA:23EC3CD:76F8D16:6A853261
+            X-Oauth-Client-Id:
+                - 178c6fc778ccc68e1d6a
+            X-Oauth-Scopes:
+                - gist, read:org, repo
+            X-Ratelimit-Limit:
+                - "5000"
+            X-Ratelimit-Remaining:
+                - "4965"
+            X-Ratelimit-Reset:
+                - "1787115107"
+            X-Ratelimit-Resource:
+                - core
+            X-Ratelimit-Used:
+                - "35"
+            X-Xss-Protection:
+                - "0"
+        status: 200 OK
+        code: 200
+        duration: 277.855541ms
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: api.github.com
+        headers:
+            Accept:
+                - application/vnd.github.merge-info-preview+json, application/vnd.github.nebula-preview
+            Content-Type:
+                - application/json; charset=utf-8
+            Time-Zone:
+                - America/Mexico_City
+            User-Agent:
+                - go-gh
+        url: https://api.github.com/repos/KyleKing/gh-sweep
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"id":1102234541,"node_id":"R_kgDOQbLDrQ","name":"gh-sweep","full_name":"KyleKing/gh-sweep","private":false,"owner":{"login":"KyleKing","id":3784339,"node_id":"MDQ6VXNlcjM3ODQzMzk=","avatar_url":"https://avatars.githubusercontent.com/u/3784339?v=4","gravatar_id":"","url":"https://api.github.com/users/KyleKing","html_url":"https://github.com/KyleKing","followers_url":"https://api.github.com/users/KyleKing/followers","following_url":"https://api.github.com/users/KyleKing/following{/other_user}","gists_url":"https://api.github.com/users/KyleKing/gists{/gist_id}","starred_url":"https://api.github.com/users/KyleKing/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/KyleKing/subscriptions","organizations_url":"https://api.github.com/users/KyleKing/orgs","repos_url":"https://api.github.com/users/KyleKing/repos","events_url":"https://api.github.com/users/KyleKing/events{/privacy}","received_events_url":"https://api.github.com/users/KyleKing/received_events","type":"User","user_view_type":"public","site_admin":false},"html_url":"https://github.com/KyleKing/gh-sweep","description":"A gh cli plugin for a mix of administrative tools (branch pruning, unresolved comment followup, etc.)","fork":false,"url":"https://api.github.com/repos/KyleKing/gh-sweep","forks_url":"https://api.github.com/repos/KyleKing/gh-sweep/forks","keys_url":"https://api.github.com/repos/KyleKing/gh-sweep/keys{/key_id}","collaborators_url":"https://api.github.com/repos/KyleKing/gh-sweep/collaborators{/collaborator}","teams_url":"https://api.github.com/repos/KyleKing/gh-sweep/teams","hooks_url":"https://api.github.com/repos/KyleKing/gh-sweep/hooks","issue_events_url":"https://api.github.com/repos/KyleKing/gh-sweep/issues/events{/number}","events_url":"https://api.github.com/repos/KyleKing/gh-sweep/events","assignees_url":"https://api.github.com/repos/KyleKing/gh-sweep/assignees{/user}","branches_url":"https://api.github.com/repos/KyleKing/gh-sweep/branches{/branch}","tags_url":"https://api.github.com/repos/KyleKing/gh-sweep/tags","blobs_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/blobs{/sha}","git_tags_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/tags{/sha}","git_refs_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/refs{/sha}","trees_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/trees{/sha}","statuses_url":"https://api.github.com/repos/KyleKing/gh-sweep/statuses/{sha}","languages_url":"https://api.github.com/repos/KyleKing/gh-sweep/languages","stargazers_url":"https://api.github.com/repos/KyleKing/gh-sweep/stargazers","contributors_url":"https://api.github.com/repos/KyleKing/gh-sweep/contributors","subscribers_url":"https://api.github.com/repos/KyleKing/gh-sweep/subscribers","subscription_url":"https://api.github.com/repos/KyleKing/gh-sweep/subscription","commits_url":"https://api.github.com/repos/KyleKing/gh-sweep/commits{/sha}","git_commits_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/commits{/sha}","comments_url":"https://api.github.com/repos/KyleKing/gh-sweep/comments{/number}","issue_comment_url":"https://api.github.com/repos/KyleKing/gh-sweep/issues/comments{/number}","contents_url":"https://api.github.com/repos/KyleKing/gh-sweep/contents/{+path}","compare_url":"https://api.github.com/repos/KyleKing/gh-sweep/compare/{base}...{head}","merges_url":"https://api.github.com/repos/KyleKing/gh-sweep/merges","archive_url":"https://api.github.com/repos/KyleKing/gh-sweep/{archive_format}{/ref}","downloads_url":"https://api.github.com/repos/KyleKing/gh-sweep/downloads","issues_url":"https://api.github.com/repos/KyleKing/gh-sweep/issues{/number}","pulls_url":"https://api.github.com/repos/KyleKing/gh-sweep/pulls{/number}","milestones_url":"https://api.github.com/repos/KyleKing/gh-sweep/milestones{/number}","notifications_url":"https://api.github.com/repos/KyleKing/gh-sweep/notifications{?since,all,participating}","labels_url":"https://api.github.com/repos/KyleKing/gh-sweep/labels{/name}","releases_url":"https://api.github.com/repos/KyleKing/gh-sweep/releases{/id}","deployments_url":"https://api.github.com/repos/KyleKing/gh-sweep/deployments","created_at":"2025-11-23T04:13:47Z","updated_at":"2026-08-19T04:34:42Z","pushed_at":"2026-08-16T02:43:41Z","git_url":"git://github.com/KyleKing/gh-sweep.git","ssh_url":"git@github.com:KyleKing/gh-sweep.git","clone_url":"https://github.com/KyleKing/gh-sweep.git","svn_url":"https://github.com/KyleKing/gh-sweep","homepage":null,"size":430,"stargazers_count":1,"watchers_count":1,"language":"Go","has_issues":true,"has_projects":false,"has_downloads":false,"has_wiki":true,"has_pages":false,"has_discussions":false,"forks_count":1,"mirror_url":null,"archived":false,"disabled":false,"open_issues_count":2,"license":{"key":"mit","name":"MIT License","spdx_id":"MIT","url":"https://api.github.com/licenses/mit","node_id":"MDc6TGljZW5zZTEz"},"allow_forking":true,"is_template":false,"web_commit_signoff_required":false,"has_pull_requests":true,"pull_request_creation_policy":"all","topics":[],"visibility":"public","forks":1,"open_issues":2,"watchers":1,"default_branch":"main","permissions":{"admin":true,"maintain":true,"push":true,"triage":true,"pull":true},"temp_clone_token":"","allow_squash_merge":true,"allow_merge_commit":true,"allow_rebase_merge":true,"allow_auto_merge":false,"delete_branch_on_merge":false,"allow_update_branch":false,"use_squash_pr_title_as_default":false,"squash_merge_commit_message":"COMMIT_MESSAGES","squash_merge_commit_title":"COMMIT_OR_PR_TITLE","merge_commit_message":"PR_TITLE","merge_commit_title":"MERGE_MESSAGE","security_and_analysis":{"secret_scanning":{"status":"enabled"},"secret_scanning_push_protection":{"status":"enabled"},"dependabot_security_updates":{"status":"disabled"},"secret_scanning_non_provider_patterns":{"status":"disabled"},"secret_scanning_validity_checks":{"status":"disabled"}},"network_count":1,"subscribers_count":0}'
+        headers:
+            Access-Control-Allow-Origin:
+                - '*'
+            Access-Control-Expose-Headers:
+                - ETag, Link, Location, Retry-After, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Used, X-RateLimit-Resource, X-RateLimit-Reset, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval, X-GitHub-Media-Type, X-GitHub-SSO, X-GitHub-Request-Id, Deprecation, Sunset, Warning
+            Cache-Control:
+                - private, max-age=60, s-maxage=60
+            Content-Security-Policy:
+                - default-src 'none'
+            Content-Type:
+                - application/json; charset=utf-8
+            Date:
+                - Wed, 19 Aug 2026 04:34:43 GMT
+            Etag:
+                - W/"4faa696c31094217e5dd7235306b211297d15da0c4602ef80bfa10d2e5b6cc0a"
+            Last-Modified:
+                - Wed, 19 Aug 2026 04:34:42 GMT
+            Referrer-Policy:
+                - origin-when-cross-origin, strict-origin-when-cross-origin
+            Server:
+                - github.com
+            Strict-Transport-Security:
+                - max-age=31536000; includeSubdomains; preload
+            Vary:
+                - Accept, Authorization, Cookie, X-GitHub-OTP,Accept-Encoding, Accept, X-Requested-With
+            X-Accepted-Oauth-Scopes:
+                - repo
+            X-Content-Type-Options:
+                - nosniff
+            X-Frame-Options:
+                - deny
+            X-Github-Api-Version-Selected:
+                - "2022-11-28"
+            X-Github-Edge-Region:
+                - iad
+            X-Github-Media-Type:
+                - github.v3; param=merge-info-preview.nebula-preview; format=json
+            X-Github-Request-Id:
+                - E41D:1337FA:23EC7F1:76F9AEF:6A853262
+            X-Oauth-Client-Id:
+                - 178c6fc778ccc68e1d6a
+            X-Oauth-Scopes:
+                - gist, read:org, repo
+            X-Ratelimit-Limit:
+                - "5000"
+            X-Ratelimit-Remaining:
+                - "4964"
+            X-Ratelimit-Reset:
+                - "1787115107"
+            X-Ratelimit-Resource:
+                - core
+            X-Ratelimit-Used:
+                - "36"
+            X-Xss-Protection:
+                - "0"
+        status: 200 OK
+        code: 200
+        duration: 275.141542ms
+    - id: 3
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 18
+        host: api.github.com
+        body: '{"has_wiki":false}'
+        headers:
+            Accept:
+                - application/vnd.github.merge-info-preview+json, application/vnd.github.nebula-preview
+            Content-Type:
+                - application/json; charset=utf-8
+            Time-Zone:
+                - America/Mexico_City
+            User-Agent:
+                - go-gh
+        url: https://api.github.com/repos/KyleKing/gh-sweep
+        method: PATCH
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"id":1102234541,"node_id":"R_kgDOQbLDrQ","name":"gh-sweep","full_name":"KyleKing/gh-sweep","private":false,"owner":{"login":"KyleKing","id":3784339,"node_id":"MDQ6VXNlcjM3ODQzMzk=","avatar_url":"https://avatars.githubusercontent.com/u/3784339?v=4","gravatar_id":"","url":"https://api.github.com/users/KyleKing","html_url":"https://github.com/KyleKing","followers_url":"https://api.github.com/users/KyleKing/followers","following_url":"https://api.github.com/users/KyleKing/following{/other_user}","gists_url":"https://api.github.com/users/KyleKing/gists{/gist_id}","starred_url":"https://api.github.com/users/KyleKing/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/KyleKing/subscriptions","organizations_url":"https://api.github.com/users/KyleKing/orgs","repos_url":"https://api.github.com/users/KyleKing/repos","events_url":"https://api.github.com/users/KyleKing/events{/privacy}","received_events_url":"https://api.github.com/users/KyleKing/received_events","type":"User","user_view_type":"public","site_admin":false},"html_url":"https://github.com/KyleKing/gh-sweep","description":"A gh cli plugin for a mix of administrative tools (branch pruning, unresolved comment followup, etc.)","fork":false,"url":"https://api.github.com/repos/KyleKing/gh-sweep","forks_url":"https://api.github.com/repos/KyleKing/gh-sweep/forks","keys_url":"https://api.github.com/repos/KyleKing/gh-sweep/keys{/key_id}","collaborators_url":"https://api.github.com/repos/KyleKing/gh-sweep/collaborators{/collaborator}","teams_url":"https://api.github.com/repos/KyleKing/gh-sweep/teams","hooks_url":"https://api.github.com/repos/KyleKing/gh-sweep/hooks","issue_events_url":"https://api.github.com/repos/KyleKing/gh-sweep/issues/events{/number}","events_url":"https://api.github.com/repos/KyleKing/gh-sweep/events","assignees_url":"https://api.github.com/repos/KyleKing/gh-sweep/assignees{/user}","branches_url":"https://api.github.com/repos/KyleKing/gh-sweep/branches{/branch}","tags_url":"https://api.github.com/repos/KyleKing/gh-sweep/tags","blobs_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/blobs{/sha}","git_tags_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/tags{/sha}","git_refs_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/refs{/sha}","trees_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/trees{/sha}","statuses_url":"https://api.github.com/repos/KyleKing/gh-sweep/statuses/{sha}","languages_url":"https://api.github.com/repos/KyleKing/gh-sweep/languages","stargazers_url":"https://api.github.com/repos/KyleKing/gh-sweep/stargazers","contributors_url":"https://api.github.com/repos/KyleKing/gh-sweep/contributors","subscribers_url":"https://api.github.com/repos/KyleKing/gh-sweep/subscribers","subscription_url":"https://api.github.com/repos/KyleKing/gh-sweep/subscription","commits_url":"https://api.github.com/repos/KyleKing/gh-sweep/commits{/sha}","git_commits_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/commits{/sha}","comments_url":"https://api.github.com/repos/KyleKing/gh-sweep/comments{/number}","issue_comment_url":"https://api.github.com/repos/KyleKing/gh-sweep/issues/comments{/number}","contents_url":"https://api.github.com/repos/KyleKing/gh-sweep/contents/{+path}","compare_url":"https://api.github.com/repos/KyleKing/gh-sweep/compare/{base}...{head}","merges_url":"https://api.github.com/repos/KyleKing/gh-sweep/merges","archive_url":"https://api.github.com/repos/KyleKing/gh-sweep/{archive_format}{/ref}","downloads_url":"https://api.github.com/repos/KyleKing/gh-sweep/downloads","issues_url":"https://api.github.com/repos/KyleKing/gh-sweep/issues{/number}","pulls_url":"https://api.github.com/repos/KyleKing/gh-sweep/pulls{/number}","milestones_url":"https://api.github.com/repos/KyleKing/gh-sweep/milestones{/number}","notifications_url":"https://api.github.com/repos/KyleKing/gh-sweep/notifications{?since,all,participating}","labels_url":"https://api.github.com/repos/KyleKing/gh-sweep/labels{/name}","releases_url":"https://api.github.com/repos/KyleKing/gh-sweep/releases{/id}","deployments_url":"https://api.github.com/repos/KyleKing/gh-sweep/deployments","created_at":"2025-11-23T04:13:47Z","updated_at":"2026-08-19T04:34:43Z","pushed_at":"2026-08-16T02:43:41Z","git_url":"git://github.com/KyleKing/gh-sweep.git","ssh_url":"git@github.com:KyleKing/gh-sweep.git","clone_url":"https://github.com/KyleKing/gh-sweep.git","svn_url":"https://github.com/KyleKing/gh-sweep","homepage":null,"size":430,"stargazers_count":1,"watchers_count":1,"language":"Go","has_issues":true,"has_projects":false,"has_downloads":false,"has_wiki":false,"has_pages":false,"has_discussions":false,"forks_count":1,"mirror_url":null,"archived":false,"disabled":false,"open_issues_count":2,"license":{"key":"mit","name":"MIT License","spdx_id":"MIT","url":"https://api.github.com/licenses/mit","node_id":"MDc6TGljZW5zZTEz"},"allow_forking":true,"is_template":false,"web_commit_signoff_required":false,"has_pull_requests":true,"pull_request_creation_policy":"all","topics":[],"visibility":"public","forks":1,"open_issues":2,"watchers":1,"default_branch":"main","permissions":{"admin":true,"maintain":true,"push":true,"triage":true,"pull":true},"allow_squash_merge":true,"allow_merge_commit":true,"allow_rebase_merge":true,"allow_auto_merge":false,"delete_branch_on_merge":false,"allow_update_branch":false,"use_squash_pr_title_as_default":false,"squash_merge_commit_message":"COMMIT_MESSAGES","squash_merge_commit_title":"COMMIT_OR_PR_TITLE","merge_commit_message":"PR_TITLE","merge_commit_title":"MERGE_MESSAGE","security_and_analysis":{"secret_scanning":{"status":"enabled"},"secret_scanning_push_protection":{"status":"enabled"},"dependabot_security_updates":{"status":"disabled"},"secret_scanning_non_provider_patterns":{"status":"disabled"},"secret_scanning_validity_checks":{"status":"disabled"}},"network_count":1,"subscribers_count":0}'
+        headers:
+            Access-Control-Allow-Origin:
+                - '*'
+            Access-Control-Expose-Headers:
+                - ETag, Link, Location, Retry-After, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Used, X-RateLimit-Resource, X-RateLimit-Reset, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval, X-GitHub-Media-Type, X-GitHub-SSO, X-GitHub-Request-Id, Deprecation, Sunset, Warning
+            Cache-Control:
+                - private, max-age=60, s-maxage=60
+            Content-Security-Policy:
+                - default-src 'none'
+            Content-Type:
+                - application/json; charset=utf-8
+            Date:
+                - Wed, 19 Aug 2026 04:34:43 GMT
+            Etag:
+                - W/"6cb55d33f5706d4c9d8f6c228ad68d589fca87a0c16bffcb1090eb5ff1094a62"
+            Referrer-Policy:
+                - origin-when-cross-origin, strict-origin-when-cross-origin
+            Server:
+                - github.com
+            Strict-Transport-Security:
+                - max-age=31536000; includeSubdomains; preload
+            Vary:
+                - Accept, Authorization, Cookie, X-GitHub-OTP,Accept-Encoding, Accept, X-Requested-With
+            X-Accepted-Oauth-Scopes:
+                - ""
+            X-Content-Type-Options:
+                - nosniff
+            X-Frame-Options:
+                - deny
+            X-Github-Api-Version-Selected:
+                - "2022-11-28"
+            X-Github-Edge-Region:
+                - iad
+            X-Github-Media-Type:
+                - github.v3; param=merge-info-preview.nebula-preview; format=json
+            X-Github-Request-Id:
+                - E41D:1337FA:23ECC8C:76FAA62:6A853263
+            X-Oauth-Client-Id:
+                - 178c6fc778ccc68e1d6a
+            X-Oauth-Scopes:
+                - gist, read:org, repo
+            X-Ratelimit-Limit:
+                - "5000"
+            X-Ratelimit-Remaining:
+                - "4963"
+            X-Ratelimit-Reset:
+                - "1787115107"
+            X-Ratelimit-Resource:
+                - core
+            X-Ratelimit-Used:
+                - "37"
+            X-Xss-Protection:
+                - "0"
+        status: 200 OK
+        code: 200
+        duration: 552.8725ms
+    - id: 4
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: api.github.com
+        headers:
+            Accept:
+                - application/vnd.github.merge-info-preview+json, application/vnd.github.nebula-preview
+            Content-Type:
+                - application/json; charset=utf-8
+            Time-Zone:
+                - America/Mexico_City
+            User-Agent:
+                - go-gh
+        url: https://api.github.com/repos/KyleKing/gh-sweep
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"id":1102234541,"node_id":"R_kgDOQbLDrQ","name":"gh-sweep","full_name":"KyleKing/gh-sweep","private":false,"owner":{"login":"KyleKing","id":3784339,"node_id":"MDQ6VXNlcjM3ODQzMzk=","avatar_url":"https://avatars.githubusercontent.com/u/3784339?v=4","gravatar_id":"","url":"https://api.github.com/users/KyleKing","html_url":"https://github.com/KyleKing","followers_url":"https://api.github.com/users/KyleKing/followers","following_url":"https://api.github.com/users/KyleKing/following{/other_user}","gists_url":"https://api.github.com/users/KyleKing/gists{/gist_id}","starred_url":"https://api.github.com/users/KyleKing/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/KyleKing/subscriptions","organizations_url":"https://api.github.com/users/KyleKing/orgs","repos_url":"https://api.github.com/users/KyleKing/repos","events_url":"https://api.github.com/users/KyleKing/events{/privacy}","received_events_url":"https://api.github.com/users/KyleKing/received_events","type":"User","user_view_type":"public","site_admin":false},"html_url":"https://github.com/KyleKing/gh-sweep","description":"A gh cli plugin for a mix of administrative tools (branch pruning, unresolved comment followup, etc.)","fork":false,"url":"https://api.github.com/repos/KyleKing/gh-sweep","forks_url":"https://api.github.com/repos/KyleKing/gh-sweep/forks","keys_url":"https://api.github.com/repos/KyleKing/gh-sweep/keys{/key_id}","collaborators_url":"https://api.github.com/repos/KyleKing/gh-sweep/collaborators{/collaborator}","teams_url":"https://api.github.com/repos/KyleKing/gh-sweep/teams","hooks_url":"https://api.github.com/repos/KyleKing/gh-sweep/hooks","issue_events_url":"https://api.github.com/repos/KyleKing/gh-sweep/issues/events{/number}","events_url":"https://api.github.com/repos/KyleKing/gh-sweep/events","assignees_url":"https://api.github.com/repos/KyleKing/gh-sweep/assignees{/user}","branches_url":"https://api.github.com/repos/KyleKing/gh-sweep/branches{/branch}","tags_url":"https://api.github.com/repos/KyleKing/gh-sweep/tags","blobs_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/blobs{/sha}","git_tags_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/tags{/sha}","git_refs_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/refs{/sha}","trees_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/trees{/sha}","statuses_url":"https://api.github.com/repos/KyleKing/gh-sweep/statuses/{sha}","languages_url":"https://api.github.com/repos/KyleKing/gh-sweep/languages","stargazers_url":"https://api.github.com/repos/KyleKing/gh-sweep/stargazers","contributors_url":"https://api.github.com/repos/KyleKing/gh-sweep/contributors","subscribers_url":"https://api.github.com/repos/KyleKing/gh-sweep/subscribers","subscription_url":"https://api.github.com/repos/KyleKing/gh-sweep/subscription","commits_url":"https://api.github.com/repos/KyleKing/gh-sweep/commits{/sha}","git_commits_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/commits{/sha}","comments_url":"https://api.github.com/repos/KyleKing/gh-sweep/comments{/number}","issue_comment_url":"https://api.github.com/repos/KyleKing/gh-sweep/issues/comments{/number}","contents_url":"https://api.github.com/repos/KyleKing/gh-sweep/contents/{+path}","compare_url":"https://api.github.com/repos/KyleKing/gh-sweep/compare/{base}...{head}","merges_url":"https://api.github.com/repos/KyleKing/gh-sweep/merges","archive_url":"https://api.github.com/repos/KyleKing/gh-sweep/{archive_format}{/ref}","downloads_url":"https://api.github.com/repos/KyleKing/gh-sweep/downloads","issues_url":"https://api.github.com/repos/KyleKing/gh-sweep/issues{/number}","pulls_url":"https://api.github.com/repos/KyleKing/gh-sweep/pulls{/number}","milestones_url":"https://api.github.com/repos/KyleKing/gh-sweep/milestones{/number}","notifications_url":"https://api.github.com/repos/KyleKing/gh-sweep/notifications{?since,all,participating}","labels_url":"https://api.github.com/repos/KyleKing/gh-sweep/labels{/name}","releases_url":"https://api.github.com/repos/KyleKing/gh-sweep/releases{/id}","deployments_url":"https://api.github.com/repos/KyleKing/gh-sweep/deployments","created_at":"2025-11-23T04:13:47Z","updated_at":"2026-08-19T04:34:43Z","pushed_at":"2026-08-16T02:43:41Z","git_url":"git://github.com/KyleKing/gh-sweep.git","ssh_url":"git@github.com:KyleKing/gh-sweep.git","clone_url":"https://github.com/KyleKing/gh-sweep.git","svn_url":"https://github.com/KyleKing/gh-sweep","homepage":null,"size":430,"stargazers_count":1,"watchers_count":1,"language":"Go","has_issues":true,"has_projects":false,"has_downloads":false,"has_wiki":false,"has_pages":false,"has_discussions":false,"forks_count":1,"mirror_url":null,"archived":false,"disabled":false,"open_issues_count":2,"license":{"key":"mit","name":"MIT License","spdx_id":"MIT","url":"https://api.github.com/licenses/mit","node_id":"MDc6TGljZW5zZTEz"},"allow_forking":true,"is_template":false,"web_commit_signoff_required":false,"has_pull_requests":true,"pull_request_creation_policy":"all","topics":[],"visibility":"public","forks":1,"open_issues":2,"watchers":1,"default_branch":"main","permissions":{"admin":true,"maintain":true,"push":true,"triage":true,"pull":true},"temp_clone_token":"","allow_squash_merge":true,"allow_merge_commit":true,"allow_rebase_merge":true,"allow_auto_merge":false,"delete_branch_on_merge":false,"allow_update_branch":false,"use_squash_pr_title_as_default":false,"squash_merge_commit_message":"COMMIT_MESSAGES","squash_merge_commit_title":"COMMIT_OR_PR_TITLE","merge_commit_message":"PR_TITLE","merge_commit_title":"MERGE_MESSAGE","security_and_analysis":{"secret_scanning":{"status":"enabled"},"secret_scanning_push_protection":{"status":"enabled"},"dependabot_security_updates":{"status":"disabled"},"secret_scanning_non_provider_patterns":{"status":"disabled"},"secret_scanning_validity_checks":{"status":"disabled"}},"network_count":1,"subscribers_count":0}'
+        headers:
+            Access-Control-Allow-Origin:
+                - '*'
+            Access-Control-Expose-Headers:
+                - ETag, Link, Location, Retry-After, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Used, X-RateLimit-Resource, X-RateLimit-Reset, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval, X-GitHub-Media-Type, X-GitHub-SSO, X-GitHub-Request-Id, Deprecation, Sunset, Warning
+            Cache-Control:
+                - private, max-age=60, s-maxage=60
+            Content-Security-Policy:
+                - default-src 'none'
+            Content-Type:
+                - application/json; charset=utf-8
+            Date:
+                - Wed, 19 Aug 2026 04:34:44 GMT
+            Etag:
+                - W/"a8c07ce60ff845072742c3a73e90ded8b5c10a3c6b72b734e8d725106aaafa63"
+            Last-Modified:
+                - Wed, 19 Aug 2026 04:34:43 GMT
+            Referrer-Policy:
+                - origin-when-cross-origin, strict-origin-when-cross-origin
+            Server:
+                - github.com
+            Strict-Transport-Security:
+                - max-age=31536000; includeSubdomains; preload
+            Vary:
+                - Accept, Authorization, Cookie, X-GitHub-OTP,Accept-Encoding, Accept, X-Requested-With
+            X-Accepted-Oauth-Scopes:
+                - repo
+            X-Content-Type-Options:
+                - nosniff
+            X-Frame-Options:
+                - deny
+            X-Github-Api-Version-Selected:
+                - "2022-11-28"
+            X-Github-Edge-Region:
+                - iad
+            X-Github-Media-Type:
+                - github.v3; param=merge-info-preview.nebula-preview; format=json
+            X-Github-Request-Id:
+                - E41D:1337FA:23ED583:76FC7E8:6A853263
+            X-Oauth-Client-Id:
+                - 178c6fc778ccc68e1d6a
+            X-Oauth-Scopes:
+                - gist, read:org, repo
+            X-Ratelimit-Limit:
+                - "5000"
+            X-Ratelimit-Remaining:
+                - "4962"
+            X-Ratelimit-Reset:
+                - "1787115107"
+            X-Ratelimit-Resource:
+                - core
+            X-Ratelimit-Used:
+                - "38"
+            X-Xss-Protection:
+                - "0"
+        status: 200 OK
+        code: 200
+        duration: 331.438083ms
+    - id: 5
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 83
+        host: api.github.com
+        body: '{"security_and_analysis":{"secret_scanning_push_protection":{"status":"disabled"}}}'
+        headers:
+            Accept:
+                - application/vnd.github.merge-info-preview+json, application/vnd.github.nebula-preview
+            Content-Type:
+                - application/json; charset=utf-8
+            Time-Zone:
+                - America/Mexico_City
+            User-Agent:
+                - go-gh
+        url: https://api.github.com/repos/KyleKing/gh-sweep
+        method: PATCH
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"id":1102234541,"node_id":"R_kgDOQbLDrQ","name":"gh-sweep","full_name":"KyleKing/gh-sweep","private":false,"owner":{"login":"KyleKing","id":3784339,"node_id":"MDQ6VXNlcjM3ODQzMzk=","avatar_url":"https://avatars.githubusercontent.com/u/3784339?v=4","gravatar_id":"","url":"https://api.github.com/users/KyleKing","html_url":"https://github.com/KyleKing","followers_url":"https://api.github.com/users/KyleKing/followers","following_url":"https://api.github.com/users/KyleKing/following{/other_user}","gists_url":"https://api.github.com/users/KyleKing/gists{/gist_id}","starred_url":"https://api.github.com/users/KyleKing/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/KyleKing/subscriptions","organizations_url":"https://api.github.com/users/KyleKing/orgs","repos_url":"https://api.github.com/users/KyleKing/repos","events_url":"https://api.github.com/users/KyleKing/events{/privacy}","received_events_url":"https://api.github.com/users/KyleKing/received_events","type":"User","user_view_type":"public","site_admin":false},"html_url":"https://github.com/KyleKing/gh-sweep","description":"A gh cli plugin for a mix of administrative tools (branch pruning, unresolved comment followup, etc.)","fork":false,"url":"https://api.github.com/repos/KyleKing/gh-sweep","forks_url":"https://api.github.com/repos/KyleKing/gh-sweep/forks","keys_url":"https://api.github.com/repos/KyleKing/gh-sweep/keys{/key_id}","collaborators_url":"https://api.github.com/repos/KyleKing/gh-sweep/collaborators{/collaborator}","teams_url":"https://api.github.com/repos/KyleKing/gh-sweep/teams","hooks_url":"https://api.github.com/repos/KyleKing/gh-sweep/hooks","issue_events_url":"https://api.github.com/repos/KyleKing/gh-sweep/issues/events{/number}","events_url":"https://api.github.com/repos/KyleKing/gh-sweep/events","assignees_url":"https://api.github.com/repos/KyleKing/gh-sweep/assignees{/user}","branches_url":"https://api.github.com/repos/KyleKing/gh-sweep/branches{/branch}","tags_url":"https://api.github.com/repos/KyleKing/gh-sweep/tags","blobs_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/blobs{/sha}","git_tags_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/tags{/sha}","git_refs_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/refs{/sha}","trees_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/trees{/sha}","statuses_url":"https://api.github.com/repos/KyleKing/gh-sweep/statuses/{sha}","languages_url":"https://api.github.com/repos/KyleKing/gh-sweep/languages","stargazers_url":"https://api.github.com/repos/KyleKing/gh-sweep/stargazers","contributors_url":"https://api.github.com/repos/KyleKing/gh-sweep/contributors","subscribers_url":"https://api.github.com/repos/KyleKing/gh-sweep/subscribers","subscription_url":"https://api.github.com/repos/KyleKing/gh-sweep/subscription","commits_url":"https://api.github.com/repos/KyleKing/gh-sweep/commits{/sha}","git_commits_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/commits{/sha}","comments_url":"https://api.github.com/repos/KyleKing/gh-sweep/comments{/number}","issue_comment_url":"https://api.github.com/repos/KyleKing/gh-sweep/issues/comments{/number}","contents_url":"https://api.github.com/repos/KyleKing/gh-sweep/contents/{+path}","compare_url":"https://api.github.com/repos/KyleKing/gh-sweep/compare/{base}...{head}","merges_url":"https://api.github.com/repos/KyleKing/gh-sweep/merges","archive_url":"https://api.github.com/repos/KyleKing/gh-sweep/{archive_format}{/ref}","downloads_url":"https://api.github.com/repos/KyleKing/gh-sweep/downloads","issues_url":"https://api.github.com/repos/KyleKing/gh-sweep/issues{/number}","pulls_url":"https://api.github.com/repos/KyleKing/gh-sweep/pulls{/number}","milestones_url":"https://api.github.com/repos/KyleKing/gh-sweep/milestones{/number}","notifications_url":"https://api.github.com/repos/KyleKing/gh-sweep/notifications{?since,all,participating}","labels_url":"https://api.github.com/repos/KyleKing/gh-sweep/labels{/name}","releases_url":"https://api.github.com/repos/KyleKing/gh-sweep/releases{/id}","deployments_url":"https://api.github.com/repos/KyleKing/gh-sweep/deployments","created_at":"2025-11-23T04:13:47Z","updated_at":"2026-08-19T04:34:43Z","pushed_at":"2026-08-16T02:43:41Z","git_url":"git://github.com/KyleKing/gh-sweep.git","ssh_url":"git@github.com:KyleKing/gh-sweep.git","clone_url":"https://github.com/KyleKing/gh-sweep.git","svn_url":"https://github.com/KyleKing/gh-sweep","homepage":null,"size":430,"stargazers_count":1,"watchers_count":1,"language":"Go","has_issues":true,"has_projects":false,"has_downloads":false,"has_wiki":false,"has_pages":false,"has_discussions":false,"forks_count":1,"mirror_url":null,"archived":false,"disabled":false,"open_issues_count":2,"license":{"key":"mit","name":"MIT License","spdx_id":"MIT","url":"https://api.github.com/licenses/mit","node_id":"MDc6TGljZW5zZTEz"},"allow_forking":true,"is_template":false,"web_commit_signoff_required":false,"has_pull_requests":true,"pull_request_creation_policy":"all","topics":[],"visibility":"public","forks":1,"open_issues":2,"watchers":1,"default_branch":"main","permissions":{"admin":true,"maintain":true,"push":true,"triage":true,"pull":true},"allow_squash_merge":true,"allow_merge_commit":true,"allow_rebase_merge":true,"allow_auto_merge":false,"delete_branch_on_merge":false,"allow_update_branch":false,"use_squash_pr_title_as_default":false,"squash_merge_commit_message":"COMMIT_MESSAGES","squash_merge_commit_title":"COMMIT_OR_PR_TITLE","merge_commit_message":"PR_TITLE","merge_commit_title":"MERGE_MESSAGE","security_and_analysis":{"secret_scanning":{"status":"enabled"},"secret_scanning_push_protection":{"status":"disabled"},"dependabot_security_updates":{"status":"disabled"},"secret_scanning_non_provider_patterns":{"status":"disabled"},"secret_scanning_validity_checks":{"status":"disabled"}},"network_count":1,"subscribers_count":0}'
+        headers:
+            Access-Control-Allow-Origin:
+                - '*'
+            Access-Control-Expose-Headers:
+                - ETag, Link, Location, Retry-After, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Used, X-RateLimit-Resource, X-RateLimit-Reset, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval, X-GitHub-Media-Type, X-GitHub-SSO, X-GitHub-Request-Id, Deprecation, Sunset, Warning
+            Cache-Control:
+                - private, max-age=60, s-maxage=60
+            Content-Security-Policy:
+                - default-src 'none'
+            Content-Type:
+                - application/json; charset=utf-8
+            Date:
+                - Wed, 19 Aug 2026 04:34:45 GMT
+            Etag:
+                - W/"6577c3cd4e5ec7178b6a0713f0cdcf43c4bfcf06a98b5bce2693f5b5da84618a"
+            Referrer-Policy:
+                - origin-when-cross-origin, strict-origin-when-cross-origin
+            Server:
+                - github.com
+            Strict-Transport-Security:
+                - max-age=31536000; includeSubdomains; preload
+            Vary:
+                - Accept, Authorization, Cookie, X-GitHub-OTP,Accept-Encoding, Accept, X-Requested-With
+            X-Accepted-Oauth-Scopes:
+                - repo
+            X-Content-Type-Options:
+                - nosniff
+            X-Frame-Options:
+                - deny
+            X-Github-Api-Version-Selected:
+                - "2022-11-28"
+            X-Github-Edge-Region:
+                - iad
+            X-Github-Media-Type:
+                - github.v3; param=merge-info-preview.nebula-preview; format=json
+            X-Github-Request-Id:
+                - E41D:1337FA:23EDA87:76FD86A:6A853264
+            X-Oauth-Client-Id:
+                - 178c6fc778ccc68e1d6a
+            X-Oauth-Scopes:
+                - gist, read:org, repo
+            X-Ratelimit-Limit:
+                - "5000"
+            X-Ratelimit-Remaining:
+                - "4961"
+            X-Ratelimit-Reset:
+                - "1787115107"
+            X-Ratelimit-Resource:
+                - core
+            X-Ratelimit-Used:
+                - "39"
+            X-Xss-Protection:
+                - "0"
+        status: 200 OK
+        code: 200
+        duration: 397.28375ms
+    - id: 6
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: api.github.com
+        headers:
+            Accept:
+                - application/vnd.github.merge-info-preview+json, application/vnd.github.nebula-preview
+            Content-Type:
+                - application/json; charset=utf-8
+            Time-Zone:
+                - America/Mexico_City
+            User-Agent:
+                - go-gh
+        url: https://api.github.com/repos/KyleKing/gh-sweep
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"id":1102234541,"node_id":"R_kgDOQbLDrQ","name":"gh-sweep","full_name":"KyleKing/gh-sweep","private":false,"owner":{"login":"KyleKing","id":3784339,"node_id":"MDQ6VXNlcjM3ODQzMzk=","avatar_url":"https://avatars.githubusercontent.com/u/3784339?v=4","gravatar_id":"","url":"https://api.github.com/users/KyleKing","html_url":"https://github.com/KyleKing","followers_url":"https://api.github.com/users/KyleKing/followers","following_url":"https://api.github.com/users/KyleKing/following{/other_user}","gists_url":"https://api.github.com/users/KyleKing/gists{/gist_id}","starred_url":"https://api.github.com/users/KyleKing/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/KyleKing/subscriptions","organizations_url":"https://api.github.com/users/KyleKing/orgs","repos_url":"https://api.github.com/users/KyleKing/repos","events_url":"https://api.github.com/users/KyleKing/events{/privacy}","received_events_url":"https://api.github.com/users/KyleKing/received_events","type":"User","user_view_type":"public","site_admin":false},"html_url":"https://github.com/KyleKing/gh-sweep","description":"A gh cli plugin for a mix of administrative tools (branch pruning, unresolved comment followup, etc.)","fork":false,"url":"https://api.github.com/repos/KyleKing/gh-sweep","forks_url":"https://api.github.com/repos/KyleKing/gh-sweep/forks","keys_url":"https://api.github.com/repos/KyleKing/gh-sweep/keys{/key_id}","collaborators_url":"https://api.github.com/repos/KyleKing/gh-sweep/collaborators{/collaborator}","teams_url":"https://api.github.com/repos/KyleKing/gh-sweep/teams","hooks_url":"https://api.github.com/repos/KyleKing/gh-sweep/hooks","issue_events_url":"https://api.github.com/repos/KyleKing/gh-sweep/issues/events{/number}","events_url":"https://api.github.com/repos/KyleKing/gh-sweep/events","assignees_url":"https://api.github.com/repos/KyleKing/gh-sweep/assignees{/user}","branches_url":"https://api.github.com/repos/KyleKing/gh-sweep/branches{/branch}","tags_url":"https://api.github.com/repos/KyleKing/gh-sweep/tags","blobs_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/blobs{/sha}","git_tags_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/tags{/sha}","git_refs_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/refs{/sha}","trees_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/trees{/sha}","statuses_url":"https://api.github.com/repos/KyleKing/gh-sweep/statuses/{sha}","languages_url":"https://api.github.com/repos/KyleKing/gh-sweep/languages","stargazers_url":"https://api.github.com/repos/KyleKing/gh-sweep/stargazers","contributors_url":"https://api.github.com/repos/KyleKing/gh-sweep/contributors","subscribers_url":"https://api.github.com/repos/KyleKing/gh-sweep/subscribers","subscription_url":"https://api.github.com/repos/KyleKing/gh-sweep/subscription","commits_url":"https://api.github.com/repos/KyleKing/gh-sweep/commits{/sha}","git_commits_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/commits{/sha}","comments_url":"https://api.github.com/repos/KyleKing/gh-sweep/comments{/number}","issue_comment_url":"https://api.github.com/repos/KyleKing/gh-sweep/issues/comments{/number}","contents_url":"https://api.github.com/repos/KyleKing/gh-sweep/contents/{+path}","compare_url":"https://api.github.com/repos/KyleKing/gh-sweep/compare/{base}...{head}","merges_url":"https://api.github.com/repos/KyleKing/gh-sweep/merges","archive_url":"https://api.github.com/repos/KyleKing/gh-sweep/{archive_format}{/ref}","downloads_url":"https://api.github.com/repos/KyleKing/gh-sweep/downloads","issues_url":"https://api.github.com/repos/KyleKing/gh-sweep/issues{/number}","pulls_url":"https://api.github.com/repos/KyleKing/gh-sweep/pulls{/number}","milestones_url":"https://api.github.com/repos/KyleKing/gh-sweep/milestones{/number}","notifications_url":"https://api.github.com/repos/KyleKing/gh-sweep/notifications{?since,all,participating}","labels_url":"https://api.github.com/repos/KyleKing/gh-sweep/labels{/name}","releases_url":"https://api.github.com/repos/KyleKing/gh-sweep/releases{/id}","deployments_url":"https://api.github.com/repos/KyleKing/gh-sweep/deployments","created_at":"2025-11-23T04:13:47Z","updated_at":"2026-08-19T04:34:43Z","pushed_at":"2026-08-16T02:43:41Z","git_url":"git://github.com/KyleKing/gh-sweep.git","ssh_url":"git@github.com:KyleKing/gh-sweep.git","clone_url":"https://github.com/KyleKing/gh-sweep.git","svn_url":"https://github.com/KyleKing/gh-sweep","homepage":null,"size":430,"stargazers_count":1,"watchers_count":1,"language":"Go","has_issues":true,"has_projects":false,"has_downloads":false,"has_wiki":false,"has_pages":false,"has_discussions":false,"forks_count":1,"mirror_url":null,"archived":false,"disabled":false,"open_issues_count":2,"license":{"key":"mit","name":"MIT License","spdx_id":"MIT","url":"https://api.github.com/licenses/mit","node_id":"MDc6TGljZW5zZTEz"},"allow_forking":true,"is_template":false,"web_commit_signoff_required":false,"has_pull_requests":true,"pull_request_creation_policy":"all","topics":[],"visibility":"public","forks":1,"open_issues":2,"watchers":1,"default_branch":"main","permissions":{"admin":true,"maintain":true,"push":true,"triage":true,"pull":true},"temp_clone_token":"","allow_squash_merge":true,"allow_merge_commit":true,"allow_rebase_merge":true,"allow_auto_merge":false,"delete_branch_on_merge":false,"allow_update_branch":false,"use_squash_pr_title_as_default":false,"squash_merge_commit_message":"COMMIT_MESSAGES","squash_merge_commit_title":"COMMIT_OR_PR_TITLE","merge_commit_message":"PR_TITLE","merge_commit_title":"MERGE_MESSAGE","security_and_analysis":{"secret_scanning":{"status":"enabled"},"secret_scanning_push_protection":{"status":"disabled"},"dependabot_security_updates":{"status":"disabled"},"secret_scanning_non_provider_patterns":{"status":"disabled"},"secret_scanning_validity_checks":{"status":"disabled"}},"network_count":1,"subscribers_count":0}'
+        headers:
+            Access-Control-Allow-Origin:
+                - '*'
+            Access-Control-Expose-Headers:
+                - ETag, Link, Location, Retry-After, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Used, X-RateLimit-Resource, X-RateLimit-Reset, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval, X-GitHub-Media-Type, X-GitHub-SSO, X-GitHub-Request-Id, Deprecation, Sunset, Warning
+            Cache-Control:
+                - private, max-age=60, s-maxage=60
+            Content-Security-Policy:
+                - default-src 'none'
+            Content-Type:
+                - application/json; charset=utf-8
+            Date:
+                - Wed, 19 Aug 2026 04:34:46 GMT
+            Etag:
+                - W/"756b78e78488532bd9eaef14a2f2ebbd62dbd3424b66db11ea59b9fb18f9ac47"
+            Last-Modified:
+                - Wed, 19 Aug 2026 04:34:43 GMT
+            Referrer-Policy:
+                - origin-when-cross-origin, strict-origin-when-cross-origin
+            Server:
+                - github.com
+            Strict-Transport-Security:
+                - max-age=31536000; includeSubdomains; preload
+            Vary:
+                - Accept, Authorization, Cookie, X-GitHub-OTP,Accept-Encoding, Accept, X-Requested-With
+            X-Accepted-Oauth-Scopes:
+                - repo
+            X-Content-Type-Options:
+                - nosniff
+            X-Frame-Options:
+                - deny
+            X-Github-Api-Version-Selected:
+                - "2022-11-28"
+            X-Github-Edge-Region:
+                - iad
+            X-Github-Media-Type:
+                - github.v3; param=merge-info-preview.nebula-preview; format=json
+            X-Github-Request-Id:
+                - E41D:1337FA:23EE0BF:76FED9F:6A853265
+            X-Oauth-Client-Id:
+                - 178c6fc778ccc68e1d6a
+            X-Oauth-Scopes:
+                - gist, read:org, repo
+            X-Ratelimit-Limit:
+                - "5000"
+            X-Ratelimit-Remaining:
+                - "4960"
+            X-Ratelimit-Reset:
+                - "1787115107"
+            X-Ratelimit-Resource:
+                - core
+            X-Ratelimit-Used:
+                - "40"
+            X-Xss-Protection:
+                - "0"
+        status: 200 OK
+        code: 200
+        duration: 329.068542ms
+    - id: 7
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 82
+        host: api.github.com
+        body: '{"security_and_analysis":{"secret_scanning_push_protection":{"status":"enabled"}}}'
+        headers:
+            Accept:
+                - application/vnd.github.merge-info-preview+json, application/vnd.github.nebula-preview
+            Content-Type:
+                - application/json; charset=utf-8
+            Time-Zone:
+                - America/Mexico_City
+            User-Agent:
+                - go-gh
+        url: https://api.github.com/repos/KyleKing/gh-sweep
+        method: PATCH
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"id":1102234541,"node_id":"R_kgDOQbLDrQ","name":"gh-sweep","full_name":"KyleKing/gh-sweep","private":false,"owner":{"login":"KyleKing","id":3784339,"node_id":"MDQ6VXNlcjM3ODQzMzk=","avatar_url":"https://avatars.githubusercontent.com/u/3784339?v=4","gravatar_id":"","url":"https://api.github.com/users/KyleKing","html_url":"https://github.com/KyleKing","followers_url":"https://api.github.com/users/KyleKing/followers","following_url":"https://api.github.com/users/KyleKing/following{/other_user}","gists_url":"https://api.github.com/users/KyleKing/gists{/gist_id}","starred_url":"https://api.github.com/users/KyleKing/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/KyleKing/subscriptions","organizations_url":"https://api.github.com/users/KyleKing/orgs","repos_url":"https://api.github.com/users/KyleKing/repos","events_url":"https://api.github.com/users/KyleKing/events{/privacy}","received_events_url":"https://api.github.com/users/KyleKing/received_events","type":"User","user_view_type":"public","site_admin":false},"html_url":"https://github.com/KyleKing/gh-sweep","description":"A gh cli plugin for a mix of administrative tools (branch pruning, unresolved comment followup, etc.)","fork":false,"url":"https://api.github.com/repos/KyleKing/gh-sweep","forks_url":"https://api.github.com/repos/KyleKing/gh-sweep/forks","keys_url":"https://api.github.com/repos/KyleKing/gh-sweep/keys{/key_id}","collaborators_url":"https://api.github.com/repos/KyleKing/gh-sweep/collaborators{/collaborator}","teams_url":"https://api.github.com/repos/KyleKing/gh-sweep/teams","hooks_url":"https://api.github.com/repos/KyleKing/gh-sweep/hooks","issue_events_url":"https://api.github.com/repos/KyleKing/gh-sweep/issues/events{/number}","events_url":"https://api.github.com/repos/KyleKing/gh-sweep/events","assignees_url":"https://api.github.com/repos/KyleKing/gh-sweep/assignees{/user}","branches_url":"https://api.github.com/repos/KyleKing/gh-sweep/branches{/branch}","tags_url":"https://api.github.com/repos/KyleKing/gh-sweep/tags","blobs_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/blobs{/sha}","git_tags_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/tags{/sha}","git_refs_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/refs{/sha}","trees_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/trees{/sha}","statuses_url":"https://api.github.com/repos/KyleKing/gh-sweep/statuses/{sha}","languages_url":"https://api.github.com/repos/KyleKing/gh-sweep/languages","stargazers_url":"https://api.github.com/repos/KyleKing/gh-sweep/stargazers","contributors_url":"https://api.github.com/repos/KyleKing/gh-sweep/contributors","subscribers_url":"https://api.github.com/repos/KyleKing/gh-sweep/subscribers","subscription_url":"https://api.github.com/repos/KyleKing/gh-sweep/subscription","commits_url":"https://api.github.com/repos/KyleKing/gh-sweep/commits{/sha}","git_commits_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/commits{/sha}","comments_url":"https://api.github.com/repos/KyleKing/gh-sweep/comments{/number}","issue_comment_url":"https://api.github.com/repos/KyleKing/gh-sweep/issues/comments{/number}","contents_url":"https://api.github.com/repos/KyleKing/gh-sweep/contents/{+path}","compare_url":"https://api.github.com/repos/KyleKing/gh-sweep/compare/{base}...{head}","merges_url":"https://api.github.com/repos/KyleKing/gh-sweep/merges","archive_url":"https://api.github.com/repos/KyleKing/gh-sweep/{archive_format}{/ref}","downloads_url":"https://api.github.com/repos/KyleKing/gh-sweep/downloads","issues_url":"https://api.github.com/repos/KyleKing/gh-sweep/issues{/number}","pulls_url":"https://api.github.com/repos/KyleKing/gh-sweep/pulls{/number}","milestones_url":"https://api.github.com/repos/KyleKing/gh-sweep/milestones{/number}","notifications_url":"https://api.github.com/repos/KyleKing/gh-sweep/notifications{?since,all,participating}","labels_url":"https://api.github.com/repos/KyleKing/gh-sweep/labels{/name}","releases_url":"https://api.github.com/repos/KyleKing/gh-sweep/releases{/id}","deployments_url":"https://api.github.com/repos/KyleKing/gh-sweep/deployments","created_at":"2025-11-23T04:13:47Z","updated_at":"2026-08-19T04:34:43Z","pushed_at":"2026-08-16T02:43:41Z","git_url":"git://github.com/KyleKing/gh-sweep.git","ssh_url":"git@github.com:KyleKing/gh-sweep.git","clone_url":"https://github.com/KyleKing/gh-sweep.git","svn_url":"https://github.com/KyleKing/gh-sweep","homepage":null,"size":430,"stargazers_count":1,"watchers_count":1,"language":"Go","has_issues":true,"has_projects":false,"has_downloads":false,"has_wiki":false,"has_pages":false,"has_discussions":false,"forks_count":1,"mirror_url":null,"archived":false,"disabled":false,"open_issues_count":2,"license":{"key":"mit","name":"MIT License","spdx_id":"MIT","url":"https://api.github.com/licenses/mit","node_id":"MDc6TGljZW5zZTEz"},"allow_forking":true,"is_template":false,"web_commit_signoff_required":false,"has_pull_requests":true,"pull_request_creation_policy":"all","topics":[],"visibility":"public","forks":1,"open_issues":2,"watchers":1,"default_branch":"main","permissions":{"admin":true,"maintain":true,"push":true,"triage":true,"pull":true},"allow_squash_merge":true,"allow_merge_commit":true,"allow_rebase_merge":true,"allow_auto_merge":false,"delete_branch_on_merge":false,"allow_update_branch":false,"use_squash_pr_title_as_default":false,"squash_merge_commit_message":"COMMIT_MESSAGES","squash_merge_commit_title":"COMMIT_OR_PR_TITLE","merge_commit_message":"PR_TITLE","merge_commit_title":"MERGE_MESSAGE","security_and_analysis":{"secret_scanning":{"status":"enabled"},"secret_scanning_push_protection":{"status":"enabled"},"dependabot_security_updates":{"status":"disabled"},"secret_scanning_non_provider_patterns":{"status":"disabled"},"secret_scanning_validity_checks":{"status":"disabled"}},"network_count":1,"subscribers_count":0}'
+        headers:
+            Access-Control-Allow-Origin:
+                - '*'
+            Access-Control-Expose-Headers:
+                - ETag, Link, Location, Retry-After, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Used, X-RateLimit-Resource, X-RateLimit-Reset, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval, X-GitHub-Media-Type, X-GitHub-SSO, X-GitHub-Request-Id, Deprecation, Sunset, Warning
+            Cache-Control:
+                - private, max-age=60, s-maxage=60
+            Content-Security-Policy:
+                - default-src 'none'
+            Content-Type:
+                - application/json; charset=utf-8
+            Date:
+                - Wed, 19 Aug 2026 04:34:47 GMT
+            Etag:
+                - W/"6cb55d33f5706d4c9d8f6c228ad68d589fca87a0c16bffcb1090eb5ff1094a62"
+            Referrer-Policy:
+                - origin-when-cross-origin, strict-origin-when-cross-origin
+            Server:
+                - github.com
+            Strict-Transport-Security:
+                - max-age=31536000; includeSubdomains; preload
+            Vary:
+                - Accept, Authorization, Cookie, X-GitHub-OTP,Accept-Encoding, Accept, X-Requested-With
+            X-Accepted-Oauth-Scopes:
+                - repo
+            X-Content-Type-Options:
+                - nosniff
+            X-Frame-Options:
+                - deny
+            X-Github-Api-Version-Selected:
+                - "2022-11-28"
+            X-Github-Edge-Region:
+                - iad
+            X-Github-Media-Type:
+                - github.v3; param=merge-info-preview.nebula-preview; format=json
+            X-Github-Request-Id:
+                - E41D:1337FA:23EE5ED:76FFE65:6A853266
+            X-Oauth-Client-Id:
+                - 178c6fc778ccc68e1d6a
+            X-Oauth-Scopes:
+                - gist, read:org, repo
+            X-Ratelimit-Limit:
+                - "5000"
+            X-Ratelimit-Remaining:
+                - "4959"
+            X-Ratelimit-Reset:
+                - "1787115107"
+            X-Ratelimit-Resource:
+                - core
+            X-Ratelimit-Used:
+                - "41"
+            X-Xss-Protection:
+                - "0"
+        status: 200 OK
+        code: 200
+        duration: 423.977292ms
+    - id: 8
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: api.github.com
+        headers:
+            Accept:
+                - application/vnd.github.merge-info-preview+json, application/vnd.github.nebula-preview
+            Content-Type:
+                - application/json; charset=utf-8
+            Time-Zone:
+                - America/Mexico_City
+            User-Agent:
+                - go-gh
+        url: https://api.github.com/repos/KyleKing/gh-sweep
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"id":1102234541,"node_id":"R_kgDOQbLDrQ","name":"gh-sweep","full_name":"KyleKing/gh-sweep","private":false,"owner":{"login":"KyleKing","id":3784339,"node_id":"MDQ6VXNlcjM3ODQzMzk=","avatar_url":"https://avatars.githubusercontent.com/u/3784339?v=4","gravatar_id":"","url":"https://api.github.com/users/KyleKing","html_url":"https://github.com/KyleKing","followers_url":"https://api.github.com/users/KyleKing/followers","following_url":"https://api.github.com/users/KyleKing/following{/other_user}","gists_url":"https://api.github.com/users/KyleKing/gists{/gist_id}","starred_url":"https://api.github.com/users/KyleKing/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/KyleKing/subscriptions","organizations_url":"https://api.github.com/users/KyleKing/orgs","repos_url":"https://api.github.com/users/KyleKing/repos","events_url":"https://api.github.com/users/KyleKing/events{/privacy}","received_events_url":"https://api.github.com/users/KyleKing/received_events","type":"User","user_view_type":"public","site_admin":false},"html_url":"https://github.com/KyleKing/gh-sweep","description":"A gh cli plugin for a mix of administrative tools (branch pruning, unresolved comment followup, etc.)","fork":false,"url":"https://api.github.com/repos/KyleKing/gh-sweep","forks_url":"https://api.github.com/repos/KyleKing/gh-sweep/forks","keys_url":"https://api.github.com/repos/KyleKing/gh-sweep/keys{/key_id}","collaborators_url":"https://api.github.com/repos/KyleKing/gh-sweep/collaborators{/collaborator}","teams_url":"https://api.github.com/repos/KyleKing/gh-sweep/teams","hooks_url":"https://api.github.com/repos/KyleKing/gh-sweep/hooks","issue_events_url":"https://api.github.com/repos/KyleKing/gh-sweep/issues/events{/number}","events_url":"https://api.github.com/repos/KyleKing/gh-sweep/events","assignees_url":"https://api.github.com/repos/KyleKing/gh-sweep/assignees{/user}","branches_url":"https://api.github.com/repos/KyleKing/gh-sweep/branches{/branch}","tags_url":"https://api.github.com/repos/KyleKing/gh-sweep/tags","blobs_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/blobs{/sha}","git_tags_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/tags{/sha}","git_refs_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/refs{/sha}","trees_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/trees{/sha}","statuses_url":"https://api.github.com/repos/KyleKing/gh-sweep/statuses/{sha}","languages_url":"https://api.github.com/repos/KyleKing/gh-sweep/languages","stargazers_url":"https://api.github.com/repos/KyleKing/gh-sweep/stargazers","contributors_url":"https://api.github.com/repos/KyleKing/gh-sweep/contributors","subscribers_url":"https://api.github.com/repos/KyleKing/gh-sweep/subscribers","subscription_url":"https://api.github.com/repos/KyleKing/gh-sweep/subscription","commits_url":"https://api.github.com/repos/KyleKing/gh-sweep/commits{/sha}","git_commits_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/commits{/sha}","comments_url":"https://api.github.com/repos/KyleKing/gh-sweep/comments{/number}","issue_comment_url":"https://api.github.com/repos/KyleKing/gh-sweep/issues/comments{/number}","contents_url":"https://api.github.com/repos/KyleKing/gh-sweep/contents/{+path}","compare_url":"https://api.github.com/repos/KyleKing/gh-sweep/compare/{base}...{head}","merges_url":"https://api.github.com/repos/KyleKing/gh-sweep/merges","archive_url":"https://api.github.com/repos/KyleKing/gh-sweep/{archive_format}{/ref}","downloads_url":"https://api.github.com/repos/KyleKing/gh-sweep/downloads","issues_url":"https://api.github.com/repos/KyleKing/gh-sweep/issues{/number}","pulls_url":"https://api.github.com/repos/KyleKing/gh-sweep/pulls{/number}","milestones_url":"https://api.github.com/repos/KyleKing/gh-sweep/milestones{/number}","notifications_url":"https://api.github.com/repos/KyleKing/gh-sweep/notifications{?since,all,participating}","labels_url":"https://api.github.com/repos/KyleKing/gh-sweep/labels{/name}","releases_url":"https://api.github.com/repos/KyleKing/gh-sweep/releases{/id}","deployments_url":"https://api.github.com/repos/KyleKing/gh-sweep/deployments","created_at":"2025-11-23T04:13:47Z","updated_at":"2026-08-19T04:34:43Z","pushed_at":"2026-08-16T02:43:41Z","git_url":"git://github.com/KyleKing/gh-sweep.git","ssh_url":"git@github.com:KyleKing/gh-sweep.git","clone_url":"https://github.com/KyleKing/gh-sweep.git","svn_url":"https://github.com/KyleKing/gh-sweep","homepage":null,"size":430,"stargazers_count":1,"watchers_count":1,"language":"Go","has_issues":true,"has_projects":false,"has_downloads":false,"has_wiki":false,"has_pages":false,"has_discussions":false,"forks_count":1,"mirror_url":null,"archived":false,"disabled":false,"open_issues_count":2,"license":{"key":"mit","name":"MIT License","spdx_id":"MIT","url":"https://api.github.com/licenses/mit","node_id":"MDc6TGljZW5zZTEz"},"allow_forking":true,"is_template":false,"web_commit_signoff_required":false,"has_pull_requests":true,"pull_request_creation_policy":"all","topics":[],"visibility":"public","forks":1,"open_issues":2,"watchers":1,"default_branch":"main","permissions":{"admin":true,"maintain":true,"push":true,"triage":true,"pull":true},"temp_clone_token":"","allow_squash_merge":true,"allow_merge_commit":true,"allow_rebase_merge":true,"allow_auto_merge":false,"delete_branch_on_merge":false,"allow_update_branch":false,"use_squash_pr_title_as_default":false,"squash_merge_commit_message":"COMMIT_MESSAGES","squash_merge_commit_title":"COMMIT_OR_PR_TITLE","merge_commit_message":"PR_TITLE","merge_commit_title":"MERGE_MESSAGE","security_and_analysis":{"secret_scanning":{"status":"enabled"},"secret_scanning_push_protection":{"status":"enabled"},"dependabot_security_updates":{"status":"disabled"},"secret_scanning_non_provider_patterns":{"status":"disabled"},"secret_scanning_validity_checks":{"status":"disabled"}},"network_count":1,"subscribers_count":0}'
+        headers:
+            Access-Control-Allow-Origin:
+                - '*'
+            Access-Control-Expose-Headers:
+                - ETag, Link, Location, Retry-After, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Used, X-RateLimit-Resource, X-RateLimit-Reset, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval, X-GitHub-Media-Type, X-GitHub-SSO, X-GitHub-Request-Id, Deprecation, Sunset, Warning
+            Cache-Control:
+                - private, max-age=60, s-maxage=60
+            Content-Security-Policy:
+                - default-src 'none'
+            Content-Type:
+                - application/json; charset=utf-8
+            Date:
+                - Wed, 19 Aug 2026 04:34:47 GMT
+            Etag:
+                - W/"a8c07ce60ff845072742c3a73e90ded8b5c10a3c6b72b734e8d725106aaafa63"
+            Last-Modified:
+                - Wed, 19 Aug 2026 04:34:43 GMT
+            Referrer-Policy:
+                - origin-when-cross-origin, strict-origin-when-cross-origin
+            Server:
+                - github.com
+            Strict-Transport-Security:
+                - max-age=31536000; includeSubdomains; preload
+            Vary:
+                - Accept, Authorization, Cookie, X-GitHub-OTP,Accept-Encoding, Accept, X-Requested-With
+            X-Accepted-Oauth-Scopes:
+                - repo
+            X-Content-Type-Options:
+                - nosniff
+            X-Frame-Options:
+                - deny
+            X-Github-Api-Version-Selected:
+                - "2022-11-28"
+            X-Github-Edge-Region:
+                - iad
+            X-Github-Media-Type:
+                - github.v3; param=merge-info-preview.nebula-preview; format=json
+            X-Github-Request-Id:
+                - E41D:1337FA:23EEC64:770135E:6A853267
+            X-Oauth-Client-Id:
+                - 178c6fc778ccc68e1d6a
+            X-Oauth-Scopes:
+                - gist, read:org, repo
+            X-Ratelimit-Limit:
+                - "5000"
+            X-Ratelimit-Remaining:
+                - "4958"
+            X-Ratelimit-Reset:
+                - "1787115107"
+            X-Ratelimit-Resource:
+                - core
+            X-Ratelimit-Used:
+                - "42"
+            X-Xss-Protection:
+                - "0"
+        status: 200 OK
+        code: 200
+        duration: 279.536791ms
+    - id: 9
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: api.github.com
+        headers:
+            Accept:
+                - application/vnd.github.merge-info-preview+json, application/vnd.github.nebula-preview
+            Content-Type:
+                - application/json; charset=utf-8
+            Time-Zone:
+                - America/Mexico_City
+            User-Agent:
+                - go-gh
+        url: https://api.github.com/repos/KyleKing/gh-sweep
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"id":1102234541,"node_id":"R_kgDOQbLDrQ","name":"gh-sweep","full_name":"KyleKing/gh-sweep","private":false,"owner":{"login":"KyleKing","id":3784339,"node_id":"MDQ6VXNlcjM3ODQzMzk=","avatar_url":"https://avatars.githubusercontent.com/u/3784339?v=4","gravatar_id":"","url":"https://api.github.com/users/KyleKing","html_url":"https://github.com/KyleKing","followers_url":"https://api.github.com/users/KyleKing/followers","following_url":"https://api.github.com/users/KyleKing/following{/other_user}","gists_url":"https://api.github.com/users/KyleKing/gists{/gist_id}","starred_url":"https://api.github.com/users/KyleKing/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/KyleKing/subscriptions","organizations_url":"https://api.github.com/users/KyleKing/orgs","repos_url":"https://api.github.com/users/KyleKing/repos","events_url":"https://api.github.com/users/KyleKing/events{/privacy}","received_events_url":"https://api.github.com/users/KyleKing/received_events","type":"User","user_view_type":"public","site_admin":false},"html_url":"https://github.com/KyleKing/gh-sweep","description":"A gh cli plugin for a mix of administrative tools (branch pruning, unresolved comment followup, etc.)","fork":false,"url":"https://api.github.com/repos/KyleKing/gh-sweep","forks_url":"https://api.github.com/repos/KyleKing/gh-sweep/forks","keys_url":"https://api.github.com/repos/KyleKing/gh-sweep/keys{/key_id}","collaborators_url":"https://api.github.com/repos/KyleKing/gh-sweep/collaborators{/collaborator}","teams_url":"https://api.github.com/repos/KyleKing/gh-sweep/teams","hooks_url":"https://api.github.com/repos/KyleKing/gh-sweep/hooks","issue_events_url":"https://api.github.com/repos/KyleKing/gh-sweep/issues/events{/number}","events_url":"https://api.github.com/repos/KyleKing/gh-sweep/events","assignees_url":"https://api.github.com/repos/KyleKing/gh-sweep/assignees{/user}","branches_url":"https://api.github.com/repos/KyleKing/gh-sweep/branches{/branch}","tags_url":"https://api.github.com/repos/KyleKing/gh-sweep/tags","blobs_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/blobs{/sha}","git_tags_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/tags{/sha}","git_refs_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/refs{/sha}","trees_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/trees{/sha}","statuses_url":"https://api.github.com/repos/KyleKing/gh-sweep/statuses/{sha}","languages_url":"https://api.github.com/repos/KyleKing/gh-sweep/languages","stargazers_url":"https://api.github.com/repos/KyleKing/gh-sweep/stargazers","contributors_url":"https://api.github.com/repos/KyleKing/gh-sweep/contributors","subscribers_url":"https://api.github.com/repos/KyleKing/gh-sweep/subscribers","subscription_url":"https://api.github.com/repos/KyleKing/gh-sweep/subscription","commits_url":"https://api.github.com/repos/KyleKing/gh-sweep/commits{/sha}","git_commits_url":"https://api.github.com/repos/KyleKing/gh-sweep/git/commits{/sha}","comments_url":"https://api.github.com/repos/KyleKing/gh-sweep/comments{/number}","issue_comment_url":"https://api.github.com/repos/KyleKing/gh-sweep/issues/comments{/number}","contents_url":"https://api.github.com/repos/KyleKing/gh-sweep/contents/{+path}","compare_url":"https://api.github.com/repos/KyleKing/gh-sweep/compare/{base}...{head}","merges_url":"https://api.github.com/repos/KyleKing/gh-sweep/merges","archive_url":"https://api.github.com/repos/KyleKing/gh-sweep/{archive_format}{/ref}","downloads_url":"https://api.github.com/repos/KyleKing/gh-sweep/downloads","issues_url":"https://api.github.com/repos/KyleKing/gh-sweep/issues{/number}","pulls_url":"https://api.github.com/repos/KyleKing/gh-sweep/pulls{/number}","milestones_url":"https://api.github.com/repos/KyleKing/gh-sweep/milestones{/number}","notifications_url":"https://api.github.com/repos/KyleKing/gh-sweep/notifications{?since,all,participating}","labels_url":"https://api.github.com/repos/KyleKing/gh-sweep/labels{/name}","releases_url":"https://api.github.com/repos/KyleKing/gh-sweep/releases{/id}","deployments_url":"https://api.github.com/repos/KyleKing/gh-sweep/deployments","created_at":"2025-11-23T04:13:47Z","updated_at":"2026-08-19T04:34:43Z","pushed_at":"2026-08-16T02:43:41Z","git_url":"git://github.com/KyleKing/gh-sweep.git","ssh_url":"git@github.com:KyleKing/gh-sweep.git","clone_url":"https://github.com/KyleKing/gh-sweep.git","svn_url":"https://github.com/KyleKing/gh-sweep","homepage":null,"size":430,"stargazers_count":1,"watchers_count":1,"language":"Go","has_issues":true,"has_projects":false,"has_downloads":false,"has_wiki":false,"has_pages":false,"has_discussions":false,"forks_count":1,"mirror_url":null,"archived":false,"disabled":false,"open_issues_count":2,"license":{"key":"mit","name":"MIT License","spdx_id":"MIT","url":"https://api.github.com/licenses/mit","node_id":"MDc6TGljZW5zZTEz"},"allow_forking":true,"is_template":false,"web_commit_signoff_required":false,"has_pull_requests":true,"pull_request_creation_policy":"all","topics":[],"visibility":"public","forks":1,"open_issues":2,"watchers":1,"default_branch":"main","permissions":{"admin":true,"maintain":true,"push":true,"triage":true,"pull":true},"temp_clone_token":"","allow_squash_merge":true,"allow_merge_commit":true,"allow_rebase_merge":true,"allow_auto_merge":false,"delete_branch_on_merge":false,"allow_update_branch":false,"use_squash_pr_title_as_default":false,"squash_merge_commit_message":"COMMIT_MESSAGES","squash_merge_commit_title":"COMMIT_OR_PR_TITLE","merge_commit_message":"PR_TITLE","merge_commit_title":"MERGE_MESSAGE","security_and_analysis":{"secret_scanning":{"status":"enabled"},"secret_scanning_push_protection":{"status":"enabled"},"dependabot_security_updates":{"status":"disabled"},"secret_scanning_non_provider_patterns":{"status":"disabled"},"secret_scanning_validity_checks":{"status":"disabled"}},"network_count":1,"subscribers_count":0}'
+        headers:
+            Access-Control-Allow-Origin:
+                - '*'
+            Access-Control-Expose-Headers:
+                - ETag, Link, Location, Retry-After, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Used, X-RateLimit-Resource, X-RateLimit-Reset, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval, X-GitHub-Media-Type, X-GitHub-SSO, X-GitHub-Request-Id, Deprecation, Sunset, Warning
+            Cache-Control:
+                - private, max-age=60, s-maxage=60
+            Content-Security-Policy:
+                - default-src 'none'
+            Content-Type:
+                - application/json; charset=utf-8
+            Date:
+                - Wed, 19 Aug 2026 04:34:48 GMT
+            Etag:
+                - W/"a8c07ce60ff845072742c3a73e90ded8b5c10a3c6b72b734e8d725106aaafa63"
+            Last-Modified:
+                - Wed, 19 Aug 2026 04:34:43 GMT
+            Referrer-Policy:
+                - origin-when-cross-origin, strict-origin-when-cross-origin
+            Server:
+                - github.com
+            Strict-Transport-Security:
+                - max-age=31536000; includeSubdomains; preload
+            Vary:
+                - Accept, Authorization, Cookie, X-GitHub-OTP,Accept-Encoding, Accept, X-Requested-With
+            X-Accepted-Oauth-Scopes:
+                - repo
+            X-Content-Type-Options:
+                - nosniff
+            X-Frame-Options:
+                - deny
+            X-Github-Api-Version-Selected:
+                - "2022-11-28"
+            X-Github-Edge-Region:
+                - iad
+            X-Github-Media-Type:
+                - github.v3; param=merge-info-preview.nebula-preview; format=json
+            X-Github-Request-Id:
+                - E41D:1337FA:23EF08C:7702158:6A853267
+            X-Oauth-Client-Id:
+                - 178c6fc778ccc68e1d6a
+            X-Oauth-Scopes:
+                - gist, read:org, repo
+            X-Ratelimit-Limit:
+                - "5000"
+            X-Ratelimit-Remaining:
+                - "4957"
+            X-Ratelimit-Reset:
+                - "1787115107"
+            X-Ratelimit-Resource:
+                - core
+            X-Ratelimit-Used:
+                - "43"
+            X-Xss-Protection:
+                - "0"
+        status: 200 OK
+        code: 200
+        duration: 296.45825ms
+    - id: 10
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: api.github.com
+        headers:
+            Accept:
+                - application/vnd.github.merge-info-preview+json, application/vnd.github.nebula-preview
+            Content-Type:
+                - application/json; charset=utf-8
+            Time-Zone:
+                - America/Mexico_City
+            User-Agent:
+                - go-gh
+        url: https://api.github.com/repos/KyleKing/gh-sweep/branches/main/protection
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"message":"Branch not protected","documentation_url":"https://docs.github.com/rest/branches/branch-protection#get-branch-protection","status":"404"}'
+        headers:
+            Access-Control-Allow-Origin:
+                - '*'
+            Access-Control-Expose-Headers:
+                - ETag, Link, Location, Retry-After, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Used, X-RateLimit-Resource, X-RateLimit-Reset, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval, X-GitHub-Media-Type, X-GitHub-SSO, X-GitHub-Request-Id, Deprecation, Sunset, Warning
+            Content-Security-Policy:
+                - default-src 'none'
+            Content-Type:
+                - application/json; charset=utf-8
+            Date:
+                - Wed, 19 Aug 2026 04:34:48 GMT
+            Referrer-Policy:
+                - origin-when-cross-origin, strict-origin-when-cross-origin
+            Server:
+                - github.com
+            Strict-Transport-Security:
+                - max-age=31536000; includeSubdomains; preload
+            Vary:
+                - Accept-Encoding, Accept, X-Requested-With
+            X-Accepted-Oauth-Scopes:
+                - ""
+            X-Content-Type-Options:
+                - nosniff
+            X-Frame-Options:
+                - deny
+            X-Github-Api-Version-Selected:
+                - "2022-11-28"
+            X-Github-Edge-Region:
+                - iad
+            X-Github-Media-Type:
+                - github.v3; param=merge-info-preview.nebula-preview; format=json
+            X-Github-Request-Id:
+                - E41D:1337FA:23EF520:7703048:6A853268
+            X-Oauth-Client-Id:
+                - 178c6fc778ccc68e1d6a
+            X-Oauth-Scopes:
+                - gist, read:org, repo
+            X-Ratelimit-Limit:
+                - "5000"
+            X-Ratelimit-Remaining:
+                - "4956"
+            X-Ratelimit-Reset:
+                - "1787115107"
+            X-Ratelimit-Resource:
+                - core
+            X-Ratelimit-Used:
+                - "44"
+            X-Xss-Protection:
+                - "0"
+        status: 404 Not Found
+        code: 404
+        duration: 248.696542ms

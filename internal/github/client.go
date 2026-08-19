@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"testing"
 
 	"github.com/cli/go-gh/v2/pkg/api"
 )
@@ -50,6 +51,34 @@ func NewClientWithTransport(ctx context.Context, rt http.RoundTripper) (*Client,
 		AuthToken: testAuthToken,
 		Transport: rt,
 	}
+
+	restClient, err := api.NewRESTClient(opts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create GitHub client: %w", err)
+	}
+
+	httpClient, err := api.NewHTTPClient(opts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HTTP client: %w", err)
+	}
+
+	return &Client{
+		httpClient: httpClient,
+		apiClient:  restClient,
+		ctx:        ctx,
+	}, nil
+}
+
+// NewClientWithRealAuthAndTransport creates a client that resolves real gh CLI
+// auth (host and token) but routes requests through rt instead of the default
+// transport. For cassette-recording tools only: it panics under `go test` so
+// tests keep using the fake-token seam in NewClientWithTransport.
+func NewClientWithRealAuthAndTransport(ctx context.Context, rt http.RoundTripper) (*Client, error) {
+	if testing.Testing() {
+		panic("github.NewClientWithRealAuthAndTransport must not be used under go test")
+	}
+
+	opts := api.ClientOptions{Transport: rt}
 
 	restClient, err := api.NewRESTClient(opts)
 	if err != nil {
