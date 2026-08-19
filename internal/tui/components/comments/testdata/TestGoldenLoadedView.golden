@@ -9,4 +9,4 @@ Total: 2 | Unresolved: 1
 [1;38;2;238;212;159m  Consider extracting this into a helper so both handlers shar...[m
 [1;38;2;238;212;159m[m                                                                 
 
-[38;2;147;154;183m↑/↓: navigate | r: toggle resolved | q: quit[m
+[38;2;147;154;183m↑/↓: navigate | r: toggle resolved | ?: help | q: quit[m

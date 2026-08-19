@@ -73,6 +73,44 @@ func TestToggleResolvedThreads(t *testing.T) {
 	}
 }
 
+func TestJumpTopBottom(t *testing.T) {
+	t.Parallel()
+
+	m := NewModel("acme/widgets")
+	m, _ = m.Update(threadsLoadedMsg{threads: threadsFixture()})
+	m, _ = m.Update(tea.KeyPressMsg{Code: 'r', Text: "r"})
+
+	m, _ = m.Update(tea.KeyPressMsg{Code: 'G', Text: "G"})
+	if want := len(m.visibleThreads()) - 1; m.cursor != want {
+		t.Errorf("cursor after G = %d, want %d", m.cursor, want)
+	}
+
+	m, _ = m.Update(tea.KeyPressMsg{Code: 'g', Text: "g"})
+	if m.cursor != 0 {
+		t.Errorf("cursor after g = %d, want 0", m.cursor)
+	}
+}
+
+func TestHelpToggle(t *testing.T) {
+	t.Parallel()
+
+	m := NewModel("acme/widgets")
+	m, _ = m.Update(threadsLoadedMsg{threads: threadsFixture()})
+
+	m, _ = m.Update(tea.KeyPressMsg{Code: '?', Text: "?"})
+	if !m.showHelp {
+		t.Fatal("expected showHelp true after ?")
+	}
+	if !strings.Contains(m.View(), "Keybindings") {
+		t.Error("help view missing Keybindings title")
+	}
+
+	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
+	if m.showHelp {
+		t.Error("expected showHelp false after esc")
+	}
+}
+
 func TestThreadsLoadError(t *testing.T) {
 	t.Parallel()
 

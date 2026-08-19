@@ -25,6 +25,7 @@ type Model struct {
 	loading       bool
 	err           error
 	viewMode      string // "org", "repo", "unused"
+	showHelp      bool
 }
 
 // NewModel creates a new secrets audit model.
@@ -122,9 +123,35 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyPressMsg:
+		if m.showHelp {
+			if msg.String() == "?" || msg.String() == "esc" {
+				m.showHelp = false
+			}
+
+			return m, nil
+		}
+
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
+
+		case "?":
+			m.showHelp = true
+
+		case "g":
+			m.cursor = 0
+
+		case "G":
+			maxCursor := len(m.orgSecrets) - 1
+			switch m.viewMode {
+			case "repo":
+				maxCursor = len(m.repos) - 1
+			case "unused":
+				maxCursor = len(m.unusedSecrets) - 1
+			}
+			if maxCursor >= 0 {
+				m.cursor = maxCursor
+			}
 
 		case "up", "k":
 			if m.cursor > 0 {
@@ -205,6 +232,10 @@ func (m Model) View() string {
 	}
 	b.WriteString("\n\n")
 
+	if m.showHelp {
+		return m.renderHelp(&b)
+	}
+
 	// Content based on view mode
 	switch m.viewMode {
 	case "org":
@@ -218,7 +249,30 @@ func (m Model) View() string {
 	// Help
 	b.WriteString("\n")
 	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
-	b.WriteString(helpStyle.Render("↑/↓: navigate | 1/2/3: switch view | q: quit"))
+	b.WriteString(helpStyle.Render("↑/↓: navigate | 1/2/3: switch view | ?: help | q: quit"))
+
+	return b.String()
+}
+
+func (m Model) renderHelp(b *strings.Builder) string {
+	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Primary)
+	b.WriteString(titleStyle.Render("Keybindings"))
+	b.WriteString("\n\n")
+
+	bindings := [][2]string{
+		{"j/k, up/down", "move the cursor"},
+		{"g / G", "jump to top / bottom"},
+		{"1/2/3", "switch view: organization / repository / unused"},
+		{"?", "toggle this help"},
+		{"q", "quit"},
+	}
+
+	for _, binding := range bindings {
+		keyStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Warning).Width(16)
+		fmt.Fprintf(b, "%s %s\n", keyStyle.Render(binding[0]), binding[1])
+	}
+
+	b.WriteString("\nPress '?' or 'esc' to close\n")
 
 	return b.String()
 }

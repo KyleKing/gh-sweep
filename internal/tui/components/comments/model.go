@@ -27,6 +27,7 @@ type Model struct {
 	loading      bool
 	err          error
 	showResolved bool
+	showHelp     bool
 }
 
 // NewModel creates a comments model scanning all open PRs of the repo.
@@ -107,9 +108,28 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyPressMsg:
+		if m.showHelp {
+			if msg.String() == "?" || msg.String() == "esc" {
+				m.showHelp = false
+			}
+
+			return m, nil
+		}
+
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
+
+		case "?":
+			m.showHelp = true
+
+		case "g":
+			m.cursor = 0
+
+		case "G":
+			if visible := m.visibleThreads(); len(visible) > 0 {
+				m.cursor = len(visible) - 1
+			}
 
 		case "up", "k":
 			if m.cursor > 0 {
@@ -164,6 +184,10 @@ func (m Model) View() string {
 	}
 	fmt.Fprintf(&b, "Total: %d | Unresolved: %d\n\n", len(m.threads), len(m.unresolved))
 
+	if m.showHelp {
+		return m.renderHelp(&b)
+	}
+
 	visible := m.visibleThreads()
 	if len(visible) == 0 {
 		b.WriteString("No review threads found.\n")
@@ -173,7 +197,30 @@ func (m Model) View() string {
 
 	b.WriteString("\n")
 	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
-	b.WriteString(helpStyle.Render("↑/↓: navigate | r: toggle resolved | q: quit"))
+	b.WriteString(helpStyle.Render("↑/↓: navigate | r: toggle resolved | ?: help | q: quit"))
+
+	return b.String()
+}
+
+func (m Model) renderHelp(b *strings.Builder) string {
+	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Primary)
+	b.WriteString(titleStyle.Render("Keybindings"))
+	b.WriteString("\n\n")
+
+	bindings := [][2]string{
+		{"j/k, up/down", "move the cursor"},
+		{"g / G", "jump to top / bottom"},
+		{"r", "toggle resolved threads"},
+		{"?", "toggle this help"},
+		{"q", "quit"},
+	}
+
+	for _, binding := range bindings {
+		keyStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Warning).Width(16)
+		fmt.Fprintf(b, "%s %s\n", keyStyle.Render(binding[0]), binding[1])
+	}
+
+	b.WriteString("\nPress '?' or 'esc' to close\n")
 
 	return b.String()
 }

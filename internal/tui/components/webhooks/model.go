@@ -22,6 +22,7 @@ type Model struct {
 	height   int
 	loading  bool
 	err      error
+	showHelp bool
 }
 
 // NewModel creates a new webhook management model.
@@ -115,9 +116,28 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyPressMsg:
+		if m.showHelp {
+			if msg.String() == "?" || msg.String() == "esc" {
+				m.showHelp = false
+			}
+
+			return m, nil
+		}
+
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
+
+		case "?":
+			m.showHelp = true
+
+		case "g":
+			m.cursor = 0
+
+		case "G":
+			if len(m.repos) > 0 {
+				m.cursor = len(m.repos) - 1
+			}
 
 		case "up", "k":
 			if m.cursor > 0 {
@@ -153,6 +173,10 @@ func (m Model) View() string {
 
 	b.WriteString(titleStyle.Render("🔔 Webhooks"))
 	b.WriteString("\n\n")
+
+	if m.showHelp {
+		return m.renderHelp(&b)
+	}
 
 	// Webhook list by repository
 	if len(m.webhooks) == 0 {
@@ -214,7 +238,29 @@ func (m Model) View() string {
 	// Help
 	b.WriteString("\n")
 	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
-	b.WriteString(helpStyle.Render("↑/↓: navigate | q: quit"))
+	b.WriteString(helpStyle.Render("↑/↓: navigate | ?: help | q: quit"))
+
+	return b.String()
+}
+
+func (m Model) renderHelp(b *strings.Builder) string {
+	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Primary)
+	b.WriteString(titleStyle.Render("Keybindings"))
+	b.WriteString("\n\n")
+
+	bindings := [][2]string{
+		{"j/k, up/down", "move the cursor"},
+		{"g / G", "jump to top / bottom"},
+		{"?", "toggle this help"},
+		{"q", "quit"},
+	}
+
+	for _, binding := range bindings {
+		keyStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Warning).Width(16)
+		fmt.Fprintf(b, "%s %s\n", keyStyle.Render(binding[0]), binding[1])
+	}
+
+	b.WriteString("\nPress '?' or 'esc' to close\n")
 
 	return b.String()
 }

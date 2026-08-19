@@ -214,6 +214,46 @@ func TestLoadedViewRendersSummary(t *testing.T) {
 	}
 }
 
+func TestJumpTopBottom(t *testing.T) {
+	t.Parallel()
+
+	m := NewModel("acme/widgets")
+	m, _ = m.Update(loadedFixture())
+
+	m, _ = m.Update(tea.KeyPressMsg{Code: 'G', Text: "G"})
+	if want := m.getMaxCursor(); m.cursor != want {
+		t.Errorf("cursor after G = %d, want %d", m.cursor, want)
+	}
+
+	m, _ = m.Update(tea.KeyPressMsg{Code: 'g', Text: "g"})
+	if m.cursor != 0 {
+		t.Errorf("cursor after g = %d, want 0", m.cursor)
+	}
+	if m.scrollTop != 0 {
+		t.Errorf("scrollTop after g = %d, want 0", m.scrollTop)
+	}
+}
+
+func TestHelpToggle(t *testing.T) {
+	t.Parallel()
+
+	m := NewModel("acme/widgets")
+	m, _ = m.Update(loadedFixture())
+
+	m, _ = m.Update(tea.KeyPressMsg{Code: '?', Text: "?"})
+	if !m.showHelp {
+		t.Fatal("expected showHelp true after ?")
+	}
+	if !strings.Contains(m.View(), "Keybindings") {
+		t.Error("help view missing Keybindings title")
+	}
+
+	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
+	if m.showHelp {
+		t.Error("expected showHelp false after esc")
+	}
+}
+
 func TestErrorViewRendered(t *testing.T) {
 	t.Parallel()
 

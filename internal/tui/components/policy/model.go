@@ -28,6 +28,7 @@ type Model struct {
 	confirmApply bool
 	applyTarget  string
 	statusMsg    string
+	showHelp     bool
 }
 
 // NewModel creates a new policy model for cfg.
@@ -103,6 +104,14 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			return m.handleConfirmKeys(msg)
 		}
 
+		if m.showHelp {
+			if msg.String() == "?" || msg.String() == "esc" {
+				m.showHelp = false
+			}
+
+			return m, nil
+		}
+
 		return m.handleKeys(msg)
 	}
 
@@ -113,6 +122,17 @@ func (m Model) handleKeys(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	switch msg.String() {
 	case "ctrl+c", "q":
 		return m, tea.Quit
+
+	case "?":
+		m.showHelp = true
+
+	case "g":
+		m.cursor = 0
+
+	case "G":
+		if m.report != nil && len(m.report.Repos) > 0 {
+			m.cursor = len(m.report.Repos) - 1
+		}
 
 	case "up", "k":
 		if m.cursor > 0 {
@@ -224,6 +244,10 @@ func (m Model) View() string {
 	b.WriteString(titleStyle.Render("Policy Drift"))
 	b.WriteString("\n\n")
 
+	if m.showHelp {
+		return m.renderHelp(&b)
+	}
+
 	if m.report == nil || len(m.report.Repos) == 0 {
 		b.WriteString("No repositories in policy.\n")
 		return b.String()
@@ -273,7 +297,31 @@ func (m Model) View() string {
 
 	b.WriteString("\n")
 	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
-	b.WriteString(helpStyle.Render("↑/↓: navigate | a: apply selected | r: refresh | q: quit"))
+	b.WriteString(helpStyle.Render("↑/↓: navigate | a: apply selected | r: refresh | ?: help | q: quit"))
+
+	return b.String()
+}
+
+func (m Model) renderHelp(b *strings.Builder) string {
+	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Primary)
+	b.WriteString(titleStyle.Render("Keybindings"))
+	b.WriteString("\n\n")
+
+	bindings := [][2]string{
+		{"j/k, up/down", "move the cursor"},
+		{"g / G", "jump to top / bottom"},
+		{"a", "apply drift on the selected repo"},
+		{"r", "refresh"},
+		{"?", "toggle this help"},
+		{"q", "quit"},
+	}
+
+	for _, binding := range bindings {
+		keyStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Warning).Width(16)
+		fmt.Fprintf(b, "%s %s\n", keyStyle.Render(binding[0]), binding[1])
+	}
+
+	b.WriteString("\nPress '?' or 'esc' to close\n")
 
 	return b.String()
 }

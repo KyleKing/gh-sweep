@@ -16,4 +16,4 @@
   [38;2;237;135;150mFAIL[m ci                             feature/login   7.0m
   [38;2;166;218;149mOK[m release                        main            12.0m
 
-[38;2;147;154;183m1-4: views | j/k: navigate | r: refresh | esc: back | q: quit[m
+[38;2;147;154;183m1-4: views | j/k: navigate | r: refresh | ?: help | esc: back | q: quit[m

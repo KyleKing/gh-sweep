@@ -13,4 +13,4 @@ Baseline: acme/widgets
 RequiredReviews:
   - acme/gadgets: 0 (baseline: 2)
 
-[38;2;147;154;183m↑/↓: navigate | q: quit[m
+[38;2;147;154;183m↑/↓: navigate | ?: help | q: quit[m
