@@ -1,13 +1,15 @@
-package models
+package models_test
 
 import (
 	"testing"
+
+	"github.com/KyleKing/gh-sweep/internal/models"
 )
 
 func TestRepositoryFullName(t *testing.T) {
 	t.Parallel()
 
-	r := Repository{Owner: "acme", Name: "widgets"}
+	r := models.Repository{Owner: "acme", Name: "widgets"}
 	if got := r.FullName(); got != "acme/widgets" {
 		t.Errorf("FullName() = %q, want acme/widgets", got)
 	}
@@ -33,7 +35,7 @@ func TestParseRepository(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			repo := ParseRepository(tt.input)
+			repo := models.ParseRepository(tt.input)
 
 			if tt.wantNil {
 				if repo != nil {
@@ -58,9 +60,9 @@ func TestParseRepository(t *testing.T) {
 func TestBranchNodeTree(t *testing.T) {
 	t.Parallel()
 
-	root := &BranchNode{Name: "main"}
-	child := &BranchNode{Name: "feature/login"}
-	grandchild := &BranchNode{Name: "feature/login-fix"}
+	root := &models.BranchNode{Name: "main"}
+	child := &models.BranchNode{Name: "feature/login"}
+	grandchild := &models.BranchNode{Name: "feature/login-fix"}
 
 	root.AddChild(child)
 	child.AddChild(grandchild)
@@ -78,7 +80,7 @@ func TestBranchNodeTree(t *testing.T) {
 	}
 
 	tests := []struct {
-		node *BranchNode
+		node *models.BranchNode
 		want int
 	}{
 		{root, 0},

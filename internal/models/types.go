@@ -1,6 +1,10 @@
+// Package models holds the domain types shared across gh-sweep's CLI and
+// TUI: repository references and the branch tree used to render ancestry.
 package models
 
 import "time"
+
+const repositoryPartsCount = 2
 
 // Repository represents a GitHub repository reference.
 type Repository struct {
@@ -31,7 +35,7 @@ func ParseRepository(repo string) *Repository {
 		parts = append(parts, current)
 	}
 
-	if len(parts) != 2 {
+	if len(parts) != repositoryPartsCount {
 		return nil
 	}
 
