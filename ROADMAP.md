@@ -23,18 +23,6 @@ key press is a single reversible toggle (press again to undo), not a batch
 operation, so the stakes don't match the CLI paths. Revisit only if it turns
 out to bite in practice.
 
-## Open questions from Kyle
-
-From a desktop screenshot review, still unresolved:
-
-1. Want to "open" the repo and make edits
-1. Remove excess metadata (fork is useful, but star/follower count is not)
-1. Are the watching categories right? There seems to be overlap
-1. "Unwatched" is a misleading default tab name (Kyle prefers "All activity")
-1. `Custom` notification setting isn't supported: GitHub's API can't see or set
-   per-notification-type settings, so a repo configured that way (e.g. releases-only)
-   shows as default instead
-
 ## M1: Pages CNAME subdomain-takeover audit
 
 A new `gh-sweep pages` command that cross-checks GitHub Pages custom domains against live DNS, in both directions.
