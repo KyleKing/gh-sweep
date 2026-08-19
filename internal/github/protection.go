@@ -1,6 +1,15 @@
 package github
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+	"net/http"
+
+	"github.com/cli/go-gh/v2/pkg/api"
+)
+
+// ErrBranchNotProtected means the branch has no protection rule configured yet.
+var ErrBranchNotProtected = errors.New("branch not protected")
 
 // ProtectionRule represents branch protection settings.
 type ProtectionRule struct {
@@ -43,6 +52,11 @@ func (c *Client) GetBranchProtection(owner, repo, branch string) (*ProtectionRul
 	path := fmt.Sprintf("repos/%s/%s/branches/%s/protection", owner, repo, branch)
 
 	if err := c.Get(path, &response); err != nil {
+		var httpErr *api.HTTPError
+		if errors.As(err, &httpErr) && httpErr.StatusCode == http.StatusNotFound {
+			return nil, fmt.Errorf("%w: %s/%s@%s", ErrBranchNotProtected, owner, repo, branch)
+		}
+
 		return nil, fmt.Errorf("failed to get branch protection: %w", err)
 	}
 

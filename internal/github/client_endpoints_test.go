@@ -2,6 +2,7 @@ package github
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 	"testing"
@@ -83,6 +84,8 @@ func endpointFake() roundTripFunc {
 			}`), nil
 		case method == http.MethodPut && path == "/repos/acme/widgets/branches/main/protection":
 			return okJSON(req, `{}`), nil
+		case method == http.MethodGet && path == "/repos/acme/unprotected/branches/main/protection":
+			return notFoundJSON(req), nil
 		case method == http.MethodPatch && path == "/repos/acme/widgets":
 			return okJSON(req, `{"name":"widgets","default_branch":"main"}`), nil
 		case method == http.MethodGet && path == "/repos/acme/widgets/immutable-releases":
@@ -334,6 +337,15 @@ func TestGetDefaultBranchProtection(t *testing.T) {
 	if !rule.EnforceAdmins || !rule.RequireLinearHistory || rule.AllowForcePushes ||
 		rule.AllowDeletions {
 		t.Errorf("rule flags = %+v", rule)
+	}
+}
+
+func TestGetBranchProtectionMissing(t *testing.T) {
+	t.Parallel()
+
+	_, err := newEndpointClient(t).GetBranchProtection("acme", "unprotected", "main")
+	if !errors.Is(err, ErrBranchNotProtected) {
+		t.Fatalf("GetBranchProtection() error = %v, want ErrBranchNotProtected", err)
 	}
 }
 

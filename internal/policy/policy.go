@@ -109,8 +109,11 @@ func evaluateRepo(client *github.Client, cfg *config.PolicyConfig, fullName stri
 
 		rule, err := client.GetBranchProtection(owner, repo, branch)
 		if err != nil {
-			drift.Err = fmt.Errorf("fetching branch protection: %w", err)
-			return drift
+			if !errors.Is(err, github.ErrBranchNotProtected) {
+				drift.Err = fmt.Errorf("fetching branch protection: %w", err)
+				return drift
+			}
+			rule = &github.ProtectionRule{Repository: fmt.Sprintf("%s/%s", owner, repo), Branch: branch}
 		}
 		drift.Diffs = append(drift.Diffs, DiffProtection(&cfg.Protection, rule)...)
 	}

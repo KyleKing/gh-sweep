@@ -25,6 +25,15 @@ func okBody(req *http.Request, body string) *http.Response {
 	}
 }
 
+func notFoundBody(req *http.Request, body string) *http.Response {
+	return &http.Response{
+		StatusCode: http.StatusNotFound,
+		Header:     http.Header{"Content-Type": []string{"application/json"}},
+		Body:       io.NopCloser(strings.NewReader(body)),
+		Request:    req,
+	}
+}
+
 const protectionFixture = `{"enforce_admins":{"enabled":false},` +
 	`"allow_force_pushes":{"enabled":false},` +
 	`"allow_deletions":{"enabled":false},` +
@@ -118,6 +127,85 @@ func TestApplySkipsUndriftedDomains(t *testing.T) {
 	}
 	if len(result.Applied) != 0 {
 		t.Errorf("Applied = %v, want none", result.Applied)
+	}
+}
+
+func TestApplyProtectionBootstrapsWhenUnprotected(t *testing.T) {
+	t.Parallel()
+
+	var putBody string
+
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		switch {
+		case req.Method == http.MethodGet && req.URL.Path == "/repos/acme/widgets":
+			return okBody(req, `{"default_branch":"main"}`), nil
+		case req.Method == http.MethodGet && req.URL.Path == "/repos/acme/widgets/branches/main/protection":
+			return notFoundBody(req, `{"message":"Branch not protected"}`), nil
+		case req.Method == http.MethodPut && req.URL.Path == "/repos/acme/widgets/branches/main/protection":
+			b, readErr := io.ReadAll(req.Body)
+			if readErr != nil {
+				t.Fatalf("read PUT body: %v", readErr)
+			}
+			putBody = string(b)
+
+			return okBody(req, `{}`), nil
+		default:
+			return okBody(req, `{}`), nil
+		}
+	})
+
+	client, err := github.NewClientWithTransport(context.Background(), transport)
+	if err != nil {
+		t.Fatalf("NewClientWithTransport() error = %v", err)
+	}
+
+	cfg := &config.PolicyConfig{Protection: config.PolicyProtection{EnforceAdmins: boolPtr(true)}}
+	drift := policy.RepoDrift{
+		Repository: "acme/widgets",
+		Diffs:      []policy.Diff{{Domain: policy.DomainProtection, Field: "enforce_admins"}},
+	}
+
+	result := policy.Apply(client, cfg, drift)
+	if result.Err != nil {
+		t.Fatalf("Apply() error = %v", result.Err)
+	}
+
+	if !strings.Contains(putBody, `"enforce_admins":true`) {
+		t.Errorf("PUT body = %s, want enforce_admins:true", putBody)
+	}
+}
+
+func TestEvaluateDoesNotErrorOnUnprotectedRepo(t *testing.T) {
+	t.Parallel()
+
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		switch {
+		case req.Method == http.MethodGet && req.URL.Path == "/repos/acme/widgets":
+			return okBody(req, `{"default_branch":"main","has_wiki":false}`), nil
+		case req.Method == http.MethodGet && req.URL.Path == "/repos/acme/widgets/branches/main/protection":
+			return notFoundBody(req, `{"message":"Branch not protected"}`), nil
+		default:
+			return okBody(req, `{}`), nil
+		}
+	})
+
+	client, err := github.NewClientWithTransport(context.Background(), transport)
+	if err != nil {
+		t.Fatalf("NewClientWithTransport() error = %v", err)
+	}
+
+	cfg := &config.PolicyConfig{
+		Repositories: []string{"acme/widgets"},
+		Protection:   config.PolicyProtection{EnforceAdmins: boolPtr(true)},
+	}
+
+	report := policy.Evaluate(client, cfg)
+	if len(report.Repos) != 1 || report.Repos[0].Err != nil {
+		t.Fatalf("Evaluate() = %+v, want no fetch error for an unprotected repo", report.Repos)
+	}
+
+	if len(report.Repos[0].Diffs) != 1 || report.Repos[0].Diffs[0].Field != "enforce_admins" {
+		t.Errorf("diffs = %+v, want one enforce_admins drift against the zero-value baseline", report.Repos[0].Diffs)
 	}
 }
 

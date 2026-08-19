@@ -1,6 +1,7 @@
 package policy
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/KyleKing/gh-sweep/internal/config"
@@ -122,7 +123,10 @@ func applyProtection(client *github.Client, owner, repo string, want *config.Pol
 
 	current, err := client.GetBranchProtection(owner, repo, branch)
 	if err != nil {
-		return fmt.Errorf("fetching current protection: %w", err)
+		if !errors.Is(err, github.ErrBranchNotProtected) {
+			return fmt.Errorf("fetching current protection: %w", err)
+		}
+		current = &github.ProtectionRule{Repository: fmt.Sprintf("%s/%s", owner, repo), Branch: branch}
 	}
 
 	desired := *current
