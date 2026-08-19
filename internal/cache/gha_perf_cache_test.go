@@ -1,9 +1,11 @@
-package cache
+package cache_test
 
 import (
+	"os"
 	"testing"
 	"time"
 
+	"github.com/KyleKing/gh-sweep/internal/cache"
 	"github.com/KyleKing/gh-sweep/internal/github"
 )
 
@@ -12,45 +14,44 @@ func TestNewGHAPerfCacheManagerCreatesDir(t *testing.T) {
 
 	dir := t.TempDir() + "/nested"
 
-	m, err := NewGHAPerfCacheManager(dir)
-	if err != nil {
+	if _, err := cache.NewGHAPerfCacheManager(dir); err != nil {
 		t.Fatalf("NewGHAPerfCacheManager() error = %v", err)
 	}
-	if m.cacheDir != dir {
-		t.Errorf("cacheDir = %q, want %q", m.cacheDir, dir)
+	if info, err := os.Stat(dir); err != nil || !info.IsDir() {
+		t.Errorf("NewGHAPerfCacheManager() did not create %q as a directory: %v", dir, err)
 	}
 }
 
 func TestLoadMissingCacheReturnsEmpty(t *testing.T) {
 	t.Parallel()
 
-	m, err := NewGHAPerfCacheManager(t.TempDir())
+	m, err := cache.NewGHAPerfCacheManager(t.TempDir())
 	if err != nil {
 		t.Fatalf("NewGHAPerfCacheManager() error = %v", err)
 	}
 
-	cache, err := m.Load("acme", "widgets")
+	loaded, err := m.Load("acme", "widgets")
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
-	if cache.Repo != "acme/widgets" || len(cache.Runs) != 0 {
-		t.Errorf("cache = %+v, want empty acme/widgets", cache)
+	if loaded.Repo != "acme/widgets" || len(loaded.Runs) != 0 {
+		t.Errorf("cache = %+v, want empty acme/widgets", loaded)
 	}
 }
 
 func TestSaveAndLoadRoundTrip(t *testing.T) {
 	t.Parallel()
 
-	m, err := NewGHAPerfCacheManager(t.TempDir())
+	m, err := cache.NewGHAPerfCacheManager(t.TempDir())
 	if err != nil {
 		t.Fatalf("NewGHAPerfCacheManager() error = %v", err)
 	}
 
-	cache := &GHAPerfCache{Runs: []github.RunTiming{
+	toSave := &cache.GHAPerfCache{Runs: []github.RunTiming{
 		{RunID: 1, Workflow: "ci", DurationSeconds: 90, CreatedAt: time.Now()},
 	}}
 
-	if err := m.Save("acme", "widgets", cache); err != nil {
+	if err := m.Save("acme", "widgets", toSave); err != nil {
 		t.Fatalf("Save() error = %v", err)
 	}
 
@@ -73,8 +74,6 @@ func TestSaveAndLoadRoundTrip(t *testing.T) {
 func TestMergeRuns(t *testing.T) {
 	t.Parallel()
 
-	m := &GHAPerfCacheManager{}
-
 	older := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	newer := time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC)
 
@@ -84,7 +83,7 @@ func TestMergeRuns(t *testing.T) {
 		{RunID: 2, CreatedAt: older, Conclusion: "success"},
 	}
 
-	merged := m.MergeRuns(existing, incoming)
+	merged := cache.MergeRuns(existing, incoming)
 
 	if len(merged) != 2 {
 		t.Fatalf("merged = %+v, want 2 runs", merged)
@@ -100,12 +99,12 @@ func TestMergeRuns(t *testing.T) {
 func TestGetCachedRunIDsAndStats(t *testing.T) {
 	t.Parallel()
 
-	m, err := NewGHAPerfCacheManager(t.TempDir())
+	m, err := cache.NewGHAPerfCacheManager(t.TempDir())
 	if err != nil {
 		t.Fatalf("NewGHAPerfCacheManager() error = %v", err)
 	}
 
-	if err := m.Save("acme", "widgets", &GHAPerfCache{
+	if err := m.Save("acme", "widgets", &cache.GHAPerfCache{
 		Runs: []github.RunTiming{{RunID: 5}, {RunID: 9}},
 	}); err != nil {
 		t.Fatalf("Save() error = %v", err)
@@ -131,15 +130,15 @@ func TestGetCachedRunIDsAndStats(t *testing.T) {
 func TestClearAndClearAll(t *testing.T) {
 	t.Parallel()
 
-	m, err := NewGHAPerfCacheManager(t.TempDir())
+	m, err := cache.NewGHAPerfCacheManager(t.TempDir())
 	if err != nil {
 		t.Fatalf("NewGHAPerfCacheManager() error = %v", err)
 	}
 
-	if err := m.Save("acme", "widgets", &GHAPerfCache{}); err != nil {
+	if err := m.Save("acme", "widgets", &cache.GHAPerfCache{}); err != nil {
 		t.Fatalf("Save() error = %v", err)
 	}
-	if err := m.Save("acme", "gadgets", &GHAPerfCache{}); err != nil {
+	if err := m.Save("acme", "gadgets", &cache.GHAPerfCache{}); err != nil {
 		t.Fatalf("Save() error = %v", err)
 	}
 
@@ -174,7 +173,15 @@ func TestClearAndClearAll(t *testing.T) {
 func TestListCachesMissingDir(t *testing.T) {
 	t.Parallel()
 
-	m := &GHAPerfCacheManager{cacheDir: t.TempDir() + "/does-not-exist"}
+	dir := t.TempDir() + "/does-not-exist"
+
+	m, err := cache.NewGHAPerfCacheManager(dir)
+	if err != nil {
+		t.Fatalf("NewGHAPerfCacheManager() error = %v", err)
+	}
+	if err := os.RemoveAll(dir); err != nil {
+		t.Fatalf("RemoveAll() error = %v", err)
+	}
 
 	repos, err := m.ListCaches()
 	if err != nil {
@@ -197,13 +204,13 @@ func TestFilterRunsByCommit(t *testing.T) {
 		{RunID: 2, HeadSHA: "zzzzzzzzzz"},
 	}
 
-	if got := FilterRunsByCommit(runs, ""); len(got) != 2 {
+	if got := cache.FilterRunsByCommit(runs, ""); len(got) != 2 {
 		t.Errorf("FilterRunsByCommit(empty) = %d runs, want 2", len(got))
 	}
-	if got := FilterRunsByCommit(runs, "abcdef1234"); len(got) != 1 || got[0].RunID != 1 {
+	if got := cache.FilterRunsByCommit(runs, "abcdef1234"); len(got) != 1 || got[0].RunID != 1 {
 		t.Errorf("FilterRunsByCommit(exact) = %+v", got)
 	}
-	if got := FilterRunsByCommit(runs, "abcdef19999"); len(got) != 1 || got[0].RunID != 1 {
+	if got := cache.FilterRunsByCommit(runs, "abcdef19999"); len(got) != 1 || got[0].RunID != 1 {
 		t.Errorf("FilterRunsByCommit(matching 7-char prefix) = %+v", got)
 	}
 }
@@ -216,10 +223,10 @@ func TestFilterRunsByConclusion(t *testing.T) {
 		{RunID: 2, Conclusion: "failure"},
 	}
 
-	if got := FilterRunsByConclusion(runs, ""); len(got) != 2 {
+	if got := cache.FilterRunsByConclusion(runs, ""); len(got) != 2 {
 		t.Errorf("FilterRunsByConclusion(empty) = %d runs, want 2", len(got))
 	}
-	if got := FilterRunsByConclusion(runs, "failure"); len(got) != 1 || got[0].RunID != 2 {
+	if got := cache.FilterRunsByConclusion(runs, "failure"); len(got) != 1 || got[0].RunID != 2 {
 		t.Errorf("FilterRunsByConclusion(failure) = %+v", got)
 	}
 }
@@ -232,12 +239,12 @@ func TestGetRunsInDateRange(t *testing.T) {
 	day3 := time.Date(2026, 1, 3, 0, 0, 0, 0, time.UTC)
 	runs := []github.RunTiming{{RunID: 1, CreatedAt: day1}, {RunID: 2, CreatedAt: day2}, {RunID: 3, CreatedAt: day3}}
 
-	got := GetRunsInDateRange(runs, day2, time.Time{})
+	got := cache.GetRunsInDateRange(runs, day2, time.Time{})
 	if len(got) != 2 || got[0].RunID != 2 {
 		t.Errorf("GetRunsInDateRange(since=day2) = %+v", got)
 	}
 
-	got = GetRunsInDateRange(runs, time.Time{}, day2)
+	got = cache.GetRunsInDateRange(runs, time.Time{}, day2)
 	if len(got) != 2 || got[1].RunID != 2 {
 		t.Errorf("GetRunsInDateRange(until=day2) = %+v", got)
 	}
@@ -255,7 +262,7 @@ func TestGetLatestRunPerWorkflow(t *testing.T) {
 		{RunID: 3, Workflow: "release", CreatedAt: older},
 	}
 
-	got := GetLatestRunPerWorkflow(runs)
+	got := cache.GetLatestRunPerWorkflow(runs)
 	if len(got) != 2 {
 		t.Fatalf("got %d workflows, want 2", len(got))
 	}

@@ -1,12 +1,16 @@
-package cache
+package cache_test
 
 import (
 	"testing"
 	"time"
+
+	"github.com/KyleKing/gh-sweep/internal/cache"
 )
 
 func TestMemoryManager(t *testing.T) {
-	mgr := NewMemoryManager(1 * time.Hour)
+	t.Parallel()
+
+	mgr := cache.NewMemoryManager(1 * time.Hour)
 
 	// Test Set and Get
 	type testData struct {
@@ -36,7 +40,9 @@ func TestMemoryManager(t *testing.T) {
 }
 
 func TestMemoryManagerExpiration(t *testing.T) {
-	mgr := NewMemoryManager(100 * time.Millisecond)
+	t.Parallel()
+
+	mgr := cache.NewMemoryManager(100 * time.Millisecond)
 
 	if err := mgr.Set("test-key", "test-value"); err != nil {
 		t.Fatalf("Failed to set: %v", err)
@@ -67,7 +73,9 @@ func TestMemoryManagerExpiration(t *testing.T) {
 }
 
 func TestMemoryManagerDelete(t *testing.T) {
-	mgr := NewMemoryManager(1 * time.Hour)
+	t.Parallel()
+
+	mgr := cache.NewMemoryManager(1 * time.Hour)
 
 	if err := mgr.Set("test-key", "test-value"); err != nil {
 		t.Fatalf("Failed to set: %v", err)
@@ -88,7 +96,9 @@ func TestMemoryManagerDelete(t *testing.T) {
 }
 
 func TestMemoryManagerClear(t *testing.T) {
-	mgr := NewMemoryManager(1 * time.Hour)
+	t.Parallel()
+
+	mgr := cache.NewMemoryManager(1 * time.Hour)
 
 	if err := mgr.Set("key1", "value1"); err != nil {
 		t.Fatalf("Failed to set: %v", err)
@@ -115,7 +125,9 @@ func TestMemoryManagerClear(t *testing.T) {
 }
 
 func TestMemoryManagerStats(t *testing.T) {
-	mgr := NewMemoryManager(100 * time.Millisecond)
+	t.Parallel()
+
+	mgr := cache.NewMemoryManager(100 * time.Millisecond)
 
 	if err := mgr.Set("key1", "value1"); err != nil {
 		t.Fatalf("Failed to set: %v", err)
@@ -155,7 +167,9 @@ func TestMemoryManagerStats(t *testing.T) {
 }
 
 func TestMemoryManagerCleanExpired(t *testing.T) {
-	mgr := NewMemoryManager(100 * time.Millisecond)
+	t.Parallel()
+
+	mgr := cache.NewMemoryManager(100 * time.Millisecond)
 
 	if err := mgr.Set("fresh", "value"); err != nil {
 		t.Fatalf("Failed to set: %v", err)
@@ -181,7 +195,9 @@ func TestMemoryManagerCleanExpired(t *testing.T) {
 }
 
 func TestMemoryManagerClose(t *testing.T) {
-	mgr := NewMemoryManager(time.Hour)
+	t.Parallel()
+
+	mgr := cache.NewMemoryManager(time.Hour)
 
 	if err := mgr.Close(); err != nil {
 		t.Errorf("Close() error = %v", err)

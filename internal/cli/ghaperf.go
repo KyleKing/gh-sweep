@@ -186,7 +186,7 @@ func runGHAPerf(cmd *cobra.Command, _ []string) {
 			}
 			newCount = len(actuallyNew)
 
-			allRuns = cacheManager.MergeRuns(allRuns, newRuns)
+			allRuns = cache.MergeRuns(allRuns, newRuns)
 
 			if !noCache && newCount > 0 {
 				cachedData := &cache.GHAPerfCache{Runs: allRuns}

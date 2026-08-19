@@ -28,7 +28,7 @@ func NewMemoryManager(ttl time.Duration) *MemoryManager {
 }
 
 // Get retrieves a value from the cache.
-func (m *MemoryManager) Get(key string, dest interface{}) (bool, error) {
+func (m *MemoryManager) Get(key string, dest any) (bool, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -51,7 +51,7 @@ func (m *MemoryManager) Get(key string, dest interface{}) (bool, error) {
 }
 
 // Set stores a value in the cache.
-func (m *MemoryManager) Set(key string, value interface{}) error {
+func (m *MemoryManager) Set(key string, value any) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -123,6 +123,6 @@ func (m *MemoryManager) Stats() (int, int, error) {
 }
 
 // Close does nothing for memory cache but implements the interface.
-func (m *MemoryManager) Close() error {
+func (*MemoryManager) Close() error {
 	return nil
 }

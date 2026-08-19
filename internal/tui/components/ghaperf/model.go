@@ -201,7 +201,7 @@ func (m Model) loadData() tea.Msg {
 			}
 			newCount = len(actuallyNew)
 
-			allRuns = cacheManager.MergeRuns(cachedData.Runs, newRuns)
+			allRuns = cache.MergeRuns(cachedData.Runs, newRuns)
 
 			if newCount > 0 {
 				cachedData.Runs = allRuns
