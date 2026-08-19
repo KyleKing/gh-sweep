@@ -12,6 +12,11 @@ import (
 	orphanscore "github.com/KyleKing/gh-sweep/internal/orphans"
 )
 
+var (
+	errBoom        = errors.New("boom")
+	errRateLimited = errors.New("rate limited")
+)
+
 func scanFixture() *orphanscore.NamespaceScanResult {
 	prNumber := 42
 
@@ -71,7 +76,7 @@ func loadedModel(t *testing.T) Model {
 }
 
 func press(m Model, key string) (Model, tea.Cmd) {
-	if key == "esc" {
+	if key == keyEsc {
 		return m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
 	}
 
@@ -105,7 +110,7 @@ func TestConfirmFlowCursorTarget(t *testing.T) {
 func TestConfirmFlowCancel(t *testing.T) {
 	t.Parallel()
 
-	for _, key := range []string{"n", "N", "esc"} {
+	for _, key := range []string{"n", "N", keyEsc} {
 		t.Run(key, func(t *testing.T) {
 			t.Parallel()
 
@@ -227,7 +232,7 @@ func TestSearchFiltersByName(t *testing.T) {
 		t.Fatalf("filtered = %+v, want only spike/cache", filtered)
 	}
 
-	m, _ = press(m, "esc")
+	m, _ = press(m, keyEsc)
 	if m.searching || m.searchQuery != "" {
 		t.Errorf("expected search cleared after esc, got searching=%v query=%q", m.searching, m.searchQuery)
 	}
@@ -248,7 +253,7 @@ func TestHelpToggle(t *testing.T) {
 		t.Error("help view missing Keybindings title")
 	}
 
-	m, _ = press(m, "esc")
+	m, _ = press(m, keyEsc)
 	if m.showHelp {
 		t.Error("expected showHelp false after esc")
 	}
@@ -298,7 +303,7 @@ func TestDeleteResultError(t *testing.T) {
 
 	m := loadedModel(t)
 
-	m, _ = m.Update(deleteResultMsg{branch: "acme/gadgets/fix/typo", err: errors.New("boom")})
+	m, _ = m.Update(deleteResultMsg{branch: "acme/gadgets/fix/typo", err: errBoom})
 
 	if m.result.TotalOrphans != 3 {
 		t.Errorf("TotalOrphans = %d, want 3 (nothing removed)", m.result.TotalOrphans)
@@ -361,7 +366,7 @@ func TestScanErrorRendered(t *testing.T) {
 	t.Parallel()
 
 	m := NewModel("acme", orphanscore.DefaultScanOptions())
-	m, _ = m.Update(scanCompleteMsg{err: errors.New("rate limited")})
+	m, _ = m.Update(scanCompleteMsg{err: errRateLimited})
 
 	view := m.View()
 	if !strings.Contains(view, "rate limited") {

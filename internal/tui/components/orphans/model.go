@@ -1,7 +1,10 @@
+// Package orphans is the TUI view for auditing and deleting orphaned
+// branches across a GitHub namespace.
 package orphans
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -14,14 +17,26 @@ import (
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
+const (
+	repoPartsCount = 2
+	helpKeyWidth   = 16
+	keyEsc         = "esc"
+	keySpace       = "space"
+)
+
+var errInvalidRepository = errors.New("invalid repository")
+
+// ViewMode selects how orphaned branches are grouped in the list view.
 type ViewMode string
 
+// Grouping modes for the orphaned-branch list.
 const (
 	ViewModeByRepo ViewMode = "by_repo"
 	ViewModeByType ViewMode = "by_type"
 	ViewModeFlat   ViewMode = "flat"
 )
 
+// Model represents the orphaned branches TUI state.
 type Model struct {
 	namespace     string
 	options       orphans.ScanOptions
@@ -47,6 +62,7 @@ type Model struct {
 	showHelp      bool
 }
 
+// NewModel creates a new orphaned branches model.
 func NewModel(namespace string, options orphans.ScanOptions) Model {
 	return Model{
 		namespace: namespace,
@@ -75,6 +91,7 @@ type deleteResultMsg struct {
 	err    error
 }
 
+// Init initializes the model.
 func (m Model) Init() tea.Cmd {
 	return m.startScan
 }
@@ -100,6 +117,7 @@ func (m Model) startScan() tea.Msg {
 	return scanCompleteMsg{namespace: namespace, result: result, err: err}
 }
 
+// Update handles messages.
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -109,14 +127,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, nil
 
 	case scanCompleteMsg:
-		m.loading = false
-		if msg.namespace != "" {
-			m.namespace = msg.namespace
-		}
-		m.result = msg.result
-		m.err = msg.err
-
-		return m, nil
+		return m.handleScanComplete(msg), nil
 
 	case scanProgressMsg:
 		m.progress = msg.current
@@ -127,17 +138,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, nil
 
 	case deleteResultMsg:
-		if msg.err != nil {
-			m.statusMsg = fmt.Sprintf("Failed to delete %s: %v", msg.branch, msg.err)
-		} else {
-			m.statusMsg = "Deleted: " + msg.branch
-			delete(m.selected, msg.branch)
-			m.removeOrphanFromResult(msg.branch)
-		}
-		m.confirmDelete = false
-		m.deleteTargets = nil
-
-		return m, nil
+		return m.handleDeleteResult(msg), nil
 
 	case tea.KeyPressMsg:
 		if m.confirmDelete {
@@ -148,114 +149,178 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			return m.handleSearchKeys(msg)
 		}
 
-		if m.showHelp {
-			if msg.String() == "?" || msg.String() == "esc" {
-				m.showHelp = false
-			}
-
-			return m, nil
-		}
-
-		switch msg.String() {
-		case "ctrl+c", "q":
-			return m, tea.Quit
-
-		case "?":
-			m.showHelp = true
-
-		case "/":
-			m.searching = true
-
-		case "g":
-			m.cursor = 0
-
-		case "G":
-			if filtered := m.getFilteredOrphans(); len(filtered) > 0 {
-				m.cursor = len(filtered) - 1
-			}
-
-		case "R":
-			m.sortReverse = !m.sortReverse
-
-		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
-			}
-
-		case "down", "j":
-			filtered := m.getFilteredOrphans()
-			if m.cursor < len(filtered)-1 {
-				m.cursor++
-			}
-
-		case "space":
-			filtered := m.getFilteredOrphans()
-			if m.cursor < len(filtered) {
-				key := filtered[m.cursor].Key()
-				m.selected[key] = !m.selected[key]
-			}
-
-		case "a":
-			filtered := m.getFilteredOrphans()
-			for _, orphan := range filtered {
-				m.selected[orphan.Key()] = true
-			}
-
-		case "n":
-			m.selected = make(map[string]bool)
-
-		case "I":
-			filtered := m.getFilteredOrphans()
-			for _, orphan := range filtered {
-				key := orphan.Key()
-				m.selected[key] = !m.selected[key]
-			}
-
-		case "d":
-			return m.handleDelete()
-
-		case "1":
-			m.filterType = nil
-			m.cursor = 0
-
-		case "2":
-			t := orphans.OrphanTypeMergedPR
-			m.filterType = &t
-			m.cursor = 0
-
-		case "3":
-			t := orphans.OrphanTypeClosedPR
-			m.filterType = &t
-			m.cursor = 0
-
-		case "4":
-			t := orphans.OrphanTypeStale
-			m.filterType = &t
-			m.cursor = 0
-
-		case "v":
-			switch m.viewMode {
-			case ViewModeByRepo:
-				m.viewMode = ViewModeByType
-			case ViewModeByType:
-				m.viewMode = ViewModeFlat
-			case ViewModeFlat:
-				m.viewMode = ViewModeByRepo
-			}
-			m.cursor = 0
-
-		case "r":
-			m.loading = true
-			m.result = nil
-			m.err = nil
-			m.cursor = 0
-			m.selected = make(map[string]bool)
-
-			return m, m.startScan
-		}
+		return m.updateKeyMsg(msg)
 	}
 
 	return m, nil
+}
+
+func (m Model) handleScanComplete(msg scanCompleteMsg) Model {
+	m.loading = false
+	if msg.namespace != "" {
+		m.namespace = msg.namespace
+	}
+	m.result = msg.result
+	m.err = msg.err
+
+	return m
+}
+
+func (m Model) handleDeleteResult(msg deleteResultMsg) Model {
+	if msg.err != nil {
+		m.statusMsg = fmt.Sprintf("Failed to delete %s: %v", msg.branch, msg.err)
+	} else {
+		m.statusMsg = "Deleted: " + msg.branch
+		delete(m.selected, msg.branch)
+		m.removeOrphanFromResult(msg.branch)
+	}
+	m.confirmDelete = false
+	m.deleteTargets = nil
+
+	return m
+}
+
+func (m Model) updateKeyMsg(msg tea.KeyPressMsg) (Model, tea.Cmd) {
+	if m.showHelp {
+		if msg.String() == "?" || msg.String() == keyEsc {
+			m.showHelp = false
+		}
+
+		return m, nil
+	}
+
+	switch msg.String() {
+	case "ctrl+c", "q":
+		return m, tea.Quit
+
+	case "?":
+		m.showHelp = true
+
+	case "/":
+		m.searching = true
+
+	case "g", "G", "up", "k", "down", "j":
+		m.updateCursor(msg.String())
+
+	case "R":
+		m.sortReverse = !m.sortReverse
+
+	case keySpace, "a", "n", "I":
+		m.updateSelection(msg.String())
+
+	case "d":
+		return m.handleDelete()
+
+	case "1", "2", "3", "4":
+		m.updateFilterType(msg.String())
+
+	case "v":
+		m.cycleViewMode()
+
+	case "r":
+		return m.startRescan()
+	}
+
+	return m, nil
+}
+
+func (m *Model) updateCursor(key string) {
+	filtered := m.getFilteredOrphans()
+
+	switch key {
+	case "g":
+		m.cursor = 0
+
+	case "G":
+		if len(filtered) > 0 {
+			m.cursor = len(filtered) - 1
+		}
+
+	case "up", "k":
+		if m.cursor > 0 {
+			m.cursor--
+		}
+
+	case "down", "j":
+		if m.cursor < len(filtered)-1 {
+			m.cursor++
+		}
+	}
+}
+
+func (m *Model) updateSelection(key string) {
+	switch key {
+	case keySpace:
+		m.toggleCursorSelection()
+	case "a":
+		m.selectAll()
+	case "n":
+		m.selected = make(map[string]bool)
+	case "I":
+		m.invertSelection()
+	}
+}
+
+func (m *Model) toggleCursorSelection() {
+	filtered := m.getFilteredOrphans()
+	if m.cursor < len(filtered) {
+		key := filtered[m.cursor].Key()
+		m.selected[key] = !m.selected[key]
+	}
+}
+
+func (m *Model) selectAll() {
+	for _, orphan := range m.getFilteredOrphans() {
+		m.selected[orphan.Key()] = true
+	}
+}
+
+func (m *Model) invertSelection() {
+	for _, orphan := range m.getFilteredOrphans() {
+		key := orphan.Key()
+		m.selected[key] = !m.selected[key]
+	}
+}
+
+func (m *Model) updateFilterType(key string) {
+	switch key {
+	case "1":
+		m.filterType = nil
+	case "2":
+		t := orphans.OrphanTypeMergedPR
+		m.filterType = &t
+	case "3":
+		t := orphans.OrphanTypeClosedPR
+		m.filterType = &t
+	case "4":
+		t := orphans.OrphanTypeStale
+		m.filterType = &t
+	}
+
+	m.cursor = 0
+}
+
+func (m *Model) cycleViewMode() {
+	switch m.viewMode {
+	case ViewModeByRepo:
+		m.viewMode = ViewModeByType
+	case ViewModeByType:
+		m.viewMode = ViewModeFlat
+	case ViewModeFlat:
+		m.viewMode = ViewModeByRepo
+	}
+
+	m.cursor = 0
+}
+
+func (m Model) startRescan() (Model, tea.Cmd) {
+	m.loading = true
+	m.result = nil
+	m.err = nil
+	m.cursor = 0
+	m.selected = make(map[string]bool)
+
+	return m, m.startScan
 }
 
 func (m Model) handleSearchKeys(msg tea.KeyPressMsg) (Model, tea.Cmd) {
@@ -263,7 +328,7 @@ func (m Model) handleSearchKeys(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	case "ctrl+c":
 		return m, tea.Quit
 
-	case "esc":
+	case keyEsc:
 		m.searching = false
 		m.searchQuery = ""
 		m.cursor = 0
@@ -272,7 +337,7 @@ func (m Model) handleSearchKeys(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 		m.searching = false
 
 	case "backspace":
-		if len(m.searchQuery) > 0 {
+		if m.searchQuery != "" {
 			runes := []rune(m.searchQuery)
 			m.searchQuery = string(runes[:len(runes)-1])
 			m.cursor = 0
@@ -292,7 +357,7 @@ func (m Model) handleConfirmKeys(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	switch msg.String() {
 	case "y", "Y":
 		return m.executeDelete()
-	case "n", "N", "esc":
+	case "n", "N", keyEsc:
 		m.confirmDelete = false
 		m.deleteTargets = nil
 		m.statusMsg = "Delete canceled"
@@ -331,7 +396,7 @@ func (m Model) handleDelete() (Model, tea.Cmd) {
 }
 
 func (m Model) executeDelete() (Model, tea.Cmd) {
-	var cmds []tea.Cmd
+	cmds := make([]tea.Cmd, 0, len(m.deleteTargets))
 
 	for _, orphan := range m.deleteTargets {
 		cmds = append(cmds, func() tea.Msg {
@@ -341,11 +406,11 @@ func (m Model) executeDelete() (Model, tea.Cmd) {
 				return deleteResultMsg{branch: orphan.Key(), err: err}
 			}
 
-			parts := strings.SplitN(orphan.Repository, "/", 2)
-			if len(parts) != 2 {
+			parts := strings.SplitN(orphan.Repository, "/", repoPartsCount)
+			if len(parts) != repoPartsCount {
 				return deleteResultMsg{
 					branch: orphan.Key(),
-					err:    fmt.Errorf("invalid repository: %s", orphan.Repository),
+					err:    fmt.Errorf("%w: %s", errInvalidRepository, orphan.Repository),
 				}
 			}
 
@@ -431,19 +496,10 @@ func (m Model) getFilteredOrphans() []orphans.OrphanedBranch {
 	return filtered
 }
 
+// View renders the model.
 func (m Model) View() string {
 	if m.loading {
-		if m.total > 0 {
-			return fmt.Sprintf(
-				"Scanning repositories...\nProgress: %d/%d repos\nCurrently: %s\nOrphans found: %d\n",
-				m.progress,
-				m.total,
-				m.scanning,
-				m.orphansFound,
-			)
-		}
-
-		return "Loading repositories...\n"
+		return m.renderLoading()
 	}
 
 	if m.err != nil {
@@ -465,43 +521,10 @@ func (m Model) View() string {
 	}
 
 	if m.showHelp {
-		return m.renderHelp(&b)
+		return renderHelp(&b)
 	}
 
-	activeTab := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(theme.Current().Warning)
-
-	inactiveTab := lipgloss.NewStyle().
-		Foreground(theme.Current().Muted)
-
-	if m.filterType == nil {
-		b.WriteString(activeTab.Render("[1] All"))
-	} else {
-		b.WriteString(inactiveTab.Render("[1] All"))
-	}
-	b.WriteString("  ")
-
-	if m.filterType != nil && *m.filterType == orphans.OrphanTypeMergedPR {
-		b.WriteString(activeTab.Render("[2] Merged"))
-	} else {
-		b.WriteString(inactiveTab.Render("[2] Merged"))
-	}
-	b.WriteString("  ")
-
-	if m.filterType != nil && *m.filterType == orphans.OrphanTypeClosedPR {
-		b.WriteString(activeTab.Render("[3] Closed"))
-	} else {
-		b.WriteString(inactiveTab.Render("[3] Closed"))
-	}
-	b.WriteString("  ")
-
-	if m.filterType != nil && *m.filterType == orphans.OrphanTypeStale {
-		b.WriteString(activeTab.Render("[4] Stale"))
-	} else {
-		b.WriteString(inactiveTab.Render("[4] Stale"))
-	}
-	b.WriteString("\n\n")
+	m.renderTypeTabs(&b)
 
 	summaryStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
 	sortLabel := ""
@@ -517,48 +540,7 @@ func (m Model) View() string {
 	}
 
 	filtered := m.getFilteredOrphans()
-
-	if len(filtered) == 0 {
-		b.WriteString("No orphaned branches in this view.\n")
-	} else {
-		currentRepo := ""
-		for i, orphan := range filtered {
-			if m.viewMode == ViewModeByRepo && orphan.Repository != currentRepo {
-				currentRepo = orphan.Repository
-				repoStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Primary)
-				b.WriteString("\n")
-				b.WriteString(repoStyle.Render(currentRepo))
-				b.WriteString("\n")
-			}
-
-			cursor := " "
-			if m.cursor == i {
-				cursor = ">"
-			}
-
-			selectMark := " "
-			if m.selected[orphan.Key()] {
-				selectMark = "*"
-			}
-
-			typeStyle := m.getTypeStyle(orphan.Type)
-
-			lineStyle := lipgloss.NewStyle()
-			if m.cursor == i {
-				lineStyle = lineStyle.Bold(true).Foreground(theme.Current().Warning)
-			}
-
-			prInfo := ""
-			if orphan.PRNumber != nil {
-				prInfo = fmt.Sprintf(" #%d", *orphan.PRNumber)
-			}
-
-			line := fmt.Sprintf("%s%s %s ", cursor, selectMark, orphan.BranchName)
-			b.WriteString(lineStyle.Render(line))
-			b.WriteString(typeStyle.Render(fmt.Sprintf("[%s]", orphan.Type.Label())))
-			fmt.Fprintf(&b, " %dd%s\n", orphan.DaysSinceActivity, prInfo)
-		}
-	}
+	m.renderOrphanList(&b, filtered)
 
 	if m.statusMsg != "" {
 		b.WriteString("\n")
@@ -579,6 +561,100 @@ func (m Model) View() string {
 	return b.String()
 }
 
+func (m Model) renderLoading() string {
+	if m.total > 0 {
+		return fmt.Sprintf(
+			"Scanning repositories...\nProgress: %d/%d repos\nCurrently: %s\nOrphans found: %d\n",
+			m.progress,
+			m.total,
+			m.scanning,
+			m.orphansFound,
+		)
+	}
+
+	return "Loading repositories...\n"
+}
+
+func (m Model) renderTypeTabs(b *strings.Builder) {
+	activeTab := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(theme.Current().Warning)
+
+	inactiveTab := lipgloss.NewStyle().
+		Foreground(theme.Current().Muted)
+
+	tab := func(label string, t *orphans.OrphanType) string {
+		match := (t == nil && m.filterType == nil) || (t != nil && m.filterType != nil && *m.filterType == *t)
+		if match {
+			return activeTab.Render(label)
+		}
+
+		return inactiveTab.Render(label)
+	}
+
+	merged := orphans.OrphanTypeMergedPR
+	closed := orphans.OrphanTypeClosedPR
+	stale := orphans.OrphanTypeStale
+
+	b.WriteString(tab("[1] All", nil))
+	b.WriteString("  ")
+	b.WriteString(tab("[2] Merged", &merged))
+	b.WriteString("  ")
+	b.WriteString(tab("[3] Closed", &closed))
+	b.WriteString("  ")
+	b.WriteString(tab("[4] Stale", &stale))
+	b.WriteString("\n\n")
+}
+
+func (m Model) renderOrphanList(b *strings.Builder, filtered []orphans.OrphanedBranch) {
+	if len(filtered) == 0 {
+		b.WriteString("No orphaned branches in this view.\n")
+		return
+	}
+
+	currentRepo := ""
+	for i, orphan := range filtered {
+		if m.viewMode == ViewModeByRepo && orphan.Repository != currentRepo {
+			currentRepo = orphan.Repository
+			repoStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Primary)
+			b.WriteString("\n")
+			b.WriteString(repoStyle.Render(currentRepo))
+			b.WriteString("\n")
+		}
+
+		m.renderOrphanLine(b, orphan, i)
+	}
+}
+
+func (m Model) renderOrphanLine(b *strings.Builder, orphan orphans.OrphanedBranch, i int) {
+	cursor := " "
+	if m.cursor == i {
+		cursor = ">"
+	}
+
+	selectMark := " "
+	if m.selected[orphan.Key()] {
+		selectMark = "*"
+	}
+
+	typeStyle := getTypeStyle(orphan.Type)
+
+	lineStyle := lipgloss.NewStyle()
+	if m.cursor == i {
+		lineStyle = lineStyle.Bold(true).Foreground(theme.Current().Warning)
+	}
+
+	prInfo := ""
+	if orphan.PRNumber != nil {
+		prInfo = fmt.Sprintf(" #%d", *orphan.PRNumber)
+	}
+
+	line := fmt.Sprintf("%s%s %s ", cursor, selectMark, orphan.BranchName)
+	b.WriteString(lineStyle.Render(line))
+	b.WriteString(typeStyle.Render(fmt.Sprintf("[%s]", orphan.Type.Label())))
+	fmt.Fprintf(b, " %dd%s\n", orphan.DaysSinceActivity, prInfo)
+}
+
 func (m Model) renderConfirmDialog(b *strings.Builder) string {
 	warnStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Error)
 	b.WriteString(warnStyle.Render("Confirm Delete"))
@@ -596,7 +672,7 @@ func (m Model) renderConfirmDialog(b *strings.Builder) string {
 	return b.String()
 }
 
-func (m Model) renderHelp(b *strings.Builder) string {
+func renderHelp(b *strings.Builder) string {
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Primary)
 	b.WriteString(titleStyle.Render("Keybindings"))
 	b.WriteString("\n\n")
@@ -617,7 +693,7 @@ func (m Model) renderHelp(b *strings.Builder) string {
 	}
 
 	for _, binding := range bindings {
-		keyStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Warning).Width(16)
+		keyStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Warning).Width(helpKeyWidth)
 		fmt.Fprintf(b, "%s %s\n", keyStyle.Render(binding[0]), binding[1])
 	}
 
@@ -626,7 +702,7 @@ func (m Model) renderHelp(b *strings.Builder) string {
 	return b.String()
 }
 
-func (m Model) getTypeStyle(t orphans.OrphanType) lipgloss.Style {
+func getTypeStyle(t orphans.OrphanType) lipgloss.Style {
 	switch t {
 	case orphans.OrphanTypeMergedPR:
 		return lipgloss.NewStyle().Foreground(theme.Current().Success)
