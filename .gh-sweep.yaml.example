@@ -86,7 +86,7 @@ gha_perf:
 # Orphan branch detection settings
 orphans:
   # Days of inactivity before a branch without a PR is considered stale
-  stale_days_threshold: 7
+  stale_days_threshold: 30
 
   # Branch patterns never treated as orphans
   exclude_patterns:

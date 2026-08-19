@@ -24,7 +24,7 @@ branches:
   protected_patterns: [main, master, develop, release/*]
 
 orphans:
-  stale_days_threshold: 7
+  stale_days_threshold: 30
   exclude_patterns: [main, master, develop, release/*, hotfix/*]
 
 gha_perf:

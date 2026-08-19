@@ -103,11 +103,13 @@ gh sweep orphans --org my-org --cleanup --dry-run
 | `--org` | Organization to scan |
 | `--namespace` | Namespace, org or user, to scan |
 | `--repos` | Specific repos to scan |
-| `--stale-days` | Days of inactivity before a branch counts as stale, default 7 |
+| `--stale-days` | Days of inactivity before a branch counts as stale, default 30 |
 | `--exclude` | Branch patterns to skip |
 | `--include-recent` | Include recent branches that have no PR |
 | `--cleanup` | Delete the orphaned branches |
 | `--dry-run` | Preview deletions and delete nothing |
+| `--yes` | Skip the cleanup confirmation prompt |
+| `--include-closed-pr` | Include closed-PR branches in `--cleanup` (excluded by default) |
 | `-o`, `--output` | Output file path |
 | `--format` | `table`, `json`, or `markdown`, default `table` |
 | `--list` | Print a table instead of the TUI |
@@ -203,6 +205,7 @@ gh sweep watching --watch-all
 |------|--------|
 | `--unwatched` | List unwatched repositories |
 | `--watch-all` | Watch every unwatched repository |
+| `--yes` | Skip the watch-all confirmation prompt |
 
 Neither REST nor GraphQL can see or set GitHub's "Custom" per-notification-type
 watch setting, so a repo left at Custom reports the same state here as one at the

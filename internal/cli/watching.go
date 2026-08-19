@@ -1,8 +1,11 @@
 package cli
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -26,6 +29,7 @@ Examples:
 	Run: func(cmd *cobra.Command, args []string) {
 		unwatched := boolFlag(cmd, "unwatched")
 		watchAll := boolFlag(cmd, "watch-all")
+		yes := boolFlag(cmd, "yes")
 
 		ctx := context.Background()
 		client, err := github.NewClient(ctx)
@@ -75,21 +79,7 @@ Examples:
 		}
 
 		if watchAll {
-			if len(unwatchedRepos) == 0 {
-				fmt.Println("All repositories are already being watched.")
-				return
-			}
-			fmt.Printf("Watching %d repositories...\n\n", len(unwatchedRepos))
-			for _, repo := range unwatchedRepos {
-				_, err := client.SetRepoSubscription(repo.Owner, repo.Name, true, false)
-				if err != nil {
-					fmt.Printf("  Failed to watch %s: %v\n", repo.FullName, err)
-					continue
-				}
-				fmt.Printf("  Watching %s\n", repo.FullName)
-			}
-			fmt.Println("\nDone.")
-
+			runWatchAll(client, unwatchedRepos, yes)
 			return
 		}
 
@@ -111,6 +101,42 @@ Examples:
 	},
 }
 
+func runWatchAll(client *github.Client, unwatchedRepos []github.RepoWatchInfo, yes bool) {
+	if len(unwatchedRepos) == 0 {
+		fmt.Println("All repositories are already being watched.")
+		return
+	}
+
+	fmt.Printf("Repositories to watch:\n\n")
+	for _, repo := range unwatchedRepos {
+		fmt.Printf("  - %s\n", repo.FullName)
+	}
+	fmt.Println()
+
+	if !yes {
+		reader := bufio.NewReader(os.Stdin)
+		fmt.Printf("Type \"yes\" to watch these %d repositories: ", len(unwatchedRepos))
+
+		line, err := reader.ReadString('\n')
+		if err != nil || strings.TrimSpace(line) != "yes" {
+			fmt.Println("Aborted; no repositories watched.")
+			return
+		}
+		fmt.Println()
+	}
+
+	fmt.Printf("Watching %d repositories...\n\n", len(unwatchedRepos))
+	for _, repo := range unwatchedRepos {
+		_, err := client.SetRepoSubscription(repo.Owner, repo.Name, true, false)
+		if err != nil {
+			fmt.Printf("  Failed to watch %s: %v\n", repo.FullName, err)
+			continue
+		}
+		fmt.Printf("  Watching %s\n", repo.FullName)
+	}
+	fmt.Println("\nDone.")
+}
+
 func formatPushedAt(repo github.RepoWatchInfo) string {
 	if repo.PushedAt.IsZero() {
 		return "unknown"
@@ -124,4 +150,5 @@ func init() {
 
 	watchingCmd.Flags().Bool("unwatched", false, "List unwatched repositories")
 	watchingCmd.Flags().Bool("watch-all", false, "Watch all unwatched repositories")
+	watchingCmd.Flags().Bool("yes", false, "Skip the watch-all confirmation prompt")
 }

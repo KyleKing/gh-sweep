@@ -360,8 +360,8 @@ func TestOrphanedBranch_Key(t *testing.T) {
 func TestDefaultScanOptions(t *testing.T) {
 	opts := DefaultScanOptions()
 
-	if opts.StaleDaysThreshold != 7 {
-		t.Errorf("StaleDaysThreshold = %d, want 7", opts.StaleDaysThreshold)
+	if opts.StaleDaysThreshold != 30 {
+		t.Errorf("StaleDaysThreshold = %d, want 30", opts.StaleDaysThreshold)
 	}
 
 	if opts.IncludeRecentNoPR {

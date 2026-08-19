@@ -115,7 +115,7 @@ func DefaultConfig() *Config {
 			RegressionThreshold: 20.0,
 		},
 		Orphans: OrphansConfig{
-			StaleDaysThreshold: 7,
+			StaleDaysThreshold: 30,
 			ExcludePatterns: []string{
 				"main",
 				"master",

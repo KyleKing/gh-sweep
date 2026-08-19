@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -53,8 +54,11 @@ func init() {
 	orphansCmd.Flags().Bool("list", false, "CLI list mode (no TUI)")
 	orphansCmd.Flags().Bool("cleanup", false, "Delete orphaned branches")
 	orphansCmd.Flags().Bool("dry-run", false, "Preview deletions without executing")
+	orphansCmd.Flags().Bool("yes", false, "Skip the cleanup confirmation prompt")
 	orphansCmd.Flags().
-		Int("stale-days", 7, "Days of inactivity before a branch is considered stale")
+		Bool("include-closed-pr", false, "Include closed-PR branches in --cleanup (excluded by default)")
+	orphansCmd.Flags().
+		Int("stale-days", 30, "Days of inactivity before a branch is considered stale")
 	orphansCmd.Flags().Bool("include-recent", false, "Include recent branches without PRs")
 	orphansCmd.Flags().StringSlice("exclude", nil, "Branch patterns to exclude")
 	orphansCmd.Flags().StringP("output", "o", "", "Output file path")
@@ -97,6 +101,8 @@ func runOrphans(cmd *cobra.Command, args []string) {
 	listMode := boolFlag(cmd, "list")
 	cleanup := boolFlag(cmd, "cleanup")
 	dryRun := boolFlag(cmd, "dry-run")
+	yes := boolFlag(cmd, "yes")
+	includeClosedPR := boolFlag(cmd, "include-closed-pr")
 	staleDays := intFlag(cmd, "stale-days")
 	includeRecent := boolFlag(cmd, "include-recent")
 	excludePatterns := stringSliceFlag(cmd, "exclude")
@@ -154,7 +160,7 @@ func runOrphans(cmd *cobra.Command, args []string) {
 	}
 
 	if cleanup {
-		runCleanup(ctx, client, result, dryRun)
+		runCleanup(ctx, client, result, dryRun, yes, includeClosedPR)
 		return
 	}
 
@@ -170,21 +176,72 @@ func runCleanup(
 	ctx context.Context,
 	client *github.Client,
 	result *orphans.NamespaceScanResult,
-	dryRun bool,
+	dryRun, yes, includeClosedPR bool,
 ) {
 	allOrphans := result.AllOrphans()
 
+	var skippedClosedPR int
+	if !includeClosedPR {
+		var filtered []orphans.OrphanedBranch
+		for _, orphan := range allOrphans {
+			if orphan.Type == orphans.OrphanTypeClosedPR {
+				skippedClosedPR++
+				continue
+			}
+			filtered = append(filtered, orphan)
+		}
+		allOrphans = filtered
+	}
+
 	if len(allOrphans) == 0 {
 		fmt.Println("No orphaned branches to clean up.")
+		if skippedClosedPR > 0 {
+			fmt.Printf(
+				"Skipped %d closed-PR branch(es); pass --include-closed-pr to delete them too.\n",
+				skippedClosedPR,
+			)
+		}
 		return
 	}
 
 	if dryRun {
 		fmt.Println("DRY RUN - Would delete the following branches:")
 	} else {
-		fmt.Println("Deleting orphaned branches:")
+		fmt.Println("Branches to delete:")
 	}
 	fmt.Println()
+
+	for _, orphan := range allOrphans {
+		fmt.Printf("  %s/%s [%s, %d days]\n", orphan.Repository, orphan.BranchName,
+			orphan.Type.Label(), orphan.DaysSinceActivity)
+	}
+	fmt.Println()
+
+	if skippedClosedPR > 0 {
+		fmt.Printf(
+			"Skipping %d closed-PR branch(es); pass --include-closed-pr to delete them too.\n\n",
+			skippedClosedPR,
+		)
+	}
+
+	if !dryRun && !yes {
+		reader := bufio.NewReader(os.Stdin)
+		fmt.Printf("Type \"yes\" to delete these %d branch(es): ", len(allOrphans))
+
+		line, err := reader.ReadString('\n')
+		if err != nil || strings.TrimSpace(line) != "yes" {
+			fmt.Println("Aborted; no branches deleted.")
+			return
+		}
+		fmt.Println()
+	}
+
+	if dryRun {
+		fmt.Printf("Total: %d would be deleted\n", len(allOrphans))
+		return
+	}
+
+	fmt.Println("Deleting orphaned branches:")
 
 	deleted := 0
 	failed := 0
@@ -195,13 +252,6 @@ func runCleanup(
 			continue
 		}
 		owner, repo := parts[0], parts[1]
-
-		if dryRun {
-			fmt.Printf("  [DRY RUN] Would delete %s/%s\n", orphan.Repository, orphan.BranchName)
-			deleted++
-
-			continue
-		}
 
 		err := client.DeleteBranch(owner, repo, orphan.BranchName)
 		if err != nil {

@@ -91,7 +91,7 @@ type ScanOptions struct {
 
 func DefaultScanOptions() ScanOptions {
 	return ScanOptions{
-		StaleDaysThreshold: 7,
+		StaleDaysThreshold: 30,
 		IncludeRecentNoPR:  false,
 		ExcludePatterns: []string{
 			"main",
