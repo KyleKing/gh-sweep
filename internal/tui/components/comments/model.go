@@ -1,3 +1,5 @@
+// Package comments is the TUI view for reviewing PR review threads across a
+// repository, filterable to unresolved threads only.
 package comments
 
 import (
@@ -13,6 +15,20 @@ import (
 	"github.com/KyleKing/gh-sweep/internal/github"
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
+
+const (
+	repoPartsCount = 2
+	helpKeyWidth   = 16
+	excerptLimit   = 60
+	hoursPerDay    = 24
+	daysPerMonth   = 30
+)
+
+// ErrNoRepository means the model was constructed without a repository to load threads from.
+var ErrNoRepository = errors.New("no repository specified")
+
+// ErrInvalidRepoFormat means the repository string was not in owner/repo form.
+var ErrInvalidRepoFormat = errors.New("invalid repo format, expected owner/repo")
 
 // Model represents the comments review TUI state.
 type Model struct {
@@ -57,14 +73,13 @@ func (m Model) Init() tea.Cmd {
 
 func (m Model) loadThreads() tea.Msg {
 	if m.repo == "" {
-		return threadsLoadedMsg{err: errors.New("no repository specified")}
+		return threadsLoadedMsg{err: ErrNoRepository}
 	}
 
-	parts := strings.Split(m.repo, "/")
-	if len(parts) != 2 {
-		return threadsLoadedMsg{err: errors.New("invalid repo format, expected owner/repo")}
+	owner, repo, ok := splitRepo(m.repo)
+	if !ok {
+		return threadsLoadedMsg{err: ErrInvalidRepoFormat}
 	}
-	owner, repo := parts[0], parts[1]
 
 	client, err := github.NewClient(context.Background())
 	if err != nil {
@@ -90,7 +105,18 @@ func (m Model) loadThreads() tea.Msg {
 	return threadsLoadedMsg{threads: threads}
 }
 
+func splitRepo(repo string) (string, string, bool) {
+	parts := strings.SplitN(repo, "/", repoPartsCount)
+	if len(parts) != repoPartsCount {
+		return "", "", false
+	}
+
+	return parts[0], parts[1], true
+}
+
 // Update handles messages.
+//
+//nolint:unparam // matches every TUI component's Update(Model, tea.Cmd) shape
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -108,43 +134,49 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyPressMsg:
-		if m.showHelp {
-			if msg.String() == "?" || msg.String() == "esc" {
-				m.showHelp = false
-			}
+		return m.updateKeyMsg(msg)
+	}
 
-			return m, nil
+	return m, nil
+}
+
+func (m Model) updateKeyMsg(msg tea.KeyPressMsg) (Model, tea.Cmd) {
+	if m.showHelp {
+		if msg.String() == "?" || msg.String() == "esc" {
+			m.showHelp = false
 		}
 
-		switch msg.String() {
-		case "ctrl+c", "q":
-			return m, tea.Quit
+		return m, nil
+	}
 
-		case "?":
-			m.showHelp = true
+	switch msg.String() {
+	case "ctrl+c", "q":
+		return m, tea.Quit
 
-		case "g":
-			m.cursor = 0
+	case "?":
+		m.showHelp = true
 
-		case "G":
-			if visible := m.visibleThreads(); len(visible) > 0 {
-				m.cursor = len(visible) - 1
-			}
+	case "g":
+		m.cursor = 0
 
-		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
-			}
-
-		case "down", "j":
-			if m.cursor < len(m.visibleThreads())-1 {
-				m.cursor++
-			}
-
-		case "r":
-			m.showResolved = !m.showResolved
-			m.cursor = 0
+	case "G":
+		if visible := m.visibleThreads(); len(visible) > 0 {
+			m.cursor = len(visible) - 1
 		}
+
+	case "up", "k":
+		if m.cursor > 0 {
+			m.cursor--
+		}
+
+	case "down", "j":
+		if m.cursor < len(m.visibleThreads())-1 {
+			m.cursor++
+		}
+
+	case "r":
+		m.showResolved = !m.showResolved
+		m.cursor = 0
 	}
 
 	return m, nil
@@ -185,7 +217,7 @@ func (m Model) View() string {
 	fmt.Fprintf(&b, "Total: %d | Unresolved: %d\n\n", len(m.threads), len(m.unresolved))
 
 	if m.showHelp {
-		return m.renderHelp(&b)
+		return renderHelp(&b)
 	}
 
 	visible := m.visibleThreads()
@@ -202,7 +234,7 @@ func (m Model) View() string {
 	return b.String()
 }
 
-func (m Model) renderHelp(b *strings.Builder) string {
+func renderHelp(b *strings.Builder) string {
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Primary)
 	b.WriteString(titleStyle.Render("Keybindings"))
 	b.WriteString("\n\n")
@@ -216,7 +248,7 @@ func (m Model) renderHelp(b *strings.Builder) string {
 	}
 
 	for _, binding := range bindings {
-		keyStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Warning).Width(16)
+		keyStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Warning).Width(helpKeyWidth)
 		fmt.Fprintf(b, "%s %s\n", keyStyle.Render(binding[0]), binding[1])
 	}
 
@@ -269,7 +301,7 @@ func renderThread(cursor string, thread github.ReviewThread) string {
 	if first, ok := thread.FirstComment(); ok {
 		author = first.Author
 		age = formatAge(first.CreatedAt)
-		body = excerpt(first.Body, 60)
+		body = excerpt(first.Body, excerptLimit)
 	}
 
 	line := fmt.Sprintf("%s %s%s\n", cursor, thread.Path, outdated)
@@ -293,11 +325,11 @@ func formatAge(t time.Time) string {
 	switch {
 	case d < time.Hour:
 		return fmt.Sprintf("%dm", int(d.Minutes()))
-	case d < 24*time.Hour:
+	case d < hoursPerDay*time.Hour:
 		return fmt.Sprintf("%dh", int(d.Hours()))
-	case d < 30*24*time.Hour:
-		return fmt.Sprintf("%dd", int(d.Hours()/24))
+	case d < daysPerMonth*hoursPerDay*time.Hour:
+		return fmt.Sprintf("%dd", int(d.Hours()/hoursPerDay))
 	default:
-		return fmt.Sprintf("%dmo", int(d.Hours()/(24*30)))
+		return fmt.Sprintf("%dmo", int(d.Hours()/(hoursPerDay*daysPerMonth)))
 	}
 }

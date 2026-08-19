@@ -11,6 +11,8 @@ import (
 	"github.com/KyleKing/gh-sweep/internal/github"
 )
 
+var errRateLimited = errors.New("rate limited")
+
 func threadsFixture() []github.ReviewThread {
 	return []github.ReviewThread{
 		{
@@ -115,7 +117,7 @@ func TestThreadsLoadError(t *testing.T) {
 	t.Parallel()
 
 	m := NewModel("acme/widgets")
-	m, _ = m.Update(threadsLoadedMsg{err: errors.New("rate limited")})
+	m, _ = m.Update(threadsLoadedMsg{err: errRateLimited})
 
 	if !strings.Contains(m.View(), "rate limited") {
 		t.Errorf("view = %q", m.View())
