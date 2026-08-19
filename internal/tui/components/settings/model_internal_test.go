@@ -10,6 +10,8 @@ import (
 	"github.com/KyleKing/gh-sweep/internal/github"
 )
 
+var errForbidden = errors.New("forbidden")
+
 func loadedSettingsModel() Model {
 	m := NewModel([]string{"acme/widgets", "acme/gadgets"}, "acme/widgets")
 	m, _ = m.Update(settingsLoadedMsg{
@@ -103,7 +105,7 @@ func TestSettingsLoadError(t *testing.T) {
 	m, _ = m.Update(settingsLoadedMsg{
 		settings: map[string]*github.RepoSettings{},
 		diffs:    map[string][]github.SettingsDiff{},
-		err:      errors.New("forbidden"),
+		err:      errForbidden,
 	})
 
 	if !strings.Contains(m.View(), "forbidden") {
