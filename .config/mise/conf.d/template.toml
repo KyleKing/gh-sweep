@@ -8,10 +8,7 @@ run = "go build -v -o gh-sweep ./cmd/gh-sweep"
 
 [tasks.ci]
 description = "Run all checks (used in GitHub Actions)"
-run = [
-  "go test -v -coverprofile=coverage.out ./...",
-  "go build -v -o gh-sweep ./cmd/gh-sweep"
-]
+run = ["go test -v -coverprofile=coverage.out ./...", "go build -v -o gh-sweep ./cmd/gh-sweep"]
 
 [tasks.clean]
 description = "Clean build artifacts"
@@ -61,17 +58,23 @@ fi
 description = "View coverage report in browser"
 run = "go tool cover -html=coverage.out"
 
+# Every version here comes from copier.yml, which is the one place they are
+# defined, so mise and the workflows can never disagree. "latest" is deliberately
+# absent: a formatter or linter that resolves differently on a laptop than on a
+# runner fails only in CI, which is the worst place to find out.
+# PLANNED: hand these pins to doner (../doner) once it reads mise TOML as well as
+# Dockerfiles, so they update on its schedule instead of by hand.
 [tools]
-actionlint = "latest"
-go = "latest"
+actionlint = "1.7.12"
+go = "1.26.6"
 "go:github.com/golangci/golines" = "0.15.0"
 "golangci-lint" = "2.12.2"
 hk = "1.53.0"
-jq = "latest"
-ls-lint = "latest"
-"pipx:commitizen" = "latest"
-"pipx:yamllint" = "latest"
-pkl = "latest"
-shellcheck = "latest"
-tombi = "latest"
-typos = "latest"
+jq = "1.8.2"
+ls-lint = "2.3.1"
+"pipx:commitizen" = "4.17.0"
+"pipx:yamllint" = "1.38.0"
+pkl = "0.32.1"
+shellcheck = "0.11.0"
+tombi = "1.4.0"
+typos = "1.49.0"

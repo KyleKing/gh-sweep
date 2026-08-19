@@ -1,16 +1,20 @@
 # AI Agent Guidelines for gh-sweep
 
 How to work in this Go project. Architecture and domain context live in
-[DESIGN.md](DESIGN.md); task and release mechanics live in
-[CONTRIBUTING.md](CONTRIBUTING.md). This file covers only what those two do not.
+[DESIGN.md](DESIGN.md), task and release mechanics live in
+[CONTRIBUTING.md](CONTRIBUTING.md), worked code examples live in
+[docs/go-best-practices.md](docs/go-best-practices.md), and toolchain failures live
+in [docs/troubleshooting.md](docs/troubleshooting.md). This file covers only what
+those do not.
 
 ## Verify before you report
 
-CI runs four jobs and `mise run ci` is only the first, so a green `mise run ci` is not
-a green build. Reproduce all four locally:
+CI runs five jobs and `mise run ci` is only the first, so a green `mise run ci` is not
+a green build. Reproduce all five locally:
 
 ```bash
 hk check --all                            # every hook step; also re-runs `mise run ci`
+mise exec -- actionlint                   # separate CI job; the validator for workflow YAML
 mise exec -- golangci-lint run ./...      # separate CI job, not an hk step
 mise exec -- golangci-lint config verify  # `run` accepts v1 schema keys silently
 mise run bench                            # compiles and runs the benchmarks
@@ -30,6 +34,10 @@ Known false negatives, each of which has already cost a session:
   code, so a failing hook looks like success and the follow-up push ships nothing.
   Commit as its own command, then confirm with `git log -1`. Hooks rewrite files here;
   when one fails that way, `git add -A` its edits and commit again.
+- **A workflow that passes yamllint can still be broken.** `hk.pkl` excludes
+  `.github/workflows/` from yamllint, and yamllint reads YAML syntax only. Runner
+  labels, expression syntax, `workflow_call` inputs, and embedded shell are
+  `actionlint`'s job, so edit a workflow and run `mise exec -- actionlint`.
 - **A release is verified by distinct hashes, not asset count.** Ten assets can be one
   binary published ten times. Confirm with
   `gh release download <tag> -p checksums.txt -O - | awk '{print $1}' | sort -u | wc -l`
@@ -41,17 +49,11 @@ report what you found.
 
 ## Layout
 
-```
-gh-sweep/
-├── cmd/gh-sweep/  # main package, kept thin
-├── internal/      # private packages; the compiler blocks outside imports
-│   ├── cli/       # Cobra commands
-│   ├── tui/       # Bubble Tea app and one package per view
-│   └── ...
-└── go.mod
-```
-
-DESIGN.md holds the full package map and the rules for adding an API surface or a view.
+The entry point lives in `cmd/gh-sweep/` and stays thin, delegating to
+`internal/`. The compiler blocks imports of `internal/` from outside this module,
+so anything under it can change freely: `internal/cli/` holds the Cobra commands,
+`internal/tui/` the Bubble Tea app and one package per view. DESIGN.md holds the
+full package map and the rules for adding an API surface or a view.
 
 One package, one purpose. Short lowercase names, no underscores (`httputil`, not
 `http_util`), and no grab-bags (`util`, `common`, `misc`). Name a file after the
@@ -75,6 +77,9 @@ Avoid: naked returns, functions past ~50 lines, deep nesting (return early), ign
 errors (`_ = doThing()` is almost always wrong), and shared global state (pass
 dependencies explicitly).
 
+[docs/go-best-practices.md](docs/go-best-practices.md) has a worked example of each
+pattern above, plus the package layout rules and the anti-pattern list in full.
+
 ## Testing
 
 Table-driven tests with subtests via `t.Run`, placed next to the code they cover, in a
@@ -92,9 +97,14 @@ commit; either rename it or add its glob to that exclude.
 A subprocess pipe is not a terminal, so the program detects a non-tty and never renders.
 Exploratory checks need a real PTY: run it under `tmux new -d -x 80 -y 24 <cmd>`, drive
 it with `tmux send-keys`, and read what actually rendered with `tmux capture-pane -p`
-(`-e` keeps ANSI codes). For scripted tests prefer
+(`-e` keeps ANSI codes). A tab in captured output is not proof the program emitted one:
+`tmux capture-pane` re-emits a tab wherever the cursor was advanced across cells that
+were never written. Check which column the text actually lands on before chasing it as
+a rendering bug. For scripted tests prefer
 `github.com/charmbracelet/x/exp/teatest`, which drives the `tea.Model` directly and
-diffs golden frames; fall back to `github.com/creack/pty` for non-Bubble Tea binaries.
+diffs golden frames; on Bubble Tea v2 that import is
+`github.com/charmbracelet/x/exp/teatest/v2`, because the unsuffixed module targets v1.
+Fall back to `github.com/creack/pty` for non-Bubble Tea binaries.
 
 Exercise deliberately, because each of these renders fine in the happy path and breaks
 elsewhere: resize mid-session (`SIGWINCH`) and the minimum supported size; every quit
@@ -116,10 +126,42 @@ local edits there. Project-specific mise tasks belong in a sibling conf.d file
 
 After `copier update --UNSAFE --conflict=rej --defaults`, re-apply real local content
 from each `.rej`, discard hunks the new template supersedes, and delete the files (a
-hook blocks committing them). Two specifics:
+hook blocks committing them). Three specifics:
 
 - `.cz.toml` is re-rendered with `version = "0.0.0"`. Restore the real version by hand
   or the next release cuts `v0.0.1`.
+- Scaffolding the project then implements (the `cmd/` entry point, the `bindings/` cgo
+  shim, its Python wrapper) conflicts on every update, because the template keeps
+  rendering its starting version. Re-apply from the `.rej` and move on
 - **The same file conflicting on two consecutive updates means an answer is wrong, not
   that the patch needs re-applying.** Read `.copier-answers.yml` first and fix the
   answer; a typo there gets faithfully re-rendered every pass.
+
+Resolve conflicts rather than avoiding them. Adding a file to `_skip_if_exists` looks
+like it removes the friction, and instead it makes the file stop receiving every later
+template fix, silently and forever. A conflict is loud and usually a few lines to
+re-apply, whereas a skipped file drifts without ever saying so. `_skip_if_exists` is
+for files the template has nothing further to say about after the first render, which
+is why it holds `README.md`, `DESIGN.md`, `go.mod`, and `.config/mise.toml` and nothing
+that carries template-maintained content.
+
+Resolving a conflict is half the work. The other half is deciding which side was
+better and backporting it. A `.rej` is a diff between what the template renders and
+what this project actually needed, so it names the gap directly:
+
+- The template's hunk is better, so take it and delete the local version
+- The local hunk is better and generalizes, so take it locally AND open the change
+  against [my_go_template](https://github.com/KyleKing/my_go_template) so the next
+  render starts from it
+- The local hunk is better and is specific to this project, so take it locally and
+  leave the template alone
+
+The second case is the one to watch for, because skipping it means re-resolving the
+same conflict on every future update. If a file clobbers the same way twice, the
+template is rendering the wrong thing and the fix belongs upstream.
+
+This file is template-owned and `copier update` keeps it current. Put project-specific
+guidance in `AGENTS.local.md` (loaded below when present) or in a nested `AGENTS.md`
+scoped to its directory.
+
+@AGENTS.local.md

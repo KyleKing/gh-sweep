@@ -17,8 +17,6 @@ import (
 // requestOnlyMatcher ignores headers (the cassette's are redacted, and Time-Zone
 // varies by machine) and matches purely on method, URL, and body, replaying
 // interactions strictly in recorded order.
-//
-//nolint:gocritic // must match cassette.MatcherFunc's value-type signature
 func requestOnlyMatcher(r *http.Request, i cassette.Request) bool {
 	if r.Method != i.Method || r.URL.String() != i.URL {
 		return false
