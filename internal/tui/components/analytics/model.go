@@ -40,8 +40,8 @@ var (
 // Model represents the analytics TUI state.
 type Model struct {
 	repo          string
-	stats         *github.WorkflowRunStats
-	runs          []github.WorkflowRun
+	stats         *github.WorkflowStats
+	runs          []github.RunTiming
 	flaky         []github.FlakyTest
 	errorContexts []*github.ErrorContext
 	errorsLoaded  bool
@@ -66,8 +66,8 @@ func NewModel(repo string) Model {
 }
 
 type analyticsLoadedMsg struct {
-	stats *github.WorkflowRunStats
-	runs  []github.WorkflowRun
+	stats *github.WorkflowStats
+	runs  []github.RunTiming
 	flaky []github.FlakyTest
 	err   error
 }
@@ -112,17 +112,17 @@ func (m Model) loadAnalytics() tea.Msg {
 		return analyticsLoadedMsg{err: fmt.Errorf("failed to create GitHub client: %w", err)}
 	}
 
-	runs, err := client.ListWorkflowRuns(owner, repo)
+	runs, err := client.FetchWorkflowRuns(owner, repo, github.FetchWorkflowRunsOptions{})
 	if err != nil {
 		return analyticsLoadedMsg{
-			stats: &github.WorkflowRunStats{},
-			runs:  []github.WorkflowRun{},
+			stats: &github.WorkflowStats{},
+			runs:  []github.RunTiming{},
 		}
 	}
 
-	stats := github.AnalyzeWorkflowRuns(runs)
+	stats := github.AnalyzeRuns(runs)
 	flaky := github.DetectFlakyTests(
-		github.WorkflowRunsToTestRuns(m.repo, runs),
+		github.RunsToTestRuns(m.repo, runs),
 		github.DefaultFlakyConfig(),
 	)
 
@@ -159,12 +159,12 @@ func (m Model) loadErrors() tea.Msg {
 		}
 		extracted++
 
-		logs, err := client.FetchFailedJobLogs(owner, repo, run.ID)
+		logs, err := client.FetchFailedJobLogs(owner, repo, run.RunID)
 		if err != nil {
 			continue
 		}
 
-		contexts = append(contexts, github.BatchExtractErrors(logs, run.Name, config)...)
+		contexts = append(contexts, github.BatchExtractErrors(logs, run.Workflow, config)...)
 	}
 
 	return errorsLoadedMsg{contexts: contexts}
@@ -407,7 +407,7 @@ func (m Model) renderErrors() string {
 	return b.String()
 }
 
-func countFailedRuns(runs []github.WorkflowRun) int {
+func countFailedRuns(runs []github.RunTiming) int {
 	count := 0
 	for i := range runs {
 		if runs[i].Conclusion == conclusionFailure {

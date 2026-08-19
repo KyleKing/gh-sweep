@@ -16,15 +16,15 @@ var errBoom = errors.New("boom")
 func loadedAnalyticsModel() Model {
 	m := NewModel("acme/widgets")
 	m, _ = m.Update(analyticsLoadedMsg{
-		stats: &github.WorkflowRunStats{
+		stats: &github.WorkflowStats{
 			TotalRuns:    20,
 			SuccessRate:  85.0,
 			FailureCount: 3,
 			AvgDuration:  4*time.Minute + 30*time.Second,
 		},
-		runs: []github.WorkflowRun{
-			{ID: 1, Name: "ci", Conclusion: "success"},
-			{ID: 2, Name: "ci", Conclusion: "failure"},
+		runs: []github.RunTiming{
+			{RunID: 1, Workflow: "ci", Conclusion: "success"},
+			{RunID: 2, Workflow: "ci", Conclusion: "failure"},
 		},
 		flaky: []github.FlakyTest{
 			{

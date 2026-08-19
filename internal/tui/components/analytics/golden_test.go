@@ -18,15 +18,15 @@ func TestGoldenLoadedView(t *testing.T) {
 	m := NewModel("acme/widgets")
 	m, _ = m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	m, _ = m.Update(analyticsLoadedMsg{
-		stats: &github.WorkflowRunStats{
+		stats: &github.WorkflowStats{
 			TotalRuns:    20,
 			SuccessRate:  85.0,
 			FailureCount: 3,
 			AvgDuration:  4*time.Minute + 30*time.Second,
 		},
-		runs: []github.WorkflowRun{
-			{ID: 1, Name: "ci", Conclusion: "success", Branch: "main"},
-			{ID: 2, Name: "ci", Conclusion: "failure", Branch: "main"},
+		runs: []github.RunTiming{
+			{RunID: 1, Workflow: "ci", Conclusion: "success", Branch: "main"},
+			{RunID: 2, Workflow: "ci", Conclusion: "failure", Branch: "main"},
 		},
 		flaky: []github.FlakyTest{
 			{

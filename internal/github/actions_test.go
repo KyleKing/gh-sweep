@@ -6,19 +6,19 @@ import (
 	"time"
 )
 
-// TestAnalyzeWorkflowRuns tests workflow run statistics.
-func TestAnalyzeWorkflowRuns(t *testing.T) {
+// TestAnalyzeRuns tests workflow run statistics.
+func TestAnalyzeRuns(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name             string
-		runs             []WorkflowRun
+		runs             []RunTiming
 		expectedSuccess  float64
 		expectedFailures int
 	}{
 		{
 			name: "all successful",
-			runs: []WorkflowRun{
+			runs: []RunTiming{
 				{Conclusion: "success", Duration: 1 * time.Minute},
 				{Conclusion: "success", Duration: 2 * time.Minute},
 			},
@@ -27,7 +27,7 @@ func TestAnalyzeWorkflowRuns(t *testing.T) {
 		},
 		{
 			name: "mixed results",
-			runs: []WorkflowRun{
+			runs: []RunTiming{
 				{Conclusion: "success", Duration: 1 * time.Minute},
 				{Conclusion: "failure", Duration: 2 * time.Minute},
 				{Conclusion: "success", Duration: 1 * time.Minute},
@@ -38,7 +38,7 @@ func TestAnalyzeWorkflowRuns(t *testing.T) {
 		},
 		{
 			name:             "empty runs",
-			runs:             []WorkflowRun{},
+			runs:             []RunTiming{},
 			expectedSuccess:  0.0,
 			expectedFailures: 0,
 		},
@@ -48,7 +48,7 @@ func TestAnalyzeWorkflowRuns(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			stats := AnalyzeWorkflowRuns(tt.runs)
+			stats := AnalyzeRuns(tt.runs)
 
 			if stats.SuccessRate != tt.expectedSuccess {
 				t.Errorf("Expected success rate %.2f%%, got %.2f%%",

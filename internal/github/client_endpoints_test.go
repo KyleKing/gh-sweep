@@ -543,9 +543,9 @@ func TestListWorkflowsAndRuns(t *testing.T) {
 		t.Errorf("workflows = %+v", workflows)
 	}
 
-	runs, err := client.ListWorkflowRuns("acme", "widgets")
+	runs, err := client.FetchWorkflowRuns("acme", "widgets", github.FetchWorkflowRunsOptions{})
 	if err != nil {
-		t.Fatalf("ListWorkflowRuns() error = %v", err)
+		t.Fatalf("FetchWorkflowRuns() error = %v", err)
 	}
 
 	if len(runs) != 1 || runs[0].Conclusion != "success" {
