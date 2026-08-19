@@ -160,10 +160,35 @@ jobs:
 
 The job fails when drift is found. `GH_SWEEP_TOKEN` needs read access to every
 repo the policy covers; the default `GITHUB_TOKEN` only covers the repo the
-workflow runs in. Applying from CI (`--apply --yes` in a workflow) is not
-wired up as a documented pattern yet: unattended writes to branch protection
-need their own decision about who is allowed to trigger them, see
-[ROADMAP.md](../ROADMAP.md#deferred).
+workflow runs in.
+
+To apply drift unattended, call the
+[`policy-apply.yml`](../.github/workflows/policy-apply.yml) reusable workflow
+instead of running `--apply --yes` directly. It checks for drift first and
+only runs the apply job when drift exists, and that job targets a GitHub
+Environment you name, so a required reviewer on that Environment has to
+approve before anything gets written:
+
+```yaml
+# .github/workflows/policy-apply.yml
+on:
+  schedule:
+    - cron: "0 6 * * 1" # every Monday
+  workflow_dispatch:
+
+jobs:
+  policy:
+    uses: KyleKing/gh-sweep/.github/workflows/policy-apply.yml@v0.6.0
+    with:
+      environment: policy-apply
+    secrets:
+      token: ${{ secrets.GH_SWEEP_TOKEN }}
+```
+
+Pin the `@` ref to the gh-sweep release you want; the caller only needs this
+short block, not a copy of the workflow itself. Create the `policy-apply`
+Environment in the caller repo's settings and add required reviewers there —
+that's the approval gate, gh-sweep does not implement its own.
 
 ## watching
 

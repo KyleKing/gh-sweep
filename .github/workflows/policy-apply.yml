@@ -1,0 +1,57 @@
+name: Policy Apply
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: >-
+          GitHub Environment gating the apply job. Add required reviewers to
+          it so an unattended policy write needs a human approval first.
+        type: string
+        required: true
+      policy:
+        description: Path to the policy file, relative to the repo root.
+        type: string
+        default: .gh-sweep-policy.yaml
+    secrets:
+      token:
+        description: Token with read/write access to every repo the policy covers.
+        required: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      drift: ${{ steps.check.outputs.drift }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - run: gh extension install kyleking/gh-sweep
+
+      # --list exits 1 on drift (and on a client error worth a human seeing),
+      # so any nonzero here is what escalates to the apply job's approval gate.
+      - id: check
+        run: |
+          if gh sweep policy --list --format json --policy "${{ inputs.policy }}"; then
+            echo "drift=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "drift=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  apply:
+    needs: check
+    if: needs.check.outputs.drift == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: ${{ inputs.environment }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - run: gh extension install kyleking/gh-sweep
+
+      - run: gh sweep policy --apply --yes --policy "${{ inputs.policy }}"
