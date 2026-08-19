@@ -70,8 +70,7 @@ Examples:
 				return
 			}
 			for _, repo := range unwatchedRepos {
-				fmt.Printf("  - %s (stars %d, watchers %d, pushed %s)\n",
-					repo.FullName, repo.StargazerCount, repo.WatcherCount, formatPushedAt(repo))
+				fmt.Printf("  - %s (pushed %s)\n", repo.FullName, formatPushedAt(repo))
 			}
 			fmt.Printf("\nTotal: %d unwatched repositories\n", len(unwatchedRepos))
 

@@ -168,6 +168,16 @@ func TestWatchResultUpdatesStatus(t *testing.T) {
 	if !strings.Contains(m.statusMsg, "boom") && !strings.Contains(m.statusMsg, "Failed") {
 		t.Errorf("statusMsg = %q", m.statusMsg)
 	}
+
+	m, _ = m.Update(openResultMsg{repo: "acme/gadgets"})
+	if !strings.Contains(m.statusMsg, "Opened acme/gadgets") {
+		t.Errorf("statusMsg = %q", m.statusMsg)
+	}
+
+	m, _ = m.Update(openResultMsg{repo: "acme/widgets", err: errors.New("boom")})
+	if !strings.Contains(m.statusMsg, "boom") && !strings.Contains(m.statusMsg, "Failed") {
+		t.Errorf("statusMsg = %q", m.statusMsg)
+	}
 }
 
 func TestIgnoreResultUpdatesStatus(t *testing.T) {

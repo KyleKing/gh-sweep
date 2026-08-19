@@ -8,6 +8,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/cli/browser"
 
 	"github.com/KyleKing/gh-sweep/internal/github"
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
@@ -58,6 +59,11 @@ type ignoreResultMsg struct {
 	err  error
 }
 
+type openResultMsg struct {
+	repo string
+	err  error
+}
+
 func (m Model) Init() tea.Cmd {
 	return m.loadData
 }
@@ -89,6 +95,13 @@ func (m Model) watchRepo(repo github.RepoWatchInfo) tea.Cmd {
 		}
 
 		return watchResultMsg{repo: repo.FullName, err: nil}
+	}
+}
+
+func (m Model) openRepo(repo github.RepoWatchInfo) tea.Cmd {
+	return func() tea.Msg {
+		err := browser.OpenURL("https://github.com/" + repo.FullName)
+		return openResultMsg{repo: repo.FullName, err: err}
 	}
 }
 
@@ -179,6 +192,15 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 		return m, nil
 
+	case openResultMsg:
+		if msg.err != nil {
+			m.statusMsg = fmt.Sprintf("Failed to open %s: %v", msg.repo, msg.err)
+		} else {
+			m.statusMsg = "Opened " + msg.repo
+		}
+
+		return m, nil
+
 	case tea.KeyPressMsg:
 		if m.searching {
 			return m.handleSearchKeys(msg)
@@ -258,6 +280,11 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 		case "i":
 			return m.handleIgnore()
+
+		case "o":
+			if filtered := m.getFilteredRepos(); m.cursor < len(filtered) {
+				return m, m.openRepo(filtered[m.cursor])
+			}
 		}
 	}
 
@@ -410,11 +437,7 @@ func repoMetadata(repo github.RepoWatchInfo) string {
 		tags = append(tags, "cannot subscribe")
 	}
 
-	tags = append(tags,
-		fmt.Sprintf("stars %d", repo.StargazerCount),
-		fmt.Sprintf("watchers %d", repo.WatcherCount),
-		"pushed "+formatDate(repo.PushedAt),
-	)
+	tags = append(tags, "pushed "+formatDate(repo.PushedAt))
 
 	return strings.Join(tags, " | ")
 }
@@ -457,7 +480,7 @@ func (m Model) View() string {
 		return inactiveTab.Render(label)
 	}
 
-	b.WriteString(tab("[1] Unwatched", "unwatched"))
+	b.WriteString(tab("[1] Default", "unwatched"))
 	b.WriteString("  ")
 	b.WriteString(tab("[2] Watched", "watched"))
 	b.WriteString("  ")
@@ -526,7 +549,7 @@ func (m Model) View() string {
 	b.WriteString(
 		helpStyle.Render(
 			"j/k: navigate | space: select | I: invert selection | w: watch all activity | u: unwatch (default) | " +
-				"i: ignore | 1/2/3/4: view mode | ?: help | esc: back",
+				"i: ignore | o: open on github.com | 1/2/3/4: view mode | ?: help | esc: back",
 		),
 	)
 	b.WriteString("\n")
@@ -550,8 +573,9 @@ func (m Model) renderHelp(b *strings.Builder) string {
 		{"space", "toggle selection on the cursor row"},
 		{"I", "invert selection"},
 		{"/", "search repository name"},
-		{"1-4", "unwatched, watched, ignored, all"},
+		{"1-4", "default, watched, ignored, all"},
 		{"w / u / i", "watch all activity / unwatch / ignore"},
+		{"o", "open on github.com"},
 		{"?", "toggle this help"},
 		{"esc / q", "back / quit"},
 	}
