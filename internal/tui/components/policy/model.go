@@ -16,6 +16,8 @@ import (
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
+const helpKeyWidth = 16
+
 // Model represents the policy diff/apply TUI state.
 type Model struct {
 	cfg          *config.PolicyConfig
@@ -247,7 +249,7 @@ func (m Model) View() string {
 	b.WriteString("\n\n")
 
 	if m.showHelp {
-		return m.renderHelp(&b)
+		return renderHelp(&b)
 	}
 
 	if m.report == nil || len(m.report.Repos) == 0 {
@@ -256,33 +258,43 @@ func (m Model) View() string {
 	}
 
 	for i, drift := range m.report.Repos {
-		cursor := " "
-		if m.cursor == i {
-			cursor = ">"
-		}
+		m.viewDriftLine(&b, i, drift)
+	}
 
-		lineStyle := lipgloss.NewStyle()
-		if m.cursor == i {
-			lineStyle = lineStyle.Bold(true).Foreground(theme.Current().Warning)
-		}
+	m.viewFooter(&b)
 
-		switch {
-		case drift.Err != nil:
-			b.WriteString(lineStyle.Render(fmt.Sprintf("%s %s: ERROR %v\n", cursor, drift.Repository, drift.Err)))
-		case len(drift.Diffs) == 0:
-			okStyle := lineStyle.Foreground(theme.Current().Success)
-			b.WriteString(okStyle.Render(fmt.Sprintf("%s %s: in sync\n", cursor, drift.Repository)))
-		default:
-			line := fmt.Sprintf("%s %s: %d field(s) drifted\n", cursor, drift.Repository, len(drift.Diffs))
-			b.WriteString(lineStyle.Render(line))
-			if m.cursor == i {
-				for _, d := range drift.Diffs {
-					fmt.Fprintf(&b, "     [%s] %s: %s -> %s\n", d.Domain, d.Field, d.Current, d.Desired)
-				}
+	return b.String()
+}
+
+func (m Model) viewDriftLine(b *strings.Builder, i int, drift policy.RepoDrift) {
+	cursor := " "
+	if m.cursor == i {
+		cursor = ">"
+	}
+
+	lineStyle := lipgloss.NewStyle()
+	if m.cursor == i {
+		lineStyle = lineStyle.Bold(true).Foreground(theme.Current().Warning)
+	}
+
+	switch {
+	case drift.Err != nil:
+		b.WriteString(lineStyle.Render(fmt.Sprintf("%s %s: ERROR %v\n", cursor, drift.Repository, drift.Err)))
+	case len(drift.Diffs) == 0:
+		okStyle := lineStyle.Foreground(theme.Current().Success)
+		b.WriteString(okStyle.Render(fmt.Sprintf("%s %s: in sync\n", cursor, drift.Repository)))
+	default:
+		line := fmt.Sprintf("%s %s: %d field(s) drifted\n", cursor, drift.Repository, len(drift.Diffs))
+		b.WriteString(lineStyle.Render(line))
+		if m.cursor == i {
+			for _, d := range drift.Diffs {
+				fmt.Fprintf(b, "     [%s] %s: %s -> %s\n", d.Domain, d.Field, d.Current, d.Desired)
 			}
 		}
 	}
+}
 
+func (m Model) viewFooter(b *strings.Builder) {
 	if m.confirmApply {
 		b.WriteString("\n")
 		warnStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Error)
@@ -299,11 +311,9 @@ func (m Model) View() string {
 	b.WriteString("\n")
 	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
 	b.WriteString(helpStyle.Render("↑/↓: navigate | a: apply selected | r: refresh | ?: help | q: quit"))
-
-	return b.String()
 }
 
-func (m Model) renderHelp(b *strings.Builder) string {
+func renderHelp(b *strings.Builder) string {
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Primary)
 	b.WriteString(titleStyle.Render("Keybindings"))
 	b.WriteString("\n\n")
@@ -318,7 +328,7 @@ func (m Model) renderHelp(b *strings.Builder) string {
 	}
 
 	for _, binding := range bindings {
-		keyStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Warning).Width(16)
+		keyStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Warning).Width(helpKeyWidth)
 		fmt.Fprintf(b, "%s %s\n", keyStyle.Render(binding[0]), binding[1])
 	}
 

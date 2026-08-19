@@ -11,6 +11,8 @@ import (
 	"github.com/KyleKing/gh-sweep/internal/policy"
 )
 
+var errNoPolicyFile = errors.New("no policy file found")
+
 func loadedPolicyModel() Model {
 	m := NewModel(&config.PolicyConfig{Repositories: []string{"acme/widgets", "acme/gadgets"}})
 	m, _ = m.Update(reportLoadedMsg{report: &policy.Report{Repos: []policy.RepoDrift{
@@ -116,7 +118,7 @@ func TestPolicyApplyResultClearsDiffs(t *testing.T) {
 func TestPolicyConfigLoadError(t *testing.T) {
 	t.Parallel()
 
-	m := NewModelWithConfigError(errors.New("no policy file found"))
+	m := NewModelWithConfigError(errNoPolicyFile)
 	if m.Init() != nil {
 		t.Error("Init() should not fetch when constructed with a config error")
 	}
