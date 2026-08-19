@@ -6,7 +6,16 @@
 [tasks.ci]
 description = "Run all checks (used in GitHub Actions)"
 run = [
-  "go test -v -coverprofile=coverage.out ./...",
+  "go test -v -coverprofile=coverage.out -coverpkg=./... ./...",
+  '''
+  coverage=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
+  echo "Current coverage: ${coverage}%"
+  if (( $(awk "BEGIN {print ($coverage < 70)}") )); then
+      echo "Coverage ${coverage}% is below 70% minimum threshold"
+      exit 1
+  fi
+  ''',
+  "./scripts/check-test-safety.sh",
   "go test -tags=golden -run TestGolden ./internal/tui/...",
   "go build -v -o gh-sweep ./cmd/gh-sweep",
 ]

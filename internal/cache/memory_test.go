@@ -153,3 +153,37 @@ func TestMemoryManagerStats(t *testing.T) {
 		t.Errorf("Expected 2 expired entries, got %d", expired)
 	}
 }
+
+func TestMemoryManagerCleanExpired(t *testing.T) {
+	mgr := NewMemoryManager(100 * time.Millisecond)
+
+	if err := mgr.Set("fresh", "value"); err != nil {
+		t.Fatalf("Failed to set: %v", err)
+	}
+
+	time.Sleep(200 * time.Millisecond)
+
+	if err := mgr.Set("still-fresh", "value"); err != nil {
+		t.Fatalf("Failed to set: %v", err)
+	}
+
+	if err := mgr.CleanExpired(); err != nil {
+		t.Fatalf("CleanExpired() error = %v", err)
+	}
+
+	total, expired, err := mgr.Stats()
+	if err != nil {
+		t.Fatalf("Stats() error = %v", err)
+	}
+	if total != 1 || expired != 0 {
+		t.Errorf("Stats() after CleanExpired = (total=%d, expired=%d), want (1, 0)", total, expired)
+	}
+}
+
+func TestMemoryManagerClose(t *testing.T) {
+	mgr := NewMemoryManager(time.Hour)
+
+	if err := mgr.Close(); err != nil {
+		t.Errorf("Close() error = %v", err)
+	}
+}

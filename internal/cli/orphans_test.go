@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -200,5 +201,101 @@ func TestRunCleanupTypedYesConfirms(t *testing.T) {
 	}
 	if atomic.LoadInt32(&transport.deletes) != 2 {
 		t.Errorf("expected 2 DELETE calls, got %d", transport.deletes)
+	}
+}
+
+func testScanResult() *orphans.NamespaceScanResult {
+	result := &orphans.NamespaceScanResult{
+		Namespace:  "acme",
+		TotalRepos: 1,
+		Results: []orphans.ScanResult{{
+			Repository: github.Repository{FullName: "acme/widgets"},
+			Orphans: []orphans.OrphanedBranch{
+				{Repository: "acme/widgets", BranchName: "merged-feature", Type: orphans.OrphanTypeMergedPR},
+				{Repository: "acme/widgets", BranchName: "abandoned-feature", Type: orphans.OrphanTypeClosedPR},
+				{Repository: "acme/widgets", BranchName: "stale-branch", Type: orphans.OrphanTypeStale},
+			},
+		}},
+	}
+	result.TotalOrphans = len(result.AllOrphans())
+
+	return result
+}
+
+func TestFormatMarkdown(t *testing.T) {
+	t.Parallel()
+
+	md := formatMarkdown(testScanResult())
+
+	for _, want := range []string{
+		"# Orphaned Branches Report: acme",
+		"| Merged PR | 1 |",
+		"| Closed PR | 1 |",
+		"| Stale | 1 |",
+		"| acme/widgets | merged-feature | Merged PR | 0 | - |",
+	} {
+		if !strings.Contains(md, want) {
+			t.Errorf("markdown missing %q, got:\n%s", want, md)
+		}
+	}
+}
+
+func TestPrintTableTo(t *testing.T) {
+	t.Parallel()
+
+	var b strings.Builder
+	printTableTo(&b, testScanResult())
+	table := b.String()
+
+	for _, want := range []string{
+		"Orphaned Branches Report: acme",
+		"Total Orphaned Branches: 3",
+		"acme/widgets (3 orphans)",
+		"merged-feature [Merged PR, 0 days]",
+	} {
+		if !strings.Contains(table, want) {
+			t.Errorf("table missing %q, got:\n%s", want, table)
+		}
+	}
+
+	var empty strings.Builder
+	printTableTo(&empty, &orphans.NamespaceScanResult{Namespace: "acme"})
+	if !strings.Contains(empty.String(), "No orphaned branches found.") {
+		t.Errorf("expected the empty-state message, got:\n%s", empty.String())
+	}
+}
+
+func TestPrintTable(t *testing.T) {
+	output := captureStdout(t, func() {
+		printTable(testScanResult())
+	})
+
+	if !strings.Contains(output, "Orphaned Branches Report: acme") {
+		t.Errorf("output missing report header, got:\n%s", output)
+	}
+}
+
+func TestOutputResult(t *testing.T) {
+	result := testScanResult()
+
+	jsonOut := captureStdout(t, func() { outputResult(result, "", "json") })
+	if !strings.Contains(jsonOut, `"Namespace": "acme"`) {
+		t.Errorf("json output missing namespace field, got:\n%s", jsonOut)
+	}
+
+	mdOut := captureStdout(t, func() { outputResult(result, "", "markdown") })
+	if !strings.Contains(mdOut, "# Orphaned Branches Report") {
+		t.Errorf("markdown output missing header, got:\n%s", mdOut)
+	}
+
+	path := filepath.Join(t.TempDir(), "orphans.json")
+	captureStdout(t, func() { outputResult(result, path, "json") })
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("failed to read output file: %v", err)
+	}
+	if !strings.Contains(string(data), `"Namespace": "acme"`) {
+		t.Errorf("output file missing namespace field, got:\n%s", data)
 	}
 }

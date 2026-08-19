@@ -1,8 +1,13 @@
 package branches
 
 import (
+	"errors"
+	"io"
+	"net/http"
+	"os/exec"
 	"strings"
 	"testing"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 
@@ -218,4 +223,271 @@ func TestSplitRepo(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestUpdateWindowSizeAndBranchesLoaded(t *testing.T) {
+	t.Parallel()
+
+	m := NewModel("acme/widgets", "")
+
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	if m.width != 100 || m.height != 30 {
+		t.Errorf("width/height = %d/%d, want 100/30", m.width, m.height)
+	}
+
+	m, _ = m.Update(branchesLoadedMsg{branches: branchStatuses()})
+	if m.loading {
+		t.Error("expected loading false after branchesLoadedMsg")
+	}
+	if len(m.branches) != len(branchStatuses()) {
+		t.Errorf("branches = %d, want %d", len(m.branches), len(branchStatuses()))
+	}
+
+	m, _ = m.Update(branchesLoadedMsg{err: errors.New("boom")})
+	if m.err == nil {
+		t.Error("expected err set after a failed load")
+	}
+}
+
+func TestHandleDeleteFlowSelectsEligibleAndBlocksOthers(t *testing.T) {
+	t.Parallel()
+
+	m := Model{repo: "acme/widgets", branches: branchStatuses(), selected: map[string]bool{
+		"main":      true, // default: blocked
+		"feature-a": true, // eligible
+	}}
+
+	m, _ = m.handleListKeys(tea.KeyPressMsg{Code: 'd', Text: "d"})
+
+	if !m.confirmDelete {
+		t.Fatal("expected confirmDelete true when at least one target is eligible")
+	}
+	if len(m.deleteTargets) != 1 || m.deleteTargets[0].Name != "feature-a" {
+		t.Errorf("deleteTargets = %+v, want just feature-a", m.deleteTargets)
+	}
+	if !strings.Contains(m.statusMsg, "Blocked: main") {
+		t.Errorf("statusMsg = %q, want it to mention the blocked default branch", m.statusMsg)
+	}
+}
+
+func TestHandleDeleteFlowNoneEligible(t *testing.T) {
+	t.Parallel()
+
+	m := Model{repo: "acme/widgets", branches: branchStatuses(), selected: map[string]bool{"main": true}}
+
+	m, _ = m.handleListKeys(tea.KeyPressMsg{Code: 'd', Text: "d"})
+
+	if m.confirmDelete {
+		t.Error("expected confirmDelete false when nothing is eligible")
+	}
+	if !strings.Contains(m.statusMsg, "Blocked: main") {
+		t.Errorf("statusMsg = %q", m.statusMsg)
+	}
+}
+
+func TestHandleDeleteFlowNoSelectionUsesCursor(t *testing.T) {
+	t.Parallel()
+
+	m := Model{repo: "acme/widgets", branches: branchStatuses(), selected: map[string]bool{}, cursor: 1}
+
+	m, _ = m.handleListKeys(tea.KeyPressMsg{Code: 'd', Text: "d"})
+
+	if !m.confirmDelete || len(m.deleteTargets) != 1 || m.deleteTargets[0].Name != "feature-a" {
+		t.Errorf("expected the cursor row (feature-a) as the sole target, got %+v", m.deleteTargets)
+	}
+}
+
+func TestHandleConfirmKeysCancel(t *testing.T) {
+	t.Parallel()
+
+	m := Model{
+		confirmDelete: true,
+		deleteTargets: []github.BranchStatus{{Branch: github.Branch{Name: "feature-a"}}},
+	}
+
+	m, cmd := m.handleConfirmKeys(tea.KeyPressMsg{Code: 'n', Text: "n"})
+
+	if m.confirmDelete || m.deleteTargets != nil {
+		t.Errorf("expected delete canceled, got confirmDelete=%v targets=%v", m.confirmDelete, m.deleteTargets)
+	}
+	if cmd != nil {
+		t.Error("expected no command on cancel")
+	}
+	if m.statusMsg != "Delete canceled" {
+		t.Errorf("statusMsg = %q", m.statusMsg)
+	}
+}
+
+func TestExecuteDeleteAndBranchRemoval(t *testing.T) {
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.Method == http.MethodDelete {
+			return &http.Response{
+				StatusCode: http.StatusNoContent,
+				Header:     http.Header{},
+				Body:       io.NopCloser(strings.NewReader("")),
+				Request:    req,
+			}, nil
+		}
+
+		return &http.Response{
+			StatusCode: http.StatusNotFound,
+			Header:     http.Header{},
+			Body:       io.NopCloser(strings.NewReader(`{"message":"Not Found"}`)),
+			Request:    req,
+		}, nil
+	})
+
+	restore := github.SetTestTransport(transport)
+	defer restore()
+
+	m := Model{
+		repo:          "acme/widgets",
+		branches:      branchStatuses(),
+		selected:      map[string]bool{"feature-a": true},
+		confirmDelete: true,
+		deleteTargets: []github.BranchStatus{{Branch: github.Branch{Name: "feature-a"}}},
+	}
+
+	m, cmd := m.handleConfirmKeys(tea.KeyPressMsg{Code: 'y', Text: "y"})
+	if cmd == nil {
+		t.Fatal("expected executeDelete to return a command")
+	}
+	if m.confirmDelete {
+		t.Error("expected confirmDelete cleared once delete is in flight")
+	}
+
+	// tea.Batch collapses a single command to that command directly (no BatchMsg wrapper).
+	m, _ = m.Update(cmd())
+
+	if m.statusMsg != "Deleted: feature-a" {
+		t.Errorf("statusMsg = %q", m.statusMsg)
+	}
+	if m.selected["feature-a"] {
+		t.Error("expected feature-a deselected after delete")
+	}
+	for _, b := range m.branches {
+		if b.Name == "feature-a" {
+			t.Error("expected feature-a removed from branches after delete")
+		}
+	}
+}
+
+func TestExecuteDeleteInvalidRepo(t *testing.T) {
+	t.Parallel()
+
+	m := Model{
+		repo:          "not-a-valid-repo",
+		confirmDelete: true,
+		deleteTargets: []github.BranchStatus{{Branch: github.Branch{Name: "feature-a"}}},
+	}
+
+	m, cmd := m.executeDelete()
+
+	if cmd != nil {
+		t.Error("expected no command for an invalid repo")
+	}
+	if m.confirmDelete || m.deleteTargets != nil {
+		t.Error("expected delete state cleared for an invalid repo")
+	}
+	if !strings.Contains(m.statusMsg, "Invalid repository") {
+		t.Errorf("statusMsg = %q", m.statusMsg)
+	}
+}
+
+func TestDescribeBlocked(t *testing.T) {
+	t.Parallel()
+
+	blocked := []github.BranchStatus{
+		{Branch: github.Branch{Name: "main"}, IsDefault: true},
+		{Branch: github.Branch{Name: "release", Protected: true}},
+	}
+
+	got := describeBlocked(blocked)
+
+	if !strings.Contains(got, "main (") || !strings.Contains(got, "release (") {
+		t.Errorf("describeBlocked() = %q, want both branch names with their reasons", got)
+	}
+}
+
+func TestViewLoadingErrorAndConfirmDialog(t *testing.T) {
+	t.Parallel()
+
+	loading := Model{loading: true}
+	if !strings.Contains(loading.View(), "Loading branches") {
+		t.Errorf("loading view = %q", loading.View())
+	}
+
+	failed := Model{err: errors.New("network down")}
+	if !strings.Contains(failed.View(), "network down") {
+		t.Errorf("error view = %q", failed.View())
+	}
+
+	confirm := Model{
+		repo:          "acme/widgets",
+		confirmDelete: true,
+		deleteTargets: []github.BranchStatus{{Branch: github.Branch{Name: "feature-a"}}},
+	}
+	view := confirm.View()
+	if !strings.Contains(view, "Confirm Delete") || !strings.Contains(view, "feature-a") {
+		t.Errorf("confirm dialog view = %q", view)
+	}
+}
+
+func TestBranchAnnotations(t *testing.T) {
+	t.Parallel()
+
+	branch := github.BranchStatus{
+		Branch: github.Branch{
+			Name:           "feature-a",
+			Protected:      true,
+			LastCommitDate: time.Now().Add(-48 * time.Hour),
+		},
+		IsDefault: true,
+		PR:        &github.PullRequest{Number: 5, State: "open"},
+	}
+
+	got := branchAnnotations(branch)
+
+	for _, want := range []string{"[default]", "[protected]", "PR #5 (open)", "2d"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("branchAnnotations() = %q, missing %q", got, want)
+		}
+	}
+
+	if branchAnnotations(github.BranchStatus{Branch: github.Branch{Name: "plain"}}) != "" {
+		t.Error("expected no annotations for a plain branch")
+	}
+}
+
+func TestGetLocalBranches(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+
+	for _, args := range [][]string{
+		{"init"},
+		{"config", "user.name", "Test User"},
+		{"config", "user.email", "test@example.com"},
+		{"commit", "--allow-empty", "-m", "initial"},
+	} {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = tmpDir
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v failed: %v\n%s", args, err, out)
+		}
+	}
+
+	branches, err := GetLocalBranches(tmpDir)
+	if err != nil {
+		t.Fatalf("GetLocalBranches() error = %v", err)
+	}
+	if len(branches) != 1 {
+		t.Errorf("branches = %+v, want 1", branches)
+	}
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
 }

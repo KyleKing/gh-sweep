@@ -129,3 +129,91 @@ func TestGetDefaultBranch(t *testing.T) {
 		t.Errorf("Expected default branch to be master or main, got %s", defaultBranch)
 	}
 }
+
+func runGit(t *testing.T, dir string, args ...string) {
+	t.Helper()
+
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git %v failed: %v\n%s", args, err, out)
+	}
+}
+
+func TestCompareBranches(t *testing.T) {
+	repoPath := setupTestRepo(t)
+	repo := NewLocalRepo(repoPath)
+	base, err := repo.GetCurrentBranch()
+	if err != nil {
+		t.Fatalf("GetCurrentBranch() error = %v", err)
+	}
+
+	runGit(t, repoPath, "checkout", "-b", "feature")
+	if err := os.WriteFile(filepath.Join(repoPath, "feature.txt"), []byte("feature"), 0o644); err != nil {
+		t.Fatalf("failed to write feature file: %v", err)
+	}
+	runGit(t, repoPath, "add", "feature.txt")
+	runGit(t, repoPath, "commit", "-m", "feature commit")
+
+	ahead, behind, err := repo.CompareBranches(base, "feature")
+	if err != nil {
+		t.Fatalf("CompareBranches() error = %v", err)
+	}
+	if ahead != 1 || behind != 0 {
+		t.Errorf("CompareBranches() = (ahead=%d, behind=%d), want (1, 0)", ahead, behind)
+	}
+}
+
+func TestGetMergeBase(t *testing.T) {
+	repoPath := setupTestRepo(t)
+	repo := NewLocalRepo(repoPath)
+	base, err := repo.GetCurrentBranch()
+	if err != nil {
+		t.Fatalf("GetCurrentBranch() error = %v", err)
+	}
+
+	baseSHA, err := repo.GetMergeBase(base, base)
+	if err != nil {
+		t.Fatalf("GetMergeBase() error = %v", err)
+	}
+
+	runGit(t, repoPath, "checkout", "-b", "feature")
+	if err := os.WriteFile(filepath.Join(repoPath, "feature.txt"), []byte("feature"), 0o644); err != nil {
+		t.Fatalf("failed to write feature file: %v", err)
+	}
+	runGit(t, repoPath, "add", "feature.txt")
+	runGit(t, repoPath, "commit", "-m", "feature commit")
+
+	mergeBase, err := repo.GetMergeBase(base, "feature")
+	if err != nil {
+		t.Fatalf("GetMergeBase() error = %v", err)
+	}
+	if mergeBase != baseSHA {
+		t.Errorf("GetMergeBase() = %q, want the base branch's tip %q", mergeBase, baseSHA)
+	}
+}
+
+func TestDeleteBranch(t *testing.T) {
+	repoPath := setupTestRepo(t)
+	repo := NewLocalRepo(repoPath)
+
+	runGit(t, repoPath, "branch", "throwaway")
+
+	if err := repo.DeleteBranch("throwaway", false); err != nil {
+		t.Fatalf("DeleteBranch() error = %v", err)
+	}
+
+	branches, err := repo.ListBranches()
+	if err != nil {
+		t.Fatalf("ListBranches() error = %v", err)
+	}
+	for _, b := range branches {
+		if b.Name == "throwaway" {
+			t.Error("throwaway branch still present after DeleteBranch()")
+		}
+	}
+
+	if err := repo.DeleteBranch("does-not-exist", false); err == nil {
+		t.Error("expected an error deleting a branch that doesn't exist")
+	}
+}

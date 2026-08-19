@@ -183,6 +183,34 @@ func newEndpointClient(t *testing.T) *Client {
 	return client
 }
 
+func TestClientContext(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	client, err := NewClientWithTransport(ctx, endpointFake())
+	if err != nil {
+		t.Fatalf("NewClientWithTransport() error = %v", err)
+	}
+
+	if client.Context() != ctx {
+		t.Error("Context() did not return the context the client was created with")
+	}
+}
+
+func TestGetPullRequestsForBranch(t *testing.T) {
+	t.Parallel()
+
+	prs, err := newEndpointClient(t).GetPullRequestsForBranch("acme", "widgets", "feature")
+	if err != nil {
+		t.Fatalf("GetPullRequestsForBranch() error = %v", err)
+	}
+
+	if len(prs) != 1 || prs[0].Number != 7 {
+		t.Errorf("prs = %+v, want just #7", prs)
+	}
+}
+
 func TestListBranchStatuses(t *testing.T) {
 	t.Parallel()
 

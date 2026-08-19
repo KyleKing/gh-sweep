@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -52,5 +54,99 @@ func TestFormatBranchPR(t *testing.T) {
 				t.Errorf("formatBranchPR() = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestFormatBool(t *testing.T) {
+	t.Parallel()
+
+	if got := formatBool(true); got != "yes" {
+		t.Errorf("formatBool(true) = %q, want yes", got)
+	}
+	if got := formatBool(false); got != "no" {
+		t.Errorf("formatBool(false) = %q, want no", got)
+	}
+}
+
+func TestRenderBranchTable(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 7, 24, 12, 0, 0, 0, time.UTC)
+	branches := []github.BranchStatus{
+		{Branch: github.Branch{Name: "main", LastCommitDate: now.Add(-24 * time.Hour)}, IsDefault: true},
+		{
+			Branch:    github.Branch{Name: "feature", Protected: true, LastCommitDate: now.Add(-2 * time.Hour)},
+			PR:        &github.PullRequest{Number: 5, State: "open"},
+			IsDefault: false,
+		},
+	}
+
+	table := renderBranchTable(branches, now)
+
+	for _, want := range []string{"BRANCH", "main (default)", "feature", "#5 (open)", "yes", "no"} {
+		if !strings.Contains(table, want) {
+			t.Errorf("table missing %q, got:\n%s", want, table)
+		}
+	}
+}
+
+func TestListBranches(t *testing.T) {
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		path := req.URL.Path
+
+		switch {
+		case path == "/repos/acme/widgets":
+			return jsonResponse(req, http.StatusOK, `{"default_branch":"main"}`), nil
+		case path == "/repos/acme/widgets/branches":
+			return jsonResponse(req, http.StatusOK, `[
+				{"name":"main","protected":true,"commit":{"sha":"abc","commit":{"author":{"date":"2026-01-10T12:00:00Z"}}}},
+				{"name":"feature","commit":{"sha":"def","commit":{"author":{"date":"2026-01-12T12:00:00Z"}}}}
+			]`), nil
+		case strings.HasPrefix(path, "/repos/acme/widgets/compare/"):
+			return jsonResponse(req, http.StatusOK, `{"ahead_by":1,"behind_by":0}`), nil
+		case path == "/repos/acme/widgets/pulls":
+			return jsonResponse(req, http.StatusOK, `[]`), nil
+		default:
+			return jsonResponse(req, http.StatusNotFound, `{"message":"Not Found"}`), nil
+		}
+	})
+
+	restore := github.SetTestTransport(transport)
+	defer restore()
+
+	output := captureStdout(t, func() {
+		listBranches("acme", "widgets", "")
+	})
+
+	if !strings.Contains(output, "main (default)") || !strings.Contains(output, "feature") {
+		t.Errorf("output missing branch rows, got:\n%s", output)
+	}
+}
+
+func TestListBranchesNoBranches(t *testing.T) {
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		path := req.URL.Path
+
+		switch path {
+		case "/repos/acme/empty":
+			return jsonResponse(req, http.StatusOK, `{"default_branch":"main"}`), nil
+		case "/repos/acme/empty/branches":
+			return jsonResponse(req, http.StatusOK, `[]`), nil
+		case "/repos/acme/empty/pulls":
+			return jsonResponse(req, http.StatusOK, `[]`), nil
+		default:
+			return jsonResponse(req, http.StatusNotFound, `{"message":"Not Found"}`), nil
+		}
+	})
+
+	restore := github.SetTestTransport(transport)
+	defer restore()
+
+	output := captureStdout(t, func() {
+		listBranches("acme", "empty", "")
+	})
+
+	if !strings.Contains(output, "No branches found.") {
+		t.Errorf("expected the empty-state message, got:\n%s", output)
 	}
 }

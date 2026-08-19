@@ -1,7 +1,11 @@
 package github
 
 import (
+	"context"
 	"encoding/json"
+	"io"
+	"net/http"
+	"strings"
 	"testing"
 	"time"
 )
@@ -278,5 +282,103 @@ func TestReviewThreadHelpers(t *testing.T) {
 	}
 	if !thread.LastActivity().Equal(late) {
 		t.Errorf("unexpected last activity: %v", thread.LastActivity())
+	}
+}
+
+func TestListOpenPRReviewThreads(t *testing.T) {
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.URL.Path == "/repos/acme/widgets/pulls" && req.URL.Query().Get("page") == "1" {
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{},
+				Body: io.NopCloser(strings.NewReader(
+					`[{"number":1,"title":"first","state":"open","head":{"ref":"a","sha":"1","repo":{"full_name":"acme/widgets"}},"base":{"ref":"main","sha":"0","repo":{"full_name":"acme/widgets"}}},
+					  {"number":2,"title":"second","state":"open","head":{"ref":"b","sha":"2","repo":{"full_name":"acme/widgets"}},"base":{"ref":"main","sha":"0","repo":{"full_name":"acme/widgets"}}}]`,
+				)),
+				Request: req,
+			}, nil
+		}
+
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{},
+			Body:       io.NopCloser(strings.NewReader(`[]`)),
+			Request:    req,
+		}, nil
+	})
+
+	client, err := NewClientWithTransport(context.Background(), transport)
+	if err != nil {
+		t.Fatalf("failed to create test client: %v", err)
+	}
+
+	doer := &fakeGQLDoer{pages: []string{singlePageFixture, singlePageFixture}}
+	gql := &GQLClient{doer: doer}
+
+	threads, err := gql.ListOpenPRReviewThreads(client, "acme", "widgets", 0)
+	if err != nil {
+		t.Fatalf("ListOpenPRReviewThreads() error = %v", err)
+	}
+
+	if len(threads) != 4 {
+		t.Fatalf("expected 4 threads (2 per PR x 2 PRs), got %d", len(threads))
+	}
+	if len(doer.calls) != 2 {
+		t.Errorf("expected one GraphQL call per PR, got %d", len(doer.calls))
+	}
+}
+
+func TestListOpenPRReviewThreadsCapped(t *testing.T) {
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.URL.Path == "/repos/acme/widgets/pulls" && req.URL.Query().Get("page") == "1" {
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{},
+				Body: io.NopCloser(strings.NewReader(
+					`[{"number":1,"title":"first","state":"open","head":{"ref":"a","sha":"1","repo":{"full_name":"acme/widgets"}},"base":{"ref":"main","sha":"0","repo":{"full_name":"acme/widgets"}}},
+					  {"number":2,"title":"second","state":"open","head":{"ref":"b","sha":"2","repo":{"full_name":"acme/widgets"}},"base":{"ref":"main","sha":"0","repo":{"full_name":"acme/widgets"}}}]`,
+				)),
+				Request: req,
+			}, nil
+		}
+
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{},
+			Body:       io.NopCloser(strings.NewReader(`[]`)),
+			Request:    req,
+		}, nil
+	})
+
+	client, err := NewClientWithTransport(context.Background(), transport)
+	if err != nil {
+		t.Fatalf("failed to create test client: %v", err)
+	}
+
+	doer := &fakeGQLDoer{pages: []string{singlePageFixture}}
+	gql := &GQLClient{doer: doer}
+
+	threads, err := gql.ListOpenPRReviewThreads(client, "acme", "widgets", 1)
+	if err != nil {
+		t.Fatalf("ListOpenPRReviewThreads() error = %v", err)
+	}
+	if len(threads) != 2 {
+		t.Fatalf("expected threads from only the first PR (capped), got %d", len(threads))
+	}
+	if len(doer.calls) != 1 {
+		t.Errorf("expected exactly one GraphQL call under the cap, got %d", len(doer.calls))
+	}
+}
+
+func TestListRepoReviewThreads(t *testing.T) {
+	doer := &fakeGQLDoer{pages: []string{singlePageFixture}}
+	gql := &GQLClient{doer: doer}
+
+	threads, err := gql.ListRepoReviewThreads(nil, "acme", "widgets", 7, 0)
+	if err != nil {
+		t.Fatalf("ListRepoReviewThreads() error = %v", err)
+	}
+	if len(threads) != 2 || threads[0].PRNumber != 7 {
+		t.Errorf("expected threads scoped to PR #7, got %+v", threads)
 	}
 }

@@ -144,6 +144,24 @@ func TestWorkflowsViewShowsDurationTrend(t *testing.T) {
 	}
 }
 
+func TestJobsViewRendersTopJobs(t *testing.T) {
+	t.Parallel()
+
+	m := NewModel("acme/widgets")
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	m, _ = m.Update(dataLoadedMsg{
+		jobStats: map[string]*github.JobStats{
+			"ci/build": {WorkflowJob: "ci/build", TotalRuns: 5, AvgDuration: 2 * time.Minute},
+		},
+	})
+	m, _ = m.Update(tea.KeyPressMsg{Code: '3', Text: "3"})
+
+	view := m.View()
+	if !strings.Contains(view, "Job Performance") || !strings.Contains(view, "ci/build") {
+		t.Errorf("jobs view missing expected content:\n%s", view)
+	}
+}
+
 func TestBranchesViewShowsBarAndRegressionMarker(t *testing.T) {
 	t.Parallel()
 

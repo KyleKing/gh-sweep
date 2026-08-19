@@ -60,6 +60,41 @@ protection:
 	}
 }
 
+func TestSavePolicyRoundTrip(t *testing.T) {
+	path := filepath.Join(t.TempDir(), ".gh-sweep-policy.yaml")
+
+	deleteOnMerge := true
+	cfg := &PolicyConfig{
+		DefaultOrg:   "acme",
+		Repositories: []string{"widgets"},
+		Settings:     PolicySettings{DeleteBranchOnMerge: &deleteOnMerge},
+	}
+
+	if err := cfg.SavePolicy(path); err != nil {
+		t.Fatalf("SavePolicy() error = %v", err)
+	}
+
+	loaded, err := LoadPolicy(path)
+	if err != nil {
+		t.Fatalf("LoadPolicy() error = %v", err)
+	}
+
+	if loaded.DefaultOrg != "acme" {
+		t.Errorf("DefaultOrg = %q, want acme", loaded.DefaultOrg)
+	}
+	if loaded.Settings.DeleteBranchOnMerge == nil || !*loaded.Settings.DeleteBranchOnMerge {
+		t.Errorf("Settings.DeleteBranchOnMerge = %v, want true", loaded.Settings.DeleteBranchOnMerge)
+	}
+}
+
+func TestSavePolicyInvalidPath(t *testing.T) {
+	cfg := &PolicyConfig{DefaultOrg: "acme"}
+
+	if err := cfg.SavePolicy(filepath.Join(t.TempDir(), "does-not-exist", "policy.yaml")); err == nil {
+		t.Error("SavePolicy() error = nil, want an error for a missing parent directory")
+	}
+}
+
 func TestLoadPolicyMissing(t *testing.T) {
 	if _, err := LoadPolicy(filepath.Join(t.TempDir(), "missing.yaml")); err == nil {
 		t.Error("LoadPolicy() error = nil, want error for missing file")

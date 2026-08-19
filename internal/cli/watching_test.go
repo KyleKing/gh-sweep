@@ -7,9 +7,24 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/KyleKing/gh-sweep/internal/github"
 )
+
+func TestFormatPushedAt(t *testing.T) {
+	t.Parallel()
+
+	if got := formatPushedAt(github.RepoWatchInfo{}); got != "unknown" {
+		t.Errorf("formatPushedAt(zero) = %q, want unknown", got)
+	}
+
+	pushedAt := time.Date(2026, 1, 10, 12, 0, 0, 0, time.UTC)
+	repo := github.RepoWatchInfo{PushedAt: pushedAt}
+	if got := formatPushedAt(repo); got != "2026-01-10" {
+		t.Errorf("formatPushedAt() = %q, want 2026-01-10", got)
+	}
+}
 
 type subscribeCountingTransport struct {
 	subscribes int32
