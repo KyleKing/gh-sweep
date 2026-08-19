@@ -30,7 +30,7 @@ type Model struct {
 	repos         []string
 	orgSecrets    []github.Secret
 	repoSecrets   map[string][]github.Secret
-	unusedSecrets []string
+	unusedSecrets []github.SecretUsage
 	cursor        int
 	width         int
 	height        int
@@ -54,7 +54,7 @@ func NewModel(org string, repos []string) Model {
 type secretsLoadedMsg struct {
 	orgSecrets    []github.Secret
 	repoSecrets   map[string][]github.Secret
-	unusedSecrets []string
+	unusedSecrets []github.SecretUsage
 	err           error
 }
 
@@ -71,7 +71,7 @@ func (m Model) loadSecrets() tea.Msg {
 		return secretsLoadedMsg{
 			orgSecrets:    []github.Secret{},
 			repoSecrets:   make(map[string][]github.Secret),
-			unusedSecrets: []string{},
+			unusedSecrets: []github.SecretUsage{},
 			err:           fmt.Errorf("failed to create GitHub client: %w", err),
 		}
 	}
@@ -86,8 +86,10 @@ func (m Model) loadSecrets() tea.Msg {
 		}
 	}
 
-	// Load repository secrets
+	// Load repository secrets and scan each repo's workflows for references
 	repoSecrets := make(map[string][]github.Secret)
+	workflowRefs := make(map[string][]string)
+
 	for _, repoStr := range m.repos {
 		parts := strings.Split(repoStr, "/")
 		if len(parts) != repoPartsCount {
@@ -102,11 +104,31 @@ func (m Model) loadSecrets() tea.Msg {
 		}
 
 		repoSecrets[repoStr] = secrets
+
+		refs, err := client.ScanRepoSecretRefs(owner, repo)
+		if err != nil {
+			// A repo's workflows failing to scan doesn't invalidate refs
+			// already found in other repos.
+			continue
+		}
+
+		for name, paths := range refs {
+			workflowRefs[name] = append(workflowRefs[name], paths...)
+		}
 	}
 
-	// Detect unused secrets (simplified - would need workflow file parsing for real detection)
-	// For now, just return empty list
-	unusedSecrets := []string{}
+	allSecrets := make([]github.Secret, 0, len(orgSecrets)+len(repoSecrets))
+	allSecrets = append(allSecrets, orgSecrets...)
+	for _, secrets := range repoSecrets {
+		allSecrets = append(allSecrets, secrets...)
+	}
+
+	unusedSecrets := make([]github.SecretUsage, 0)
+	for _, usage := range github.DetectUnusedSecrets(allSecrets, workflowRefs) {
+		if usage.Unused {
+			unusedSecrets = append(unusedSecrets, usage)
+		}
+	}
 
 	return secretsLoadedMsg{
 		orgSecrets:    orgSecrets,
@@ -387,10 +409,10 @@ func (m Model) renderUnusedSecrets() string {
 	var b strings.Builder
 
 	b.WriteString("⚠️  Potentially Unused Secrets\n\n")
+	b.WriteString("No ${{ secrets.NAME }} reference found in any scanned repo's workflow files.\n\n")
 
 	if len(m.unusedSecrets) == 0 {
 		b.WriteString("✅ All secrets appear to be in use.\n")
-		b.WriteString("(Full analysis requires workflow file parsing)\n")
 
 		return b.String()
 	}
@@ -406,7 +428,11 @@ func (m Model) renderUnusedSecrets() string {
 			secretStyle = secretStyle.Bold(true).Foreground(theme.Current().Warning)
 		}
 
-		line := fmt.Sprintf("%s %s\n", cursor, secret)
+		line := fmt.Sprintf("%s %s (%s)\n", cursor, secret.Name, secret.Scope)
+		if secret.Repository != "" {
+			line = fmt.Sprintf("%s %s (%s, %s)\n", cursor, secret.Name, secret.Scope, secret.Repository)
+		}
+
 		b.WriteString(secretStyle.Render(line))
 	}
 

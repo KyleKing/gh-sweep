@@ -24,7 +24,9 @@ func loadedSecretsModel() Model {
 				{Name: "CODECOV_TOKEN", Scope: "repo", Repository: "acme/widgets"},
 			},
 		},
-		unusedSecrets: []string{},
+		unusedSecrets: []github.SecretUsage{
+			{Name: "CODECOV_TOKEN", Scope: "repo", Repository: "acme/widgets", Unused: true},
+		},
 	})
 
 	return m
@@ -52,8 +54,8 @@ func TestSecretsViewModeSwitches(t *testing.T) {
 	}
 
 	m, _ = m.Update(tea.KeyPressMsg{Code: '3', Text: "3"})
-	if m.viewMode != "unused" {
-		t.Errorf("viewMode = %q after 3", m.viewMode)
+	if m.viewMode != "unused" || !strings.Contains(m.View(), "CODECOV_TOKEN (repo, acme/widgets)") {
+		t.Errorf("viewMode = %q after 3, view = %q", m.viewMode, m.View())
 	}
 
 	m, _ = m.Update(tea.KeyPressMsg{Code: '1', Text: "1"})

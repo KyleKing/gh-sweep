@@ -36,7 +36,7 @@ func TestGoldenLoadedView(t *testing.T) {
 				},
 			},
 		},
-		unusedSecrets: []string{},
+		unusedSecrets: []github.SecretUsage{},
 	})
 
 	golden.RequireEqual(t, []byte(m.View()))

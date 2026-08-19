@@ -82,6 +82,9 @@ var endpointRoutes = map[string]string{
 		 "head_branch":"main","head_sha":"abc123",
 		 "created_at":"2026-01-10T12:00:00Z","updated_at":"2026-01-10T12:05:00Z"}
 	]}`,
+	"GET /repos/acme/widgets/contents/.github/workflows/ci.yml": `{
+		"content":"YWNtZTogJHt7IHNlY3JldHMuREVQTE9ZX0tFWSB9fQo=","encoding":"base64"
+	}`,
 }
 
 // endpointNotFoundRoutes are exact-match paths the fake router serves as 404,

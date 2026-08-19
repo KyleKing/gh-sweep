@@ -10,9 +10,9 @@ import (
 // ErrPagesNotFound means the repo has no GitHub Pages site configured.
 var ErrPagesNotFound = errors.New("pages not configured for this repository")
 
-// ErrUnexpectedCNAMEEncoding means the CNAME file's content came back in an
-// encoding other than base64, which the GitHub Contents API is not expected to send.
-var ErrUnexpectedCNAMEEncoding = errors.New("unexpected CNAME file encoding")
+// ErrUnexpectedFileEncoding means a Contents API response came back in an
+// encoding other than base64, which the API is not expected to send.
+var ErrUnexpectedFileEncoding = errors.New("unexpected file encoding")
 
 // PagesInfo is a repository's GitHub Pages configuration.
 type PagesInfo struct {
@@ -66,25 +66,40 @@ type contentsResponse struct {
 // subdomain-takeover signal: DNS still points at GitHub while nothing serves
 // the domain from this repo anymore.
 func (c *Client) GetCNAMEFile(owner, repo string) (string, error) {
-	path := fmt.Sprintf("repos/%s/%s/contents/CNAME", owner, repo)
+	content, err := c.getFileContent(owner, repo, "CNAME")
+	if err != nil {
+		return "", fmt.Errorf("failed to read CNAME file: %w", err)
+	}
+
+	return strings.TrimSpace(content), nil
+}
+
+// getFileContent reads a repository file's content via the Contents API,
+// returning "" when the file doesn't exist.
+func (c *Client) getFileContent(owner, repo, path string) (string, error) {
+	apiPath := fmt.Sprintf("repos/%s/%s/contents/%s", owner, repo, path)
 
 	var response contentsResponse
-	if err := c.Get(path, &response); err != nil {
+	if err := c.Get(apiPath, &response); err != nil {
 		if strings.Contains(err.Error(), "404") {
 			return "", nil
 		}
 
-		return "", fmt.Errorf("failed to read CNAME file: %w", err)
+		return "", err
+	}
+
+	if response.Content == "" {
+		return "", nil
 	}
 
 	if response.Encoding != "base64" {
-		return "", fmt.Errorf("%w: %s", ErrUnexpectedCNAMEEncoding, response.Encoding)
+		return "", fmt.Errorf("%w: %s", ErrUnexpectedFileEncoding, response.Encoding)
 	}
 
 	decoded, err := base64.StdEncoding.DecodeString(strings.ReplaceAll(response.Content, "\n", ""))
 	if err != nil {
-		return "", fmt.Errorf("failed to decode CNAME file: %w", err)
+		return "", fmt.Errorf("failed to decode file content: %w", err)
 	}
 
-	return strings.TrimSpace(string(decoded)), nil
+	return string(decoded), nil
 }

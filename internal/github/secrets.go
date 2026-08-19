@@ -131,6 +131,33 @@ func ScanWorkflowForSecrets(workflowContent string) []string {
 	return secrets
 }
 
+// ScanRepoSecretRefs fetches a repo's workflow files and returns which
+// secret names each one references, keyed by secret name. Workflows that
+// fail to fetch are skipped rather than failing the whole scan, since a
+// partial reference map only risks a false "unused" positive, not a wrong
+// action.
+func (c *Client) ScanRepoSecretRefs(owner, repo string) (map[string][]string, error) {
+	workflows, err := c.ListWorkflows(owner, repo)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list workflows: %w", err)
+	}
+
+	refs := make(map[string][]string)
+
+	for _, wf := range workflows {
+		content, err := c.getFileContent(owner, repo, wf.Path)
+		if err != nil || content == "" {
+			continue
+		}
+
+		for _, secretName := range ScanWorkflowForSecrets(content) {
+			refs[secretName] = append(refs[secretName], wf.Path)
+		}
+	}
+
+	return refs, nil
+}
+
 // GroupSecretsByScope groups secrets by their scope (org/repo)
 // Pure function: creates grouped map.
 func GroupSecretsByScope(secrets []Secret) map[string][]Secret {

@@ -6,6 +6,32 @@ import (
 	"github.com/KyleKing/gh-sweep/internal/github"
 )
 
+func TestScanRepoSecretRefs(t *testing.T) {
+	t.Parallel()
+
+	client := newEndpointClient(t)
+
+	refs, err := client.ScanRepoSecretRefs("acme", "widgets")
+	if err != nil {
+		t.Fatalf("ScanRepoSecretRefs() error = %v", err)
+	}
+
+	paths, ok := refs["DEPLOY_KEY"]
+	if !ok || len(paths) != 1 || paths[0] != ".github/workflows/ci.yml" {
+		t.Errorf("refs[DEPLOY_KEY] = %v, want [.github/workflows/ci.yml]", paths)
+	}
+}
+
+func TestScanRepoSecretRefsListWorkflowsError(t *testing.T) {
+	t.Parallel()
+
+	client := newEndpointClient(t)
+
+	if _, err := client.ScanRepoSecretRefs("acme", "missing"); err == nil {
+		t.Error("ScanRepoSecretRefs() error = nil, want error for a repo with no workflows endpoint")
+	}
+}
+
 // TestDetectUnusedSecrets tests unused secret detection.
 func TestDetectUnusedSecrets(t *testing.T) {
 	t.Parallel()
