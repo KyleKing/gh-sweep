@@ -14,37 +14,14 @@ Four layers, detailed in [DESIGN.md](DESIGN.md#testing): table-driven unit tests
 
 Shipped work is not tracked here. `CHANGELOG.md` and `git log` are the record.
 
-## M0: Guardrails on the destructive commands
+## M0: TUI watching toggle confirmation (deferred)
 
-The highest-priority milestone. `orphans --cleanup` is currently an unprompted,
-unlimited delete, and all four gaps below are present as of v0.5.0.
-
-- `runCleanup` in `internal/cli/orphans.go` deletes every classified branch
-  immediately. `--dry-run` previews, but `orphans --cleanup` without it deletes
-  with no prompt, no count summary, and no limit. With `--org` and `--namespace`
-  both omitted the namespace resolves to the authenticated user and the scan
-  covers every non-archived repo you own, so a bare `orphans --cleanup` is an
-  account-wide branch delete. Add an interactive confirmation before the delete
-  loop: print the count and the full list, then require a typed `yes`, with a
-  `--yes`/`--force` flag to skip it for automation. The TUI orphans component
-  already gates deletion behind a `y/N` screen, so the CLI is the asymmetric path
-- `internal/orphans/detector.go:70` classifies a branch whose PR closed without
-  merging as `OrphanTypeClosedPR` and returns it as deletable, which can erase
-  abandoned-for-now work. Exclude that class from `--cleanup` by default behind
-  an explicit opt-in flag, or at minimum list it separately in the confirmation
-  so it is never deleted silently alongside merged branches
-- `DefaultScanOptions` in `internal/orphans/types.go:94` sets
-  `StaleDaysThreshold` to 7. A branch with no PR whose last commit is a week old
-  is classified stale and deletable, which is short for personal repos. Either
-  raise the default to 30 or make the confirmation non-negotiable for the stale
-  class
-- `watching --watch-all` has no confirmation and no dry-run, and the TUI `w`/`u`
-  keys mutate subscriptions with no prompt. Lower stakes (notifications only) but
-  the same pattern would make the tool consistent
-
-Coverage on exactly this code is the thinnest in the repo, so M3 below and this
-milestone reinforce each other. Test the orphan detector and the CLI cleanup path
-first.
+The TUI watching component's `w`/`u`/`i` keys mutate a single repo's
+subscription with no prompt, unlike the CLI's `orphans --cleanup` and
+`watching --watch-all`, which now gate behind a typed `yes`. Left as is: each
+key press is a single reversible toggle (press again to undo), not a batch
+operation, so the stakes don't match the CLI paths. Revisit only if it turns
+out to bite in practice.
 
 ## Open questions from Kyle
 
