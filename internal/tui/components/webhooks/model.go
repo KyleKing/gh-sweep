@@ -1,3 +1,5 @@
+// Package webhooks is the TUI view that lists repository webhooks and their
+// recent delivery health.
 package webhooks
 
 import (
@@ -10,6 +12,14 @@ import (
 
 	"github.com/KyleKing/gh-sweep/internal/github"
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
+)
+
+const (
+	repoPartsCount       = 2
+	helpKeyWidth         = 16
+	maxWebhooksShown     = 3
+	unhealthySuccessRate = 80
+	degradedSuccessRate  = 95
 )
 
 // Model represents the webhook management TUI state.
@@ -63,11 +73,10 @@ func (m Model) loadWebhooks() tea.Msg {
 	health := make(map[string]map[int]github.WebhookHealth)
 
 	for _, repoStr := range m.repos {
-		parts := strings.Split(repoStr, "/")
-		if len(parts) != 2 {
+		owner, repo, ok := splitRepo(repoStr)
+		if !ok {
 			continue
 		}
-		owner, repo := parts[0], parts[1]
 
 		// Load webhooks
 		repoWebhooks, err := client.ListWebhooks(owner, repo)
@@ -98,7 +107,18 @@ func (m Model) loadWebhooks() tea.Msg {
 	}
 }
 
+func splitRepo(repo string) (string, string, bool) {
+	parts := strings.SplitN(repo, "/", repoPartsCount)
+	if len(parts) != repoPartsCount {
+		return "", "", false
+	}
+
+	return parts[0], parts[1], true
+}
+
 // Update handles messages.
+//
+//nolint:unparam // matches every TUI component's Update(Model, tea.Cmd) shape
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -116,38 +136,44 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyPressMsg:
-		if m.showHelp {
-			if msg.String() == "?" || msg.String() == "esc" {
-				m.showHelp = false
-			}
+		return m.updateKeyMsg(msg)
+	}
 
-			return m, nil
+	return m, nil
+}
+
+func (m Model) updateKeyMsg(msg tea.KeyPressMsg) (Model, tea.Cmd) {
+	if m.showHelp {
+		if msg.String() == "?" || msg.String() == "esc" {
+			m.showHelp = false
 		}
 
-		switch msg.String() {
-		case "ctrl+c", "q":
-			return m, tea.Quit
+		return m, nil
+	}
 
-		case "?":
-			m.showHelp = true
+	switch msg.String() {
+	case "ctrl+c", "q":
+		return m, tea.Quit
 
-		case "g":
-			m.cursor = 0
+	case "?":
+		m.showHelp = true
 
-		case "G":
-			if len(m.repos) > 0 {
-				m.cursor = len(m.repos) - 1
-			}
+	case "g":
+		m.cursor = 0
 
-		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
-			}
+	case "G":
+		if len(m.repos) > 0 {
+			m.cursor = len(m.repos) - 1
+		}
 
-		case "down", "j":
-			if m.cursor < len(m.repos)-1 {
-				m.cursor++
-			}
+	case "up", "k":
+		if m.cursor > 0 {
+			m.cursor--
+		}
+
+	case "down", "j":
+		if m.cursor < len(m.repos)-1 {
+			m.cursor++
 		}
 	}
 
@@ -175,64 +201,14 @@ func (m Model) View() string {
 	b.WriteString("\n\n")
 
 	if m.showHelp {
-		return m.renderHelp(&b)
+		return renderHelp(&b)
 	}
 
 	// Webhook list by repository
 	if len(m.webhooks) == 0 {
 		b.WriteString("No webhooks found.\n")
 	} else {
-		for i, repo := range m.repos {
-			cursor := " "
-			if m.cursor == i {
-				cursor = ">"
-			}
-
-			repoStyle := lipgloss.NewStyle()
-			if m.cursor == i {
-				repoStyle = repoStyle.Bold(true).Foreground(theme.Current().Warning)
-			}
-
-			webhooks := m.webhooks[repo]
-			line := fmt.Sprintf("%s %s (%d webhooks):\n", cursor, repo, len(webhooks))
-
-			// Show first few webhooks
-			var lineSb172 strings.Builder
-			for j, webhook := range webhooks {
-				if j >= 3 {
-					fmt.Fprintf(&lineSb172, "   ... and %d more\n", len(webhooks)-3)
-					break
-				}
-
-				fmt.Fprintf(&lineSb172, "   ID: %d | %s\n", webhook.ID, webhook.URL)
-				fmt.Fprintf(&lineSb172, "   Events: %s\n", strings.Join(webhook.Events, ", "))
-
-				// Add health metrics if available
-				if repoHealth, ok := m.health[repo]; ok {
-					if health, ok := repoHealth[webhook.ID]; ok {
-						statusColor := theme.Current().Success
-						if health.SuccessRate < 80 {
-							statusColor = theme.Current().Error
-						} else if health.SuccessRate < 95 {
-							statusColor = theme.Current().Warning
-						}
-
-						healthStyle := lipgloss.NewStyle().Foreground(statusColor)
-						healthLine := fmt.Sprintf(
-							"   Health: %.1f%% success | Avg: %dms | Total: %d\n",
-							health.SuccessRate,
-							health.AvgDuration,
-							health.TotalDeliveries,
-						)
-						lineSb172.WriteString(healthStyle.Render(healthLine))
-					}
-				}
-			}
-			line += lineSb172.String()
-
-			b.WriteString(repoStyle.Render(line))
-			b.WriteString("\n")
-		}
+		m.renderWebhookList(&b)
 	}
 
 	// Help
@@ -243,7 +219,66 @@ func (m Model) View() string {
 	return b.String()
 }
 
-func (m Model) renderHelp(b *strings.Builder) string {
+func (m Model) renderWebhookList(b *strings.Builder) {
+	for i, repo := range m.repos {
+		cursor := " "
+		if m.cursor == i {
+			cursor = ">"
+		}
+
+		repoStyle := lipgloss.NewStyle()
+		if m.cursor == i {
+			repoStyle = repoStyle.Bold(true).Foreground(theme.Current().Warning)
+		}
+
+		webhooks := m.webhooks[repo]
+		line := fmt.Sprintf("%s %s (%d webhooks):\n", cursor, repo, len(webhooks))
+		line += m.renderRepoWebhooks(repo, webhooks)
+
+		b.WriteString(repoStyle.Render(line))
+		b.WriteString("\n")
+	}
+}
+
+func (m Model) renderRepoWebhooks(repo string, webhooks []github.Webhook) string {
+	var b strings.Builder
+
+	for j, webhook := range webhooks {
+		if j >= maxWebhooksShown {
+			fmt.Fprintf(&b, "   ... and %d more\n", len(webhooks)-maxWebhooksShown)
+			break
+		}
+
+		fmt.Fprintf(&b, "   ID: %d | %s\n", webhook.ID, webhook.URL)
+		fmt.Fprintf(&b, "   Events: %s\n", strings.Join(webhook.Events, ", "))
+
+		if health, ok := m.health[repo][webhook.ID]; ok {
+			b.WriteString(renderWebhookHealth(health))
+		}
+	}
+
+	return b.String()
+}
+
+func renderWebhookHealth(health github.WebhookHealth) string {
+	statusColor := theme.Current().Success
+	if health.SuccessRate < unhealthySuccessRate {
+		statusColor = theme.Current().Error
+	} else if health.SuccessRate < degradedSuccessRate {
+		statusColor = theme.Current().Warning
+	}
+
+	healthStyle := lipgloss.NewStyle().Foreground(statusColor)
+
+	return healthStyle.Render(fmt.Sprintf(
+		"   Health: %.1f%% success | Avg: %dms | Total: %d\n",
+		health.SuccessRate,
+		health.AvgDuration,
+		health.TotalDeliveries,
+	))
+}
+
+func renderHelp(b *strings.Builder) string {
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Primary)
 	b.WriteString(titleStyle.Render("Keybindings"))
 	b.WriteString("\n\n")
@@ -256,7 +291,7 @@ func (m Model) renderHelp(b *strings.Builder) string {
 	}
 
 	for _, binding := range bindings {
-		keyStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Warning).Width(16)
+		keyStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Warning).Width(helpKeyWidth)
 		fmt.Fprintf(b, "%s %s\n", keyStyle.Render(binding[0]), binding[1])
 	}
 
