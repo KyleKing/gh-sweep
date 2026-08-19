@@ -39,11 +39,12 @@ type Model struct {
 	scrollTop  int
 	maxVisible int
 
-	workflows        []github.WorkflowFile
-	selectedWorkflow string
-	filterBranch     string
-	filterDays       int
-	cacheOnly        bool
+	workflows           []github.WorkflowFile
+	selectedWorkflow    string
+	filterBranch        string
+	filterDays          int
+	cacheOnly           bool
+	regressionThreshold float64
 
 	runs          []github.RunTiming
 	workflowStats map[string]*github.WorkflowStats
@@ -65,14 +66,15 @@ func NewModel(repo string, opts ...Option) Model {
 	}
 
 	m := Model{
-		repo:       repo,
-		owner:      owner,
-		repoName:   repoName,
-		loading:    true,
-		viewMode:   viewOverview,
-		filterDays: 30,
-		baseBranch: "main",
-		maxVisible: 15,
+		repo:                repo,
+		owner:               owner,
+		repoName:            repoName,
+		loading:             true,
+		viewMode:            viewOverview,
+		filterDays:          30,
+		baseBranch:          "main",
+		maxVisible:          15,
+		regressionThreshold: 20.0,
 	}
 
 	for _, opt := range opts {
@@ -111,6 +113,14 @@ func WithCacheOnly(cacheOnly bool) Option {
 func WithBaseBranch(branch string) Option {
 	return func(m *Model) {
 		m.baseBranch = branch
+	}
+}
+
+// WithRegressionThreshold sets the percent slowdown against baseline that
+// marks a branch as regressed in the Branches view.
+func WithRegressionThreshold(threshold float64) Option {
+	return func(m *Model) {
+		m.regressionThreshold = threshold
 	}
 }
 
@@ -511,6 +521,33 @@ func (m Model) renderOverview() string {
 	return b.String()
 }
 
+const (
+	trendWidth = 20
+	barWidth   = 20
+)
+
+// runDurationsFor returns workflow's run durations in seconds, oldest first,
+// for the trend sparkline.
+func (m Model) runDurationsFor(workflow string) []float64 {
+	var runs []github.RunTiming
+	for _, r := range m.runs {
+		if r.Workflow == workflow {
+			runs = append(runs, r)
+		}
+	}
+
+	sort.Slice(runs, func(i, j int) bool {
+		return runs[i].CreatedAt.Before(runs[j].CreatedAt)
+	})
+
+	durations := make([]float64, len(runs))
+	for i, r := range runs {
+		durations[i] = r.DurationSeconds
+	}
+
+	return durations
+}
+
 func (m Model) renderWorkflows() string {
 	var b strings.Builder
 
@@ -525,8 +562,8 @@ func (m Model) renderWorkflows() string {
 		Bold(true).
 		Foreground(theme.Current().Muted)
 
-	b.WriteString(headerStyle.Render(fmt.Sprintf("  %-35s %8s %8s %8s %8s %8s\n",
-		"Workflow", "Runs", "Avg", "Min", "Max", "Success")))
+	b.WriteString(headerStyle.Render(fmt.Sprintf("  %-35s %8s %8s %8s %8s %8s  %s\n",
+		"Workflow", "Runs", "Avg", "Min", "Max", "Success", "Trend")))
 
 	var workflows []*github.WorkflowStats
 	for _, ws := range m.workflowStats {
@@ -549,13 +586,16 @@ func (m Model) renderWorkflows() string {
 			name = name[:32] + "..."
 		}
 
-		line := fmt.Sprintf("  %-35s %8d %8s %8s %8s %7.0f%%",
+		trend := sparkline(m.runDurationsFor(ws.Workflow), trendWidth)
+
+		line := fmt.Sprintf("  %-35s %8d %8s %8s %8s %7.0f%%  %s",
 			name,
 			ws.TotalRuns,
 			github.FormatDuration(ws.AvgDuration),
 			github.FormatDuration(ws.MinDuration),
 			github.FormatDuration(ws.MaxDuration),
-			ws.SuccessRate)
+			ws.SuccessRate,
+			trend)
 
 		if i == m.cursor {
 			b.WriteString(selectedStyle.Render(line))
@@ -632,12 +672,16 @@ func (m Model) renderBranches() string {
 		Bold(true).
 		Foreground(theme.Current().Muted)
 
-	b.WriteString(headerStyle.Render(fmt.Sprintf("  %-30s %8s %10s %12s\n",
-		"Branch", "Runs", "Avg", "Delta")))
+	b.WriteString(headerStyle.Render(fmt.Sprintf("  %-30s %8s %10s %12s  %s\n",
+		"Branch", "Runs", "Avg", "Delta", "Relative")))
 
 	var branches []*github.BranchStats
+	var maxAvg time.Duration
 	for _, bs := range m.branchStats {
 		branches = append(branches, bs)
+		if bs.AvgDuration > maxAvg {
+			maxAvg = bs.AvgDuration
+		}
 	}
 
 	sort.Slice(branches, func(i, j int) bool {
@@ -678,14 +722,21 @@ func (m Model) renderBranches() string {
 				sign = ""
 				style = fasterStyle
 			}
-			delta = style.Render(fmt.Sprintf("%s%.0f%%", sign, bs.DeltaVsBasePct))
+
+			marker := ""
+			if bs.DeltaVsBasePct >= m.regressionThreshold {
+				marker = " ⚠"
+			}
+
+			delta = style.Render(fmt.Sprintf("%s%.0f%%%s", sign, bs.DeltaVsBasePct, marker))
 		}
 
-		line := fmt.Sprintf("  %-30s %8d %10s %12s",
+		line := fmt.Sprintf("  %-30s %8d %10s %12s  %s",
 			name,
 			bs.TotalRuns,
 			github.FormatDuration(bs.AvgDuration),
-			delta)
+			delta,
+			bar(float64(bs.AvgDuration), float64(maxAvg), barWidth))
 
 		if i == m.cursor {
 			b.WriteString(selectedStyle.Render(line))

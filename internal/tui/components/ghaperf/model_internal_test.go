@@ -109,6 +109,67 @@ func TestOptionsApply(t *testing.T) {
 	}
 }
 
+func TestWithRegressionThreshold(t *testing.T) {
+	t.Parallel()
+
+	m := NewModel("acme/widgets", WithRegressionThreshold(50))
+
+	if m.regressionThreshold != 50 {
+		t.Errorf("regressionThreshold = %v, want 50", m.regressionThreshold)
+	}
+}
+
+func TestWorkflowsViewShowsDurationTrend(t *testing.T) {
+	t.Parallel()
+
+	m := NewModel("acme/widgets")
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	m, _ = m.Update(dataLoadedMsg{
+		runs: []github.RunTiming{
+			{Workflow: "ci", CreatedAt: time.Now().Add(-2 * time.Hour), DurationSeconds: 60},
+			{Workflow: "ci", CreatedAt: time.Now().Add(-1 * time.Hour), DurationSeconds: 300},
+		},
+		workflowStats: map[string]*github.WorkflowStats{
+			"ci": {Workflow: "ci", TotalRuns: 2},
+		},
+	})
+	m, _ = m.Update(tea.KeyPressMsg{Code: '2', Text: "2"})
+
+	view := m.View()
+	if !strings.Contains(view, "Trend") {
+		t.Errorf("workflows view missing Trend column header:\n%s", view)
+	}
+	if !strings.ContainsAny(view, "▁▂▃▄▅▆▇█") {
+		t.Errorf("workflows view missing a sparkline:\n%s", view)
+	}
+}
+
+func TestBranchesViewShowsBarAndRegressionMarker(t *testing.T) {
+	t.Parallel()
+
+	m := NewModel("acme/widgets", WithRegressionThreshold(20))
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	m, _ = m.Update(dataLoadedMsg{
+		branchStats: map[string]*github.BranchStats{
+			"main":    {Branch: "main", TotalRuns: 5, AvgDuration: 5 * time.Minute},
+			"regress": {Branch: "regress", TotalRuns: 3, AvgDuration: 8 * time.Minute, DeltaVsBasePct: 60},
+			"faster":  {Branch: "faster", TotalRuns: 3, AvgDuration: 3 * time.Minute, DeltaVsBasePct: -40},
+		},
+	})
+	m, _ = m.Update(tea.KeyPressMsg{Code: '4', Text: "4"})
+
+	view := m.View()
+	if !strings.Contains(view, "Relative") {
+		t.Errorf("branches view missing Relative column header:\n%s", view)
+	}
+	if !strings.ContainsAny(view, "█░") {
+		t.Errorf("branches view missing a comparison bar:\n%s", view)
+	}
+	if !strings.Contains(view, "⚠") {
+		t.Errorf("branches view missing the regression marker for the branch over threshold:\n%s", view)
+	}
+}
+
 func TestGetMaxCursorPerView(t *testing.T) {
 	t.Parallel()
 

@@ -21,9 +21,14 @@ func TestResolveMainOptionsFromConfig(t *testing.T) {
 		Baseline:     "acme/baseline",
 		DefaultOrg:   "acme",
 		Repositories: []string{"acme/repo1", "repo2"},
+		GHAPerf:      config.GHAPerfConfig{RegressionThreshold: 25.0},
 	}
 
 	opts := resolveMainOptions(cfg, "", "", nil)
+
+	if opts.RegressionThreshold != 25.0 {
+		t.Errorf("Expected regression threshold from config, got %v", opts.RegressionThreshold)
+	}
 
 	if opts.Org != "acme" {
 		t.Errorf("Expected org from config, got '%s'", opts.Org)

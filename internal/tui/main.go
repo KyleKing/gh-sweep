@@ -84,29 +84,32 @@ type MainModel struct {
 	webhooksModel      webhooks.Model
 
 	// Configuration
-	repo     string
-	repos    []string
-	baseline string
-	org      string
+	repo                string
+	repos               []string
+	baseline            string
+	org                 string
+	regressionThreshold float64
 }
 
 // MainModelOptions configures the initial state of the main TUI model.
 type MainModelOptions struct {
-	Baseline string
-	Org      string
-	Repo     string
-	Repos    []string
+	Baseline            string
+	Org                 string
+	Repo                string
+	Repos               []string
+	RegressionThreshold float64
 }
 
 // NewMainModel creates a new main TUI model.
 func NewMainModel(opts MainModelOptions) MainModel {
 	return MainModel{
-		ready:    false,
-		mode:     ViewHome,
-		repo:     opts.Repo,
-		repos:    opts.Repos,
-		baseline: opts.Baseline,
-		org:      opts.Org,
+		ready:               false,
+		mode:                ViewHome,
+		repo:                opts.Repo,
+		repos:               opts.Repos,
+		baseline:            opts.Baseline,
+		org:                 opts.Org,
+		regressionThreshold: opts.RegressionThreshold,
 	}
 }
 
@@ -475,7 +478,12 @@ func (m MainModel) activateItem(item menuItem) (tea.Model, tea.Cmd) {
 
 	case ViewGHAPerf:
 		if m.repo != "" {
-			m.ghaPerfModel = ghaperf.NewModel(m.repo)
+			opts := []ghaperf.Option{}
+			if m.regressionThreshold > 0 {
+				opts = append(opts, ghaperf.WithRegressionThreshold(m.regressionThreshold))
+			}
+
+			m.ghaPerfModel = ghaperf.NewModel(m.repo, opts...)
 			return m, m.ghaPerfModel.Init()
 		}
 

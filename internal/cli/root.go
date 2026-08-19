@@ -69,10 +69,11 @@ func resolveMainOptions(cfg *config.Config, repo, org string, repos []string) tu
 	}
 
 	return tui.MainModelOptions{
-		Baseline: cfg.Baseline,
-		Org:      org,
-		Repo:     repo,
-		Repos:    repos,
+		Baseline:            cfg.Baseline,
+		Org:                 org,
+		Repo:                repo,
+		Repos:               repos,
+		RegressionThreshold: cfg.GHAPerf.RegressionThreshold,
 	}
 }
 
