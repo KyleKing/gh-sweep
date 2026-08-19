@@ -539,5 +539,11 @@ func splitRepo(repo string) (string, string, bool) {
 // GetLocalBranches loads branches from local Git repository.
 func GetLocalBranches(repoPath string) ([]git.BranchInfo, error) {
 	repo := git.NewLocalRepo(repoPath)
-	return repo.ListBranches()
+
+	branches, err := repo.ListBranches()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list local branches: %w", err)
+	}
+
+	return branches, nil
 }

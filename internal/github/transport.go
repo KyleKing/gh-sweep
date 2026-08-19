@@ -85,7 +85,7 @@ func (s safetyTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		))
 	}
 
-	return s.base.RoundTrip(req)
+	return s.base.RoundTrip(req) //nolint:wrapcheck // transparent proxy: http.Client wraps this in *url.Error itself
 }
 
 func isMutatingMethod(method string) bool {

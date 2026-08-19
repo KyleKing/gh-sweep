@@ -3,6 +3,7 @@ package github
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -105,7 +106,11 @@ type fakeGQLDoer struct {
 func (f *fakeGQLDoer) Do(_ string, variables map[string]interface{}, response interface{}) error {
 	f.calls = append(f.calls, variables)
 
-	return json.Unmarshal([]byte(f.pages[len(f.calls)-1]), response)
+	if err := json.Unmarshal([]byte(f.pages[len(f.calls)-1]), response); err != nil {
+		return fmt.Errorf("failed to unmarshal fixture: %w", err)
+	}
+
+	return nil
 }
 
 const pageOneFixture = `{
@@ -119,7 +124,9 @@ const pageOneFixture = `{
             "isResolved": false,
             "isOutdated": false,
             "path": "a.go",
-            "comments": {"nodes": [{"author": {"login": "octocat"}, "body": "first", "createdAt": "2026-06-01T00:00:00Z", "url": ""}]}
+            "comments": {"nodes": [
+              {"author": {"login": "octocat"}, "body": "first", "createdAt": "2026-06-01T00:00:00Z", "url": ""}
+            ]}
           }
         ]
       }
@@ -138,7 +145,9 @@ const pageTwoFixture = `{
             "isResolved": true,
             "isOutdated": false,
             "path": "b.go",
-            "comments": {"nodes": [{"author": {"login": "hubot"}, "body": "second", "createdAt": "2026-06-02T00:00:00Z", "url": ""}]}
+            "comments": {"nodes": [
+              {"author": {"login": "hubot"}, "body": "second", "createdAt": "2026-06-02T00:00:00Z", "url": ""}
+            ]}
           }
         ]
       }
@@ -285,17 +294,23 @@ func TestReviewThreadHelpers(t *testing.T) {
 	}
 }
 
-func TestListOpenPRReviewThreads(t *testing.T) {
-	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+const twoOpenPRsFixture = `[
+	{"number":1,"title":"first","state":"open",
+	 "head":{"ref":"a","sha":"1","repo":{"full_name":"acme/widgets"}},
+	 "base":{"ref":"main","sha":"0","repo":{"full_name":"acme/widgets"}}},
+	{"number":2,"title":"second","state":"open",
+	 "head":{"ref":"b","sha":"2","repo":{"full_name":"acme/widgets"}},
+	 "base":{"ref":"main","sha":"0","repo":{"full_name":"acme/widgets"}}}
+]`
+
+func openPRsTransport(body string) roundTripFunc {
+	return func(req *http.Request) (*http.Response, error) {
 		if req.URL.Path == "/repos/acme/widgets/pulls" && req.URL.Query().Get("page") == "1" {
 			return &http.Response{
 				StatusCode: http.StatusOK,
 				Header:     http.Header{},
-				Body: io.NopCloser(strings.NewReader(
-					`[{"number":1,"title":"first","state":"open","head":{"ref":"a","sha":"1","repo":{"full_name":"acme/widgets"}},"base":{"ref":"main","sha":"0","repo":{"full_name":"acme/widgets"}}},
-					  {"number":2,"title":"second","state":"open","head":{"ref":"b","sha":"2","repo":{"full_name":"acme/widgets"}},"base":{"ref":"main","sha":"0","repo":{"full_name":"acme/widgets"}}}]`,
-				)),
-				Request: req,
+				Body:       io.NopCloser(strings.NewReader(body)),
+				Request:    req,
 			}, nil
 		}
 
@@ -305,7 +320,11 @@ func TestListOpenPRReviewThreads(t *testing.T) {
 			Body:       io.NopCloser(strings.NewReader(`[]`)),
 			Request:    req,
 		}, nil
-	})
+	}
+}
+
+func TestListOpenPRReviewThreads(t *testing.T) {
+	transport := openPRsTransport(twoOpenPRsFixture)
 
 	client, err := NewClientWithTransport(context.Background(), transport)
 	if err != nil {
@@ -329,26 +348,7 @@ func TestListOpenPRReviewThreads(t *testing.T) {
 }
 
 func TestListOpenPRReviewThreadsCapped(t *testing.T) {
-	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
-		if req.URL.Path == "/repos/acme/widgets/pulls" && req.URL.Query().Get("page") == "1" {
-			return &http.Response{
-				StatusCode: http.StatusOK,
-				Header:     http.Header{},
-				Body: io.NopCloser(strings.NewReader(
-					`[{"number":1,"title":"first","state":"open","head":{"ref":"a","sha":"1","repo":{"full_name":"acme/widgets"}},"base":{"ref":"main","sha":"0","repo":{"full_name":"acme/widgets"}}},
-					  {"number":2,"title":"second","state":"open","head":{"ref":"b","sha":"2","repo":{"full_name":"acme/widgets"}},"base":{"ref":"main","sha":"0","repo":{"full_name":"acme/widgets"}}}]`,
-				)),
-				Request: req,
-			}, nil
-		}
-
-		return &http.Response{
-			StatusCode: http.StatusOK,
-			Header:     http.Header{},
-			Body:       io.NopCloser(strings.NewReader(`[]`)),
-			Request:    req,
-		}, nil
-	})
+	transport := openPRsTransport(twoOpenPRsFixture)
 
 	client, err := NewClientWithTransport(context.Background(), transport)
 	if err != nil {

@@ -34,14 +34,18 @@ func scannerFake() roundTripFunc {
 		case strings.HasSuffix(path, "/orgs/acme/repos"):
 			return jsonResponse(req, http.StatusOK, `[
 				{"name":"widgets","full_name":"acme/widgets","owner":{"login":"acme"},"default_branch":"main"},
-				{"name":"archived","full_name":"acme/archived","owner":{"login":"acme"},"archived":true,"default_branch":"main"}
+				{"name":"archived","full_name":"acme/archived","owner":{"login":"acme"},
+				 "archived":true,"default_branch":"main"}
 			]`), nil
 
 		case path == "/repos/acme/widgets/branches":
 			return jsonResponse(req, http.StatusOK, `[
-				{"name":"main","protected":true,"commit":{"sha":"abc","commit":{"author":{"date":"2026-01-01T00:00:00Z"}}}},
-				{"name":"merged-feature","commit":{"sha":"def","commit":{"author":{"date":"2026-01-05T00:00:00Z"}}}},
-				{"name":"stale-feature","commit":{"sha":"ghi","commit":{"author":{"date":"2020-01-05T00:00:00Z"}}}}
+				{"name":"main","protected":true,
+				 "commit":{"sha":"abc","commit":{"author":{"date":"2026-01-01T00:00:00Z"}}}},
+				{"name":"merged-feature",
+				 "commit":{"sha":"def","commit":{"author":{"date":"2026-01-05T00:00:00Z"}}}},
+				{"name":"stale-feature",
+				 "commit":{"sha":"ghi","commit":{"author":{"date":"2020-01-05T00:00:00Z"}}}}
 			]`), nil
 
 		case path == "/repos/acme/widgets/pulls":

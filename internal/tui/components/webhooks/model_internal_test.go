@@ -39,7 +39,10 @@ func TestLoadedWebhooksView(t *testing.T) {
 	t.Parallel()
 
 	view := loadedWebhooksModel().View()
-	for _, want := range []string{"Webhooks", "acme/widgets (1 webhooks)", "https://ci.example.com/hook", "push, pull_request"} {
+	wants := []string{
+		"Webhooks", "acme/widgets (1 webhooks)", "https://ci.example.com/hook", "push, pull_request",
+	}
+	for _, want := range wants {
 		if !strings.Contains(view, want) {
 			t.Errorf("view missing %q", want)
 		}

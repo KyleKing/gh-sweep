@@ -241,7 +241,7 @@ func runGHAPerf(cmd *cobra.Command, _ []string) {
 func exportCSV(runs []github.RunTiming, path string) error {
 	f, err := os.Create(path)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create %s: %w", path, err)
 	}
 	defer func() {
 		if closeErr := f.Close(); closeErr != nil {
@@ -257,7 +257,7 @@ func exportCSV(runs []github.RunTiming, path string) error {
 		"run_duration_s", "job_name", "job_duration_s", "step_name", "step_duration_s",
 	}
 	if err := w.Write(header); err != nil {
-		return err
+		return fmt.Errorf("failed to write CSV header: %w", err)
 	}
 
 	for _, r := range runs {
@@ -276,7 +276,7 @@ func exportCSV(runs []github.RunTiming, path string) error {
 					fmt.Sprintf("%.1f", s.DurationSeconds),
 				}
 				if err := w.Write(row); err != nil {
-					return err
+					return fmt.Errorf("failed to write CSV row: %w", err)
 				}
 			}
 		}

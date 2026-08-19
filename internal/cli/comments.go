@@ -150,7 +150,7 @@ func buildThreadFilter(cmd *cobra.Command) (github.ThreadFilter, error) {
 	if since := stringFlag(cmd, "since"); since != "" {
 		parsed, err := github.ParseSinceDate(since)
 		if err != nil {
-			return github.ThreadFilter{}, err
+			return github.ThreadFilter{}, fmt.Errorf("invalid --since flag: %w", err)
 		}
 		filter.Since = &parsed
 	}

@@ -122,7 +122,11 @@ func NewClientWithToken(ctx context.Context, token string) (*Client, error) {
 
 // Get performs a GET request to the GitHub API.
 func (c *Client) Get(path string, response interface{}) error {
-	return c.apiClient.Get(path, response)
+	if err := c.apiClient.Get(path, response); err != nil {
+		return fmt.Errorf("GET %s: %w", path, err)
+	}
+
+	return nil
 }
 
 // Post performs a POST request to the GitHub API.
@@ -132,7 +136,11 @@ func (c *Client) Post(path string, body, response interface{}) error {
 		return fmt.Errorf("failed to marshal request body: %w", err)
 	}
 
-	return c.apiClient.Post(path, bytes.NewReader(jsonBody), response)
+	if err := c.apiClient.Post(path, bytes.NewReader(jsonBody), response); err != nil {
+		return fmt.Errorf("POST %s: %w", path, err)
+	}
+
+	return nil
 }
 
 // Patch performs a PATCH request to the GitHub API.
@@ -142,7 +150,11 @@ func (c *Client) Patch(path string, body, response interface{}) error {
 		return fmt.Errorf("failed to marshal request body: %w", err)
 	}
 
-	return c.apiClient.Patch(path, bytes.NewReader(jsonBody), response)
+	if err := c.apiClient.Patch(path, bytes.NewReader(jsonBody), response); err != nil {
+		return fmt.Errorf("PATCH %s: %w", path, err)
+	}
+
+	return nil
 }
 
 // Put performs a PUT request to the GitHub API.
@@ -152,12 +164,20 @@ func (c *Client) Put(path string, body, response interface{}) error {
 		return fmt.Errorf("failed to marshal request body: %w", err)
 	}
 
-	return c.apiClient.Put(path, bytes.NewReader(jsonBody), response)
+	if err := c.apiClient.Put(path, bytes.NewReader(jsonBody), response); err != nil {
+		return fmt.Errorf("PUT %s: %w", path, err)
+	}
+
+	return nil
 }
 
 // Delete performs a DELETE request to the GitHub API.
 func (c *Client) Delete(path string, response interface{}) error {
-	return c.apiClient.Delete(path, response)
+	if err := c.apiClient.Delete(path, response); err != nil {
+		return fmt.Errorf("DELETE %s: %w", path, err)
+	}
+
+	return nil
 }
 
 // Context returns the client's context.

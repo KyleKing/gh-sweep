@@ -99,8 +99,10 @@ func TestListBranches(t *testing.T) {
 			return jsonResponse(req, http.StatusOK, `{"default_branch":"main"}`), nil
 		case path == "/repos/acme/widgets/branches":
 			return jsonResponse(req, http.StatusOK, `[
-				{"name":"main","protected":true,"commit":{"sha":"abc","commit":{"author":{"date":"2026-01-10T12:00:00Z"}}}},
-				{"name":"feature","commit":{"sha":"def","commit":{"author":{"date":"2026-01-12T12:00:00Z"}}}}
+				{"name":"main","protected":true,
+				 "commit":{"sha":"abc","commit":{"author":{"date":"2026-01-10T12:00:00Z"}}}},
+				{"name":"feature",
+				 "commit":{"sha":"def","commit":{"author":{"date":"2026-01-12T12:00:00Z"}}}}
 			]`), nil
 		case strings.HasPrefix(path, "/repos/acme/widgets/compare/"):
 			return jsonResponse(req, http.StatusOK, `{"ahead_by":1,"behind_by":0}`), nil

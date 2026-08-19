@@ -2,6 +2,7 @@ package orphans
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/KyleKing/gh-sweep/internal/github"
@@ -40,7 +41,7 @@ func (s *NamespaceScanner) ScanNamespaceWithProgress(
 ) (*NamespaceScanResult, error) {
 	repos, isOrg, err := s.client.ListNamespaceRepositories(namespace)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list namespace repositories: %w", err)
 	}
 
 	var nonArchivedRepos []github.Repository

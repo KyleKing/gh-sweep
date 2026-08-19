@@ -45,8 +45,10 @@ func routeFakeGitHub(req *http.Request) (*http.Response, error) {
 		return jsonResponse(req, http.StatusOK, `{"default_branch":"main"}`), nil
 	case path == "/repos/acme/widgets/branches":
 		return jsonResponse(req, http.StatusOK, `[
-			{"name":"main","protected":true,"commit":{"sha":"abc123","commit":{"author":{"date":"2026-01-10T12:00:00Z"}}}},
-			{"name":"feature/login","commit":{"sha":"def456","commit":{"author":{"date":"2026-01-12T12:00:00Z"}}}}
+			{"name":"main","protected":true,
+			 "commit":{"sha":"abc123","commit":{"author":{"date":"2026-01-10T12:00:00Z"}}}},
+			{"name":"feature/login",
+			 "commit":{"sha":"def456","commit":{"author":{"date":"2026-01-12T12:00:00Z"}}}}
 		]`), nil
 	case strings.HasPrefix(path, "/repos/acme/widgets/compare/"):
 		return jsonResponse(req, http.StatusOK, `{"ahead_by":2,"behind_by":1}`), nil

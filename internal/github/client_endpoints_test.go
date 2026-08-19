@@ -23,8 +23,10 @@ func endpointFake() roundTripFunc {
 			}`), nil
 		case method == http.MethodGet && path == "/repos/acme/widgets/branches":
 			return okJSON(req, `[
-				{"name":"main","protected":true,"commit":{"sha":"abc123","commit":{"author":{"date":"2026-01-10T12:00:00Z"}}}},
-				{"name":"feature","commit":{"sha":"def456","commit":{"author":{"date":"2026-01-12T12:00:00Z"}}}}
+				{"name":"main","protected":true,
+				 "commit":{"sha":"abc123","commit":{"author":{"date":"2026-01-10T12:00:00Z"}}}},
+				{"name":"feature",
+				 "commit":{"sha":"def456","commit":{"author":{"date":"2026-01-12T12:00:00Z"}}}}
 			]`), nil
 		case method == http.MethodGet && strings.HasPrefix(path, "/repos/acme/widgets/compare/"):
 			return okJSON(req, `{"ahead_by":3,"behind_by":1}`), nil
@@ -119,7 +121,8 @@ func endpointFake() roundTripFunc {
 
 			return okJSON(req, `[
 				{"name":"widgets","full_name":"acme/widgets","owner":{"login":"acme"},"default_branch":"main"},
-				{"name":"gadgets","full_name":"acme/gadgets","owner":{"login":"acme"},"private":true,"archived":true,"default_branch":"main"}
+				{"name":"gadgets","full_name":"acme/gadgets","owner":{"login":"acme"},
+				 "private":true,"archived":true,"default_branch":"main"}
 			]`), nil
 		case method == http.MethodGet && strings.HasPrefix(path, "/orgs/"):
 			return notFoundJSON(req), nil
@@ -130,7 +133,8 @@ func endpointFake() roundTripFunc {
 
 			return okJSON(
 				req,
-				`[{"name":"dotfiles","full_name":"tester/dotfiles","owner":{"login":"tester"},"default_branch":"main"}]`,
+				`[{"name":"dotfiles","full_name":"tester/dotfiles",
+				  "owner":{"login":"tester"},"default_branch":"main"}]`,
 			), nil
 		case method == http.MethodGet && path == "/repos/acme/widgets/hooks":
 			return okJSON(
@@ -149,7 +153,8 @@ func endpointFake() roundTripFunc {
 			), nil
 		case method == http.MethodGet && path == "/repos/acme/widgets/actions/runs":
 			return okJSON(req, `{"workflow_runs":[
-				{"id":101,"name":"ci","status":"completed","conclusion":"success","head_branch":"main","head_sha":"abc123",
+				{"id":101,"name":"ci","status":"completed","conclusion":"success",
+				 "head_branch":"main","head_sha":"abc123",
 				 "created_at":"2026-01-10T12:00:00Z","updated_at":"2026-01-10T12:05:00Z"}
 			]}`), nil
 		default:

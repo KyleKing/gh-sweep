@@ -30,12 +30,10 @@ enable = ["asciicheck", "bidichk", "bodyclose", "containedctx", "contextcheck", 
 path = "_test\\.go"
 linters = ["cyclop", "goconst"]
 
-# TODO(v1): remove after component refactor. The pre-lint codebase violates these
-# style/complexity linters throughout; correctness linters (errcheck, unused,
-# ineffassign, forcetypeassert, govet, staticcheck) stay enforced everywhere.
 [[linters.exclusions.rules]]
-path = "internal/(cache|cli|config|git|github|models|orphans|tui)/"
-linters = ["containedctx", "cyclop", "dupl", "err113", "exhaustive", "funlen", "gochecknoinits", "gocognit", "goconst", "gocritic", "gocyclo", "godox", "gosec", "lll", "maintidx", "mnd", "musttag", "nestif", "nilnil", "nlreturn", "noctx", "nonamedreturns", "paralleltest", "prealloc", "revive", "tagliatelle", "testpackage", "thelper", "unparam", "wrapcheck"]
+# Cobra's own convention: each command registers itself and its flags in init().
+path = "internal/cli/"
+linters = ["gochecknoinits"]
 
 [linters.settings.cyclop]
 max-complexity = 15

@@ -271,9 +271,8 @@ func (m Model) View() string {
 			okStyle := lineStyle.Foreground(theme.Current().Success)
 			b.WriteString(okStyle.Render(fmt.Sprintf("%s %s: in sync\n", cursor, drift.Repository)))
 		default:
-			b.WriteString(
-				lineStyle.Render(fmt.Sprintf("%s %s: %d field(s) drifted\n", cursor, drift.Repository, len(drift.Diffs))),
-			)
+			line := fmt.Sprintf("%s %s: %d field(s) drifted\n", cursor, drift.Repository, len(drift.Diffs))
+			b.WriteString(lineStyle.Render(line))
 			if m.cursor == i {
 				for _, d := range drift.Diffs {
 					fmt.Fprintf(&b, "     [%s] %s: %s -> %s\n", d.Domain, d.Field, d.Current, d.Desired)
