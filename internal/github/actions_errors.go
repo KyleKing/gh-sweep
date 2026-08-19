@@ -2,6 +2,7 @@ package github
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -9,6 +10,10 @@ import (
 	"strings"
 	"time"
 )
+
+// ErrJobLogFetchFailed indicates the GitHub API returned a non-200 status while
+// fetching a job's logs.
+var ErrJobLogFetchFailed = errors.New("unexpected status fetching job logs")
 
 // JobLog represents a GitHub Actions job log.
 type JobLog struct {
@@ -48,8 +53,9 @@ func (c *Client) FetchFailedJobLogs(owner, repo string, runID int) ([]JobLog, er
 	}
 
 	logs := make([]JobLog, 0)
-	for _, job := range response.Jobs {
-		if job.Conclusion != "failure" {
+	for i := range response.Jobs {
+		job := &response.Jobs[i]
+		if job.Conclusion != ConclusionFailure {
 			continue
 		}
 
@@ -93,7 +99,7 @@ func (c *Client) fetchJobLogLines(owner, repo string, jobID int) ([]string, erro
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status %d fetching job logs", resp.StatusCode)
+		return nil, fmt.Errorf("%w: %d", ErrJobLogFetchFailed, resp.StatusCode)
 	}
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxJobLogBytes))
@@ -114,11 +120,17 @@ type LogExtractionConfig struct {
 	ErrorPatterns     []string // Custom regex patterns for errors
 }
 
+// Defaults for LogExtractionConfig.
+const (
+	defaultTailLines    = 100
+	defaultContextLines = 5
+)
+
 // DefaultLogConfig returns sensible defaults for log extraction.
 func DefaultLogConfig() LogExtractionConfig {
 	return LogExtractionConfig{
-		TailLines:         100,
-		ContextLines:      5,
+		TailLines:         defaultTailLines,
+		ContextLines:      defaultContextLines,
 		FilterNoise:       true,
 		ExtractStackTrace: false, // Usually too verbose
 		IncludeSuccess:    false,
@@ -136,7 +148,7 @@ func DefaultLogConfig() LogExtractionConfig {
 // Pure function: deterministic, no side effects.
 func ExtractErrorContext(log JobLog, workflow string, config LogExtractionConfig) *ErrorContext {
 	// Skip successful runs if not included
-	if !config.IncludeSuccess && log.Conclusion == "success" {
+	if !config.IncludeSuccess && log.Conclusion == ConclusionSuccess {
 		return nil
 	}
 
@@ -220,7 +232,7 @@ func filterNoise(lines []string) []string {
 // identifyErrors finds lines matching error patterns
 // Pure function: returns indices of error lines.
 func identifyErrors(lines, patterns []string) []string {
-	errors := make([]string, 0)
+	errorLines := make([]string, 0)
 
 	// Compile patterns
 	regexes := make([]*regexp.Regexp, len(patterns))
@@ -231,13 +243,13 @@ func identifyErrors(lines, patterns []string) []string {
 	for _, line := range lines {
 		for _, re := range regexes {
 			if re.MatchString(line) {
-				errors = append(errors, line)
+				errorLines = append(errorLines, line)
 				break
 			}
 		}
 	}
 
-	return errors
+	return errorLines
 }
 
 // extractContext extracts context lines around errors
@@ -271,11 +283,20 @@ func extractContext(allLines, errorLines []string, contextSize int) []string {
 	return context
 }
 
+// Error type classifications returned by classifyError.
+const (
+	ErrorTypeUnknown     = "unknown"
+	ErrorTypeBuildError  = "build-error"
+	ErrorTypeTestFailure = "test-failure"
+	ErrorTypePanic       = "panic"
+	ErrorTypeTimeout     = "timeout"
+)
+
 // classifyError determines error type from error lines
 // Pure function for error classification.
 func classifyError(errorLines []string) string {
 	if len(errorLines) == 0 {
-		return "unknown"
+		return ErrorTypeUnknown
 	}
 
 	// Join all errors for pattern matching
@@ -284,19 +305,19 @@ func classifyError(errorLines []string) string {
 	// Classification patterns (order matters - more specific first)
 	// Check build errors first (more specific than panic)
 	if containsAny(allErrors, "build failed", "compilation error", "syntax error") {
-		return "build-error"
+		return ErrorTypeBuildError
 	}
 
 	if containsAny(allErrors, "test failed", "assertion", "expected", "but got") {
-		return "test-failure"
+		return ErrorTypeTestFailure
 	}
 
 	if containsAny(allErrors, "panic:", "segmentation fault") {
-		return "panic"
+		return ErrorTypePanic
 	}
 
 	if containsAny(allErrors, "timeout", "timed out", "deadline exceeded") {
-		return "timeout"
+		return ErrorTypeTimeout
 	}
 
 	if containsAny(

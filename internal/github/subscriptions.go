@@ -5,8 +5,10 @@ import (
 	"time"
 )
 
+// WatchState is a repository's notification subscription state for the authenticated user.
 type WatchState string
 
+// Subscription states as reported by the GitHub API.
 const (
 	WatchStateSubscribed WatchState = "subscribed"
 	WatchStateIgnored    WatchState = "ignored"
@@ -15,6 +17,7 @@ const (
 	WatchStateDefault WatchState = ""
 )
 
+// Subscription describes the authenticated user's notification subscription to a repository.
 type Subscription struct {
 	Repository string
 	Subscribed bool
@@ -24,6 +27,7 @@ type Subscription struct {
 	State      WatchState
 }
 
+// RepoBasic holds the minimal repository identity fields used by the watch/subscription APIs.
 type RepoBasic struct {
 	Name     string
 	FullName string
@@ -42,6 +46,7 @@ type subscriptionResponse struct {
 	CreatedAt  time.Time `json:"created_at"`
 }
 
+// GetAuthenticatedUser returns the login of the user the client is authenticated as.
 func (c *Client) GetAuthenticatedUser() (string, error) {
 	var response userResponse
 	if err := c.Get("user", &response); err != nil {
@@ -51,6 +56,7 @@ func (c *Client) GetAuthenticatedUser() (string, error) {
 	return response.Login, nil
 }
 
+// SetRepoSubscription sets the authenticated user's watch/ignore subscription for a repository.
 func (c *Client) SetRepoSubscription(
 	owner, repo string,
 	subscribed, ignored bool,
@@ -83,6 +89,8 @@ func (c *Client) SetRepoSubscription(
 	}, nil
 }
 
+// DeleteRepoSubscription removes the authenticated user's subscription to a repository,
+// resetting it to the default (un-set) state.
 func (c *Client) DeleteRepoSubscription(owner, repo string) error {
 	path := fmt.Sprintf("repos/%s/%s/subscription", owner, repo)
 	if err := c.Delete(path, nil); err != nil {

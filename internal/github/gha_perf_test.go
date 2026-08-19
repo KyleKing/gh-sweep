@@ -1,12 +1,14 @@
-package github
+package github_test
 
 import (
 	"testing"
 	"time"
+
+	"github.com/KyleKing/gh-sweep/internal/github"
 )
 
-func perfRuns() []RunTiming {
-	return []RunTiming{
+func perfRuns() []github.RunTiming {
+	return []github.RunTiming{
 		{
 			RunID:      1,
 			Workflow:   "ci",
@@ -14,7 +16,7 @@ func perfRuns() []RunTiming {
 			Conclusion: "success",
 			CreatedAt:  time.Date(2026, 1, 10, 12, 0, 0, 0, time.UTC),
 			Duration:   4 * time.Minute,
-			Jobs: []JobTiming{
+			Jobs: []github.JobTiming{
 				{Name: "build", Duration: time.Minute},
 				{Name: "test", Duration: 3 * time.Minute},
 			},
@@ -26,7 +28,7 @@ func perfRuns() []RunTiming {
 			Conclusion: "failure",
 			CreatedAt:  time.Date(2026, 1, 12, 12, 0, 0, 0, time.UTC),
 			Duration:   8 * time.Minute,
-			Jobs: []JobTiming{
+			Jobs: []github.JobTiming{
 				{Name: "build", Duration: 2 * time.Minute},
 			},
 		},
@@ -44,7 +46,7 @@ func perfRuns() []RunTiming {
 func TestComputeWorkflowStats(t *testing.T) {
 	t.Parallel()
 
-	stats := ComputeWorkflowStats(perfRuns())
+	stats := github.ComputeWorkflowStats(perfRuns())
 
 	ci := stats["ci"]
 	if ci == nil {
@@ -71,7 +73,7 @@ func TestComputeWorkflowStats(t *testing.T) {
 func TestComputeJobStats(t *testing.T) {
 	t.Parallel()
 
-	stats := ComputeJobStats(perfRuns())
+	stats := github.ComputeJobStats(perfRuns())
 
 	build := stats["ci:build"]
 	if build == nil {
@@ -94,7 +96,7 @@ func TestComputeJobStats(t *testing.T) {
 func TestComputeBranchStatsDelta(t *testing.T) {
 	t.Parallel()
 
-	stats := ComputeBranchStats(perfRuns(), "main")
+	stats := github.ComputeBranchStats(perfRuns(), "main")
 
 	main := stats["main"]
 	if main == nil || main.AvgDuration != 7*time.Minute {
@@ -121,21 +123,21 @@ func TestFilterRuns(t *testing.T) {
 
 	runs := perfRuns()
 
-	if got := FilterRunsByBranch(runs, "main"); len(got) != 2 {
+	if got := github.FilterRunsByBranch(runs, "main"); len(got) != 2 {
 		t.Errorf("branch filter = %d runs, want 2", len(got))
 	}
 
-	if got := FilterRunsByBranch(runs, ""); len(got) != 3 {
+	if got := github.FilterRunsByBranch(runs, ""); len(got) != 3 {
 		t.Errorf("empty branch filter = %d runs, want all 3", len(got))
 	}
 
-	if got := FilterRunsByWorkflows(runs, []string{"release"}); len(got) != 1 {
+	if got := github.FilterRunsByWorkflows(runs, []string{"release"}); len(got) != 1 {
 		t.Errorf("workflow filter = %d runs, want 1", len(got))
 	}
 
 	since := time.Date(2026, 1, 11, 0, 0, 0, 0, time.UTC)
 	until := time.Date(2026, 1, 13, 0, 0, 0, 0, time.UTC)
-	if got := FilterRunsByTimeRange(runs, since, until); len(got) != 1 || got[0].RunID != 2 {
+	if got := github.FilterRunsByTimeRange(runs, since, until); len(got) != 1 || got[0].RunID != 2 {
 		t.Errorf("time filter = %+v, want only run 2", got)
 	}
 }
@@ -145,12 +147,12 @@ func TestSortRunsByDate(t *testing.T) {
 
 	runs := perfRuns()
 
-	SortRunsByDate(runs, false)
+	github.SortRunsByDate(runs, false)
 	if runs[0].RunID != 3 {
 		t.Errorf("descending first run = %d, want 3", runs[0].RunID)
 	}
 
-	SortRunsByDate(runs, true)
+	github.SortRunsByDate(runs, true)
 	if runs[0].RunID != 1 {
 		t.Errorf("ascending first run = %d, want 1", runs[0].RunID)
 	}
@@ -159,9 +161,9 @@ func TestSortRunsByDate(t *testing.T) {
 func TestGetTopJobsByDuration(t *testing.T) {
 	t.Parallel()
 
-	stats := ComputeJobStats(perfRuns())
+	stats := github.ComputeJobStats(perfRuns())
 
-	jobs := GetTopJobsByDuration(stats, 0)
+	jobs := github.GetTopJobsByDuration(stats, 0)
 	if len(jobs) != 2 {
 		t.Fatalf("jobs = %d, want 2", len(jobs))
 	}
@@ -170,7 +172,7 @@ func TestGetTopJobsByDuration(t *testing.T) {
 		t.Error("jobs not sorted by avg duration descending")
 	}
 
-	if got := GetTopJobsByDuration(stats, 1); len(got) != 1 {
+	if got := github.GetTopJobsByDuration(stats, 1); len(got) != 1 {
 		t.Errorf("limited jobs = %d, want 1", len(got))
 	}
 }
@@ -188,7 +190,7 @@ func TestFormatDuration(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		if got := FormatDuration(tt.d); got != tt.want {
+		if got := github.FormatDuration(tt.d); got != tt.want {
 			t.Errorf("FormatDuration(%v) = %q, want %q", tt.d, got, tt.want)
 		}
 	}
@@ -197,14 +199,14 @@ func TestFormatDuration(t *testing.T) {
 func TestAnalyzeWebhookHealth(t *testing.T) {
 	t.Parallel()
 
-	deliveries := []WebhookDelivery{
+	deliveries := []github.WebhookDelivery{
 		{ID: 1, Status: 200, Duration: 100},
 		{ID: 2, Status: 200, Duration: 200},
 		{ID: 3, Status: 500, Duration: 300},
 		{ID: 4, Status: 404, Duration: 400},
 	}
 
-	health := AnalyzeWebhookHealth(deliveries)
+	health := github.AnalyzeWebhookHealth(deliveries)
 
 	if health.TotalDeliveries != 4 {
 		t.Errorf("TotalDeliveries = %d, want 4", health.TotalDeliveries)
@@ -222,7 +224,7 @@ func TestAnalyzeWebhookHealth(t *testing.T) {
 func TestCompareProtectionRules(t *testing.T) {
 	t.Parallel()
 
-	rules := []*ProtectionRule{
+	rules := []*github.ProtectionRule{
 		{Repository: "acme/widgets", RequiredReviews: 2, EnforceAdmins: true},
 		{
 			Repository:              "acme/gadgets",
@@ -232,7 +234,7 @@ func TestCompareProtectionRules(t *testing.T) {
 		},
 	}
 
-	diffs := CompareProtectionRules(rules)
+	diffs := github.CompareProtectionRules(rules)
 
 	if len(diffs["RequiredReviews"]) != 1 {
 		t.Errorf("RequiredReviews diffs = %v", diffs["RequiredReviews"])
@@ -246,7 +248,7 @@ func TestCompareProtectionRules(t *testing.T) {
 		t.Errorf("EnforceAdmins diffs = %v, want none", diffs["EnforceAdmins"])
 	}
 
-	if got := CompareProtectionRules(rules[:1]); len(got) != 0 {
+	if got := github.CompareProtectionRules(rules[:1]); len(got) != 0 {
 		t.Errorf("single rule diffs = %v, want empty", got)
 	}
 }
@@ -254,13 +256,13 @@ func TestCompareProtectionRules(t *testing.T) {
 func TestCompareReleases(t *testing.T) {
 	t.Parallel()
 
-	releases := map[string]*Release{
+	releases := map[string]*github.Release{
 		"acme/current":  {TagName: "v2.0.0", PublishedAt: time.Now().Add(-24 * time.Hour)},
 		"acme/outdated": {TagName: "2.0.0", PublishedAt: time.Now().AddDate(-1, 0, 0)},
 		"acme/none":     nil,
 	}
 
-	comparison := CompareReleases(releases)
+	comparison := github.CompareReleases(releases)
 
 	if len(comparison.Repositories) != 3 {
 		t.Errorf("Repositories = %d, want 3", len(comparison.Repositories))

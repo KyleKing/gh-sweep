@@ -10,6 +10,10 @@ import (
 // ErrPagesNotFound means the repo has no GitHub Pages site configured.
 var ErrPagesNotFound = errors.New("pages not configured for this repository")
 
+// ErrUnexpectedCNAMEEncoding means the CNAME file's content came back in an
+// encoding other than base64, which the GitHub Contents API is not expected to send.
+var ErrUnexpectedCNAMEEncoding = errors.New("unexpected CNAME file encoding")
+
 // PagesInfo is a repository's GitHub Pages configuration.
 type PagesInfo struct {
 	Repository     string
@@ -74,7 +78,7 @@ func (c *Client) GetCNAMEFile(owner, repo string) (string, error) {
 	}
 
 	if response.Encoding != "base64" {
-		return "", fmt.Errorf("unexpected CNAME file encoding: %s", response.Encoding)
+		return "", fmt.Errorf("%w: %s", ErrUnexpectedCNAMEEncoding, response.Encoding)
 	}
 
 	decoded, err := base64.StdEncoding.DecodeString(strings.ReplaceAll(response.Content, "\n", ""))

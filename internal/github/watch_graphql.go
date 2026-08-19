@@ -103,10 +103,10 @@ func watchStateFromViewerSubscription(s string) WatchState {
 func (g *GQLClient) ListViewerRepoWatchInfo() (string, []RepoWatchInfo, error) {
 	var username string
 	var infos []RepoWatchInfo
-	var cursor interface{}
+	var cursor any
 
 	for {
-		variables := map[string]interface{}{"cursor": cursor}
+		variables := map[string]any{"cursor": cursor}
 
 		var response viewerRepoWatchInfoResponse
 		if err := g.doer.Do(viewerRepoWatchInfoQuery, variables, &response); err != nil {
@@ -115,7 +115,8 @@ func (g *GQLClient) ListViewerRepoWatchInfo() (string, []RepoWatchInfo, error) {
 
 		username = response.Viewer.Login
 
-		for _, node := range response.Viewer.Repositories.Nodes {
+		for i := range response.Viewer.Repositories.Nodes {
+			node := &response.Viewer.Repositories.Nodes[i]
 			infos = append(infos, RepoWatchInfo{
 				RepoBasic: RepoBasic{
 					Name:     node.Name,

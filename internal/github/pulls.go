@@ -5,12 +5,16 @@ import (
 	"time"
 )
 
+const pullRequestsPerPage = 100
+
+// PRRef identifies one side (head or base) of a pull request.
 type PRRef struct {
 	Ref  string
 	SHA  string
 	Repo string
 }
 
+// PullRequest describes a GitHub pull request.
 type PullRequest struct {
 	Number   int
 	Title    string
@@ -43,127 +47,51 @@ type prResponse struct {
 	ClosedAt *time.Time `json:"closed_at"`
 }
 
-func (c *Client) ListPullRequests(owner, repo, state string) ([]PullRequest, error) {
-	var allPRs []PullRequest
-	page := 1
-	perPage := 100
-
-	for {
-		var response []prResponse
-		path := fmt.Sprintf(
-			"repos/%s/%s/pulls?state=%s&per_page=%d&page=%d",
-			owner,
-			repo,
-			state,
-			perPage,
-			page,
-		)
-
-		if err := c.Get(path, &response); err != nil {
-			return nil, fmt.Errorf("failed to list pull requests: %w", err)
-		}
-
-		if len(response) == 0 {
-			break
-		}
-
-		for _, pr := range response {
-			headRepo := ""
-			if pr.Head.Repo.FullName != "" {
-				headRepo = pr.Head.Repo.FullName
-			}
-			baseRepo := ""
-			if pr.Base.Repo.FullName != "" {
-				baseRepo = pr.Base.Repo.FullName
-			}
-
-			allPRs = append(allPRs, PullRequest{
-				Number: pr.Number,
-				Title:  pr.Title,
-				State:  pr.State,
-				Head: PRRef{
-					Ref:  pr.Head.Ref,
-					SHA:  pr.Head.SHA,
-					Repo: headRepo,
-				},
-				Base: PRRef{
-					Ref:  pr.Base.Ref,
-					SHA:  pr.Base.SHA,
-					Repo: baseRepo,
-				},
-				MergedAt: pr.MergedAt,
-				ClosedAt: pr.ClosedAt,
-			})
-		}
-
-		if len(response) < perPage {
-			break
-		}
-		page++
+func pullRequestFromResponse(pr prResponse) PullRequest {
+	headRepo := ""
+	if pr.Head.Repo.FullName != "" {
+		headRepo = pr.Head.Repo.FullName
+	}
+	baseRepo := ""
+	if pr.Base.Repo.FullName != "" {
+		baseRepo = pr.Base.Repo.FullName
 	}
 
-	return allPRs, nil
+	return PullRequest{
+		Number: pr.Number,
+		Title:  pr.Title,
+		State:  pr.State,
+		Head: PRRef{
+			Ref:  pr.Head.Ref,
+			SHA:  pr.Head.SHA,
+			Repo: headRepo,
+		},
+		Base: PRRef{
+			Ref:  pr.Base.Ref,
+			SHA:  pr.Base.SHA,
+			Repo: baseRepo,
+		},
+		MergedAt: pr.MergedAt,
+		ClosedAt: pr.ClosedAt,
+	}
 }
 
-func (c *Client) GetPullRequestsForBranch(owner, repo, branch string) ([]PullRequest, error) {
-	var allPRs []PullRequest
-	page := 1
-	perPage := 100
-
-	for {
-		var response []prResponse
-		path := fmt.Sprintf(
-			"repos/%s/%s/pulls?state=all&head=%s:%s&per_page=%d&page=%d",
-			owner,
-			repo,
-			owner,
-			branch,
-			perPage,
-			page,
+// ListPullRequests lists pull requests in a repository matching state ("open", "closed", or "all").
+func (c *Client) ListPullRequests(owner, repo, state string) ([]PullRequest, error) {
+	return fetchPages(c, pullRequestsPerPage, func(page int) string {
+		return fmt.Sprintf(
+			"repos/%s/%s/pulls?state=%s&per_page=%d&page=%d",
+			owner, repo, state, pullRequestsPerPage, page,
 		)
+	}, pullRequestFromResponse)
+}
 
-		if err := c.Get(path, &response); err != nil {
-			return nil, fmt.Errorf("failed to get pull requests for branch: %w", err)
-		}
-
-		if len(response) == 0 {
-			break
-		}
-
-		for _, pr := range response {
-			headRepo := ""
-			if pr.Head.Repo.FullName != "" {
-				headRepo = pr.Head.Repo.FullName
-			}
-			baseRepo := ""
-			if pr.Base.Repo.FullName != "" {
-				baseRepo = pr.Base.Repo.FullName
-			}
-
-			allPRs = append(allPRs, PullRequest{
-				Number: pr.Number,
-				Title:  pr.Title,
-				State:  pr.State,
-				Head: PRRef{
-					Ref:  pr.Head.Ref,
-					SHA:  pr.Head.SHA,
-					Repo: headRepo,
-				},
-				Base: PRRef{
-					Ref:  pr.Base.Ref,
-					SHA:  pr.Base.SHA,
-					Repo: baseRepo,
-				},
-				MergedAt: pr.MergedAt,
-				ClosedAt: pr.ClosedAt,
-			})
-		}
-
-		if len(response) < perPage {
-			break
-		}
-		page++
-	}
-
-	return allPRs, nil
+// GetPullRequestsForBranch lists all pull requests (any state) whose head is owner/branch.
+func (c *Client) GetPullRequestsForBranch(owner, repo, branch string) ([]PullRequest, error) {
+	return fetchPages(c, pullRequestsPerPage, func(page int) string {
+		return fmt.Sprintf(
+			"repos/%s/%s/pulls?state=all&head=%s:%s&per_page=%d&page=%d",
+			owner, repo, owner, branch, pullRequestsPerPage, page,
+		)
+	}, pullRequestFromResponse)
 }

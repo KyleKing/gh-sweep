@@ -5,6 +5,9 @@ import (
 	"strings"
 )
 
+const repositoriesPerPage = 100
+
+// Repository describes a GitHub repository.
 type Repository struct {
 	Name          string `json:"name"`
 	FullName      string `json:"full_name"`
@@ -25,80 +28,33 @@ type repoListItemResponse struct {
 	DefaultBranch string `json:"default_branch"`
 }
 
+func repositoryFromResponse(repo repoListItemResponse) Repository {
+	return Repository{
+		Name:          repo.Name,
+		FullName:      repo.FullName,
+		Owner:         repo.Owner.Login,
+		Private:       repo.Private,
+		Archived:      repo.Archived,
+		DefaultBranch: repo.DefaultBranch,
+	}
+}
+
+// ListOrgRepositories lists all repositories belonging to an organization.
 func (c *Client) ListOrgRepositories(org string) ([]Repository, error) {
-	var allRepos []Repository
-	page := 1
-	perPage := 100
-
-	for {
-		var response []repoListItemResponse
-		path := fmt.Sprintf("orgs/%s/repos?per_page=%d&page=%d", org, perPage, page)
-
-		if err := c.Get(path, &response); err != nil {
-			return nil, fmt.Errorf("failed to list org repos: %w", err)
-		}
-
-		if len(response) == 0 {
-			break
-		}
-
-		for _, repo := range response {
-			allRepos = append(allRepos, Repository{
-				Name:          repo.Name,
-				FullName:      repo.FullName,
-				Owner:         repo.Owner.Login,
-				Private:       repo.Private,
-				Archived:      repo.Archived,
-				DefaultBranch: repo.DefaultBranch,
-			})
-		}
-
-		if len(response) < perPage {
-			break
-		}
-		page++
-	}
-
-	return allRepos, nil
+	return fetchPages(c, repositoriesPerPage, func(page int) string {
+		return fmt.Sprintf("orgs/%s/repos?per_page=%d&page=%d", org, repositoriesPerPage, page)
+	}, repositoryFromResponse)
 }
 
+// ListUserRepositories lists all repositories belonging to a user.
 func (c *Client) ListUserRepositories(username string) ([]Repository, error) {
-	var allRepos []Repository
-	page := 1
-	perPage := 100
-
-	for {
-		var response []repoListItemResponse
-		path := fmt.Sprintf("users/%s/repos?per_page=%d&page=%d", username, perPage, page)
-
-		if err := c.Get(path, &response); err != nil {
-			return nil, fmt.Errorf("failed to list user repos: %w", err)
-		}
-
-		if len(response) == 0 {
-			break
-		}
-
-		for _, repo := range response {
-			allRepos = append(allRepos, Repository{
-				Name:          repo.Name,
-				FullName:      repo.FullName,
-				Owner:         repo.Owner.Login,
-				Private:       repo.Private,
-				Archived:      repo.Archived,
-				DefaultBranch: repo.DefaultBranch,
-			})
-		}
-
-		if len(response) < perPage {
-			break
-		}
-		page++
-	}
-
-	return allRepos, nil
+	return fetchPages(c, repositoriesPerPage, func(page int) string {
+		return fmt.Sprintf("users/%s/repos?per_page=%d&page=%d", username, repositoriesPerPage, page)
+	}, repositoryFromResponse)
 }
 
+// ListNamespaceRepositories lists repositories for a namespace that may be either an
+// organization or a user, reporting which kind it resolved to.
 func (c *Client) ListNamespaceRepositories(namespace string) ([]Repository, bool, error) {
 	repos, err := c.ListOrgRepositories(namespace)
 	if err == nil {

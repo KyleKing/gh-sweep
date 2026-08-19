@@ -115,7 +115,7 @@ func AnalyzeWebhookHealth(deliveries []WebhookDelivery) WebhookHealth {
 		totalDuration += d.Duration
 	}
 
-	health.SuccessRate = float64(successCount) / float64(len(deliveries)) * 100
+	health.SuccessRate = float64(successCount) / float64(len(deliveries)) * percentMultiplier
 	health.AvgDuration = totalDuration / len(deliveries)
 
 	return health

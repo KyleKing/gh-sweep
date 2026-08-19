@@ -5,10 +5,16 @@ import (
 	"regexp"
 )
 
+// Secret scopes.
+const (
+	SecretScopeOrg  = "org"
+	SecretScopeRepo = "repo"
+)
+
 // Secret represents a GitHub Actions secret.
 type Secret struct {
 	Name       string
-	Scope      string // "org" or "repo"
+	Scope      string // SecretScopeOrg or SecretScopeRepo
 	Repository string // Empty for org secrets
 	CreatedAt  string
 	UpdatedAt  string
@@ -35,7 +41,7 @@ func (c *Client) ListOrgSecrets(org string) ([]Secret, error) {
 	for i, s := range response.Secrets {
 		secrets[i] = Secret{
 			Name:      s.Name,
-			Scope:     "org",
+			Scope:     SecretScopeOrg,
 			CreatedAt: s.CreatedAt,
 			UpdatedAt: s.UpdatedAt,
 		}
@@ -57,7 +63,7 @@ func (c *Client) ListRepoSecrets(owner, repo string) ([]Secret, error) {
 	for i, s := range response.Secrets {
 		secrets[i] = Secret{
 			Name:       s.Name,
-			Scope:      "repo",
+			Scope:      SecretScopeRepo,
 			Repository: fmt.Sprintf("%s/%s", owner, repo),
 			CreatedAt:  s.CreatedAt,
 			UpdatedAt:  s.UpdatedAt,
@@ -78,7 +84,7 @@ type SecretUsage struct {
 
 // DetectUnusedSecrets compares secrets against workflow references.
 func DetectUnusedSecrets(secrets []Secret, workflowRefs map[string][]string) []SecretUsage {
-	usages := []SecretUsage{}
+	usages := make([]SecretUsage, 0, len(secrets))
 
 	for _, secret := range secrets {
 		usage := SecretUsage{
@@ -159,7 +165,7 @@ func FindDuplicateSecrets(secrets []Secret) []DuplicateSecret {
 				dup.Scopes = append(dup.Scopes, secret.Scope)
 			}
 			// Add repo if repo-scoped
-			if secret.Scope == "repo" && !contains(dup.Repos, secret.Repository) {
+			if secret.Scope == SecretScopeRepo && !contains(dup.Repos, secret.Repository) {
 				dup.Repos = append(dup.Repos, secret.Repository)
 			}
 		} else {
@@ -169,7 +175,7 @@ func FindDuplicateSecrets(secrets []Secret) []DuplicateSecret {
 				Scopes: []string{secret.Scope},
 				Repos:  []string{},
 			}
-			if secret.Scope == "repo" {
+			if secret.Scope == SecretScopeRepo {
 				occurrences[secret.Name].Repos = []string{secret.Repository}
 			}
 		}

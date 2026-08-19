@@ -208,8 +208,8 @@ func (c *Client) UpdateSecurityAndAnalysis(owner, repo, feature, status string) 
 // SettingsDiff represents differences between repository settings.
 type SettingsDiff struct {
 	Field    string
-	Baseline interface{}
-	Current  interface{}
+	Baseline any
+	Current  any
 	Severity string // critical, warning, info
 }
 

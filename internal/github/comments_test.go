@@ -61,6 +61,8 @@ const singlePageFixture = `{
 }`
 
 func TestMapReviewThreads(t *testing.T) {
+	t.Parallel()
+
 	var response reviewThreadsResponse
 	if err := json.Unmarshal([]byte(singlePageFixture), &response); err != nil {
 		t.Fatalf("failed to unmarshal fixture: %v", err)
@@ -100,10 +102,10 @@ func TestMapReviewThreads(t *testing.T) {
 
 type fakeGQLDoer struct {
 	pages []string
-	calls []map[string]interface{}
+	calls []map[string]any
 }
 
-func (f *fakeGQLDoer) Do(_ string, variables map[string]interface{}, response interface{}) error {
+func (f *fakeGQLDoer) Do(_ string, variables map[string]any, response any) error {
 	f.calls = append(f.calls, variables)
 
 	if err := json.Unmarshal([]byte(f.pages[len(f.calls)-1]), response); err != nil {
@@ -156,6 +158,8 @@ const pageTwoFixture = `{
 }`
 
 func TestListPRReviewThreadsPagination(t *testing.T) {
+	t.Parallel()
+
 	fake := &fakeGQLDoer{pages: []string{pageOneFixture, pageTwoFixture}}
 	client := &GQLClient{doer: fake}
 
@@ -201,6 +205,8 @@ func makeThread(
 }
 
 func TestFilterUnresolvedThreads(t *testing.T) {
+	t.Parallel()
+
 	now := time.Now()
 	threads := []ReviewThread{
 		makeThread(1, "a.go", "octocat", "open question", now, false),
@@ -214,6 +220,8 @@ func TestFilterUnresolvedThreads(t *testing.T) {
 }
 
 func TestThreadFilterApply(t *testing.T) {
+	t.Parallel()
+
 	older := time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC)
 	newer := time.Date(2026, 6, 15, 0, 0, 0, 0, time.UTC)
 	cutoff := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
@@ -240,6 +248,8 @@ func TestThreadFilterApply(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got := tt.filter.Apply(threads)
 			if len(got) != len(tt.want) {
 				t.Fatalf("expected %d threads, got %d: %+v", len(tt.want), len(got), got)
@@ -254,6 +264,8 @@ func TestThreadFilterApply(t *testing.T) {
 }
 
 func TestParseSinceDate(t *testing.T) {
+	t.Parallel()
+
 	parsed, err := ParseSinceDate("2026-03-01")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -270,6 +282,8 @@ func TestParseSinceDate(t *testing.T) {
 }
 
 func TestReviewThreadHelpers(t *testing.T) {
+	t.Parallel()
+
 	empty := ReviewThread{}
 	if _, ok := empty.FirstComment(); ok {
 		t.Error("expected no first comment for empty thread")
@@ -324,6 +338,8 @@ func openPRsTransport(body string) roundTripFunc {
 }
 
 func TestListOpenPRReviewThreads(t *testing.T) {
+	t.Parallel()
+
 	transport := openPRsTransport(twoOpenPRsFixture)
 
 	client, err := NewClientWithTransport(context.Background(), transport)
@@ -348,6 +364,8 @@ func TestListOpenPRReviewThreads(t *testing.T) {
 }
 
 func TestListOpenPRReviewThreadsCapped(t *testing.T) {
+	t.Parallel()
+
 	transport := openPRsTransport(twoOpenPRsFixture)
 
 	client, err := NewClientWithTransport(context.Background(), transport)
@@ -371,6 +389,8 @@ func TestListOpenPRReviewThreadsCapped(t *testing.T) {
 }
 
 func TestListRepoReviewThreads(t *testing.T) {
+	t.Parallel()
+
 	doer := &fakeGQLDoer{pages: []string{singlePageFixture}}
 	gql := &GQLClient{doer: doer}
 

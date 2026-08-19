@@ -5,6 +5,13 @@ import (
 	"time"
 )
 
+// Flaky patterns returned by classifyPattern.
+const (
+	FlakyPatternSameCommitFlip = "same-commit-flip"
+	FlakyPatternIntermittent   = "intermittent"
+	FlakyPatternConsistent     = "consistent"
+)
+
 // FlakyTest represents a test that exhibits flaky behavior.
 type FlakyTest struct {
 	Name         string
@@ -14,13 +21,14 @@ type FlakyTest struct {
 	FlipCount    int
 	TotalRuns    int
 	FailureCount int
-	Pattern      string // "same-commit-flip", "intermittent", "consistent"
+	Pattern      string // one of the FlakyPattern* constants
 }
 
 // TestRun represents a single test execution.
 type TestRun struct {
-	Name       string
-	Status     string // "success", "failure", "skipped"
+	Name   string
+	Status string // one of the Conclusion* constants
+
 	CommitSHA  string
 	Timestamp  time.Time
 	Duration   time.Duration
@@ -37,12 +45,23 @@ type FlakyDetectionConfig struct {
 	IncludeSkipped bool // Include skipped tests in analysis
 }
 
+// Defaults for FlakyDetectionConfig and the pattern classification thresholds
+// that build on it.
+const (
+	defaultMinFlips           = 2
+	defaultMinFailureRate     = 0.1 // 10%
+	defaultTimeWindow         = 7 * 24 * time.Hour
+	minRunsToDetectFlakiness  = 2
+	intermittentFailureCutoff = 0.3
+	intermittentFailureCeil   = 0.7
+)
+
 // DefaultFlakyConfig returns sensible defaults.
 func DefaultFlakyConfig() FlakyDetectionConfig {
 	return FlakyDetectionConfig{
-		MinFlips:       2,
-		MinFailureRate: 0.1,                // 10%
-		TimeWindow:     7 * 24 * time.Hour, // 7 days
+		MinFlips:       defaultMinFlips,
+		MinFailureRate: defaultMinFailureRate,
+		TimeWindow:     defaultTimeWindow,
 		SameCommitOnly: false,
 		IncludeSkipped: false,
 	}
@@ -91,14 +110,14 @@ func groupByTestName(runs []TestRun) map[string][]TestRun {
 // analyzeFlakyPattern analyzes a single test for flaky behavior
 // Pure function: returns nil if not flaky.
 func analyzeFlakyPattern(name string, runs []TestRun, config FlakyDetectionConfig) *FlakyTest {
-	if len(runs) < 2 {
+	if len(runs) < minRunsToDetectFlakiness {
 		return nil // Need at least 2 runs to detect flakiness
 	}
 
 	// Filter by time window
 	cutoff := time.Now().Add(-config.TimeWindow)
 	filtered := filterByTime(runs, cutoff)
-	if len(filtered) < 2 {
+	if len(filtered) < minRunsToDetectFlakiness {
 		return nil
 	}
 
@@ -108,11 +127,10 @@ func analyzeFlakyPattern(name string, runs []TestRun, config FlakyDetectionConfi
 	// Detect flips (status changes)
 	flips := detectFlips(filtered, config.SameCommitOnly)
 
-	// Check if meets flaky criteria
-	// Same-commit flips are always considered flaky (strong signal)
-	if flips.sameCommitFlips > 0 {
-		// Pass through - same commit flips are always flaky
-	} else if flips.count < config.MinFlips || stats.failureRate < config.MinFailureRate {
+	// Check if meets flaky criteria; same-commit flips are always considered
+	// flaky (strong signal), everything else needs to clear both thresholds.
+	if flips.sameCommitFlips == 0 &&
+		(flips.count < config.MinFlips || stats.failureRate < config.MinFailureRate) {
 		return nil
 	}
 
@@ -145,7 +163,7 @@ func calculateTestStats(runs []TestRun, includeSkipped bool) testStats {
 	stats := testStats{totalRuns: len(runs)}
 
 	for i, run := range runs {
-		if run.Status == "failure" {
+		if run.Status == ConclusionFailure {
 			stats.failureCount++
 			if stats.firstFailure.IsZero() || run.Timestamp.Before(stats.firstFailure) {
 				stats.firstFailure = run.Timestamp
@@ -153,12 +171,12 @@ func calculateTestStats(runs []TestRun, includeSkipped bool) testStats {
 		}
 
 		// Optionally exclude skipped from count
-		if !includeSkipped && run.Status == "skipped" {
+		if !includeSkipped && run.Status == ConclusionSkipped {
 			stats.totalRuns--
 		}
 
 		// Keep timestamp of first occurrence
-		if i == 0 && run.Status == "failure" {
+		if i == 0 && run.Status == ConclusionFailure {
 			stats.firstFailure = run.Timestamp
 		}
 	}
@@ -186,14 +204,14 @@ func detectFlips(runs []TestRun, sameCommitOnly bool) flipDetection {
 		prev, curr := runs[i-1], runs[i]
 
 		// Skip if both are skipped
-		if prev.Status == "skipped" && curr.Status == "skipped" {
+		if prev.Status == ConclusionSkipped && curr.Status == ConclusionSkipped {
 			continue
 		}
 
 		// Detect flip
 		if prev.Status != curr.Status {
 			// Skip skipped transitions unless they're meaningful
-			if prev.Status == "skipped" || curr.Status == "skipped" {
+			if prev.Status == ConclusionSkipped || curr.Status == ConclusionSkipped {
 				continue
 			}
 
@@ -217,24 +235,24 @@ func detectFlips(runs []TestRun, sameCommitOnly bool) flipDetection {
 
 // classifyPattern determines the flaky pattern type
 // Pure function for pattern classification.
-func classifyPattern(stats testStats, flips flipDetection, config FlakyDetectionConfig) string {
+func classifyPattern(stats testStats, flips flipDetection, _ FlakyDetectionConfig) string {
 	// Same-commit flip = strongest signal
 	if flips.sameCommitFlips > 0 {
-		return "same-commit-flip"
+		return FlakyPatternSameCommitFlip
 	}
 
 	// High failure rate but inconsistent = intermittent
-	if stats.failureRate > 0.3 && stats.failureRate < 0.7 {
-		return "intermittent"
+	if stats.failureRate > intermittentFailureCutoff && stats.failureRate < intermittentFailureCeil {
+		return FlakyPatternIntermittent
 	}
 
 	// Low failure rate = occasional
-	if stats.failureRate < 0.3 {
+	if stats.failureRate < intermittentFailureCutoff {
 		return "occasional"
 	}
 
 	// High failure rate = consistent failure (not really "flaky")
-	return "consistent"
+	return FlakyPatternConsistent
 }
 
 // filterByTime filters test runs within a time window

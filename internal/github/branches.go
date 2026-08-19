@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// Sentinel errors returned by BranchStatus.DeleteBlocked.
 var (
 	ErrDefaultBranchDeletion   = errors.New("cannot delete the default branch")
 	ErrOpenPRBranchDeletion    = errors.New("branch has an open pull request")

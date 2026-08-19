@@ -11,6 +11,9 @@ import (
 	"github.com/cli/go-gh/v2/pkg/api"
 )
 
+// percentMultiplier converts a 0-1 fraction to a 0-100 percentage.
+const percentMultiplier = 100.0
+
 // Client wraps the GitHub API client.
 //
 //nolint:containedctx // deferred: threading ctx through every method and caller is a larger change
@@ -123,7 +126,7 @@ func NewClientWithToken(ctx context.Context, token string) (*Client, error) {
 }
 
 // Get performs a GET request to the GitHub API.
-func (c *Client) Get(path string, response interface{}) error {
+func (c *Client) Get(path string, response any) error {
 	if err := c.apiClient.Get(path, response); err != nil {
 		return fmt.Errorf("GET %s: %w", path, err)
 	}
@@ -132,7 +135,7 @@ func (c *Client) Get(path string, response interface{}) error {
 }
 
 // Post performs a POST request to the GitHub API.
-func (c *Client) Post(path string, body, response interface{}) error {
+func (c *Client) Post(path string, body, response any) error {
 	jsonBody, err := json.Marshal(body)
 	if err != nil {
 		return fmt.Errorf("failed to marshal request body: %w", err)
@@ -146,7 +149,7 @@ func (c *Client) Post(path string, body, response interface{}) error {
 }
 
 // Patch performs a PATCH request to the GitHub API.
-func (c *Client) Patch(path string, body, response interface{}) error {
+func (c *Client) Patch(path string, body, response any) error {
 	jsonBody, err := json.Marshal(body)
 	if err != nil {
 		return fmt.Errorf("failed to marshal request body: %w", err)
@@ -160,7 +163,7 @@ func (c *Client) Patch(path string, body, response interface{}) error {
 }
 
 // Put performs a PUT request to the GitHub API.
-func (c *Client) Put(path string, body, response interface{}) error {
+func (c *Client) Put(path string, body, response any) error {
 	jsonBody, err := json.Marshal(body)
 	if err != nil {
 		return fmt.Errorf("failed to marshal request body: %w", err)
@@ -174,7 +177,7 @@ func (c *Client) Put(path string, body, response interface{}) error {
 }
 
 // Delete performs a DELETE request to the GitHub API.
-func (c *Client) Delete(path string, response interface{}) error {
+func (c *Client) Delete(path string, response any) error {
 	if err := c.apiClient.Delete(path, response); err != nil {
 		return fmt.Errorf("DELETE %s: %w", path, err)
 	}
@@ -185,4 +188,39 @@ func (c *Client) Delete(path string, response interface{}) error {
 // Context returns the client's context.
 func (c *Client) Context() context.Context {
 	return c.ctx
+}
+
+// fetchPages walks a paginated listing endpoint, calling pathForPage to build
+// each page's request path and convert to map each raw item to its public type.
+// Pagination stops once a page returns fewer than perPage items.
+func fetchPages[T, R any](
+	c *Client,
+	perPage int,
+	pathForPage func(page int) string,
+	convert func(R) T,
+) ([]T, error) {
+	var all []T
+	page := 1
+
+	for {
+		var response []R
+		if err := c.Get(pathForPage(page), &response); err != nil {
+			return nil, fmt.Errorf("failed to list page %d: %w", page, err)
+		}
+
+		if len(response) == 0 {
+			break
+		}
+
+		for _, item := range response {
+			all = append(all, convert(item))
+		}
+
+		if len(response) < perPage {
+			break
+		}
+		page++
+	}
+
+	return all, nil
 }

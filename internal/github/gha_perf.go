@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// StepTiming records the timing and outcome of a single job step.
 type StepTiming struct {
 	Name            string        `json:"name"`
 	DurationSeconds float64       `json:"duration_seconds"`
@@ -16,6 +17,7 @@ type StepTiming struct {
 	Duration        time.Duration `json:"-"`
 }
 
+// JobTiming records the timing and outcome of a single workflow job.
 type JobTiming struct {
 	Name            string        `json:"name"`
 	DurationSeconds float64       `json:"duration_seconds"`
@@ -27,6 +29,7 @@ type JobTiming struct {
 	Steps           []StepTiming  `json:"steps"`
 }
 
+// RunTiming records the timing and outcome of a single workflow run.
 type RunTiming struct {
 	RunID           int           `json:"run_id"`
 	Workflow        string        `json:"workflow"`
@@ -41,6 +44,7 @@ type RunTiming struct {
 	Jobs            []JobTiming   `json:"jobs"`
 }
 
+// WorkflowFile identifies a workflow definition file in a repository.
 type WorkflowFile struct {
 	ID    int    `json:"id"`
 	Name  string `json:"name"`
@@ -48,6 +52,7 @@ type WorkflowFile struct {
 	State string `json:"state"`
 }
 
+// WorkflowStats aggregates run timing and outcomes for one workflow.
 type WorkflowStats struct {
 	Workflow     string
 	TotalRuns    int
@@ -58,6 +63,7 @@ type WorkflowStats struct {
 	FailureCount int
 }
 
+// JobStats aggregates timing for one workflow job across runs.
 type JobStats struct {
 	WorkflowJob string
 	TotalRuns   int
@@ -66,6 +72,7 @@ type JobStats struct {
 	MaxDuration time.Duration
 }
 
+// BranchStats aggregates run timing for one branch, including its delta against a base branch.
 type BranchStats struct {
 	Branch         string
 	TotalRuns      int
@@ -118,6 +125,7 @@ type jobsResponse struct {
 	} `json:"jobs"`
 }
 
+// ListWorkflows lists the workflow files defined in a repository.
 func (c *Client) ListWorkflows(owner, repo string) ([]WorkflowFile, error) {
 	var response workflowsResponse
 	path := fmt.Sprintf("repos/%s/%s/actions/workflows", owner, repo)
@@ -139,6 +147,7 @@ func (c *Client) ListWorkflows(owner, repo string) ([]WorkflowFile, error) {
 	return workflows, nil
 }
 
+// FetchWorkflowRunsOptions configures FetchWorkflowRuns.
 type FetchWorkflowRunsOptions struct {
 	WorkflowFile string
 	Branch       string
@@ -147,16 +156,22 @@ type FetchWorkflowRunsOptions struct {
 	CreatedAfter time.Time
 }
 
+const (
+	defaultRunsLimit = 30
+	maxRunsPerFetch  = 100
+)
+
+// FetchWorkflowRuns fetches completed workflow runs matching opts.
 func (c *Client) FetchWorkflowRuns(
 	owner, repo string,
 	opts FetchWorkflowRunsOptions,
 ) ([]RunTiming, error) {
 	limit := opts.Limit
 	if limit <= 0 {
-		limit = 30
+		limit = defaultRunsLimit
 	}
-	if limit > 100 {
-		limit = 100
+	if limit > maxRunsPerFetch {
+		limit = maxRunsPerFetch
 	}
 
 	var path string
@@ -178,7 +193,8 @@ func (c *Client) FetchWorkflowRuns(
 	}
 
 	var runs []RunTiming
-	for _, r := range response.WorkflowRuns {
+	for i := range response.WorkflowRuns {
+		r := &response.WorkflowRuns[i]
 		if r.Conclusion == "" {
 			continue
 		}
@@ -209,6 +225,7 @@ func (c *Client) FetchWorkflowRuns(
 	return runs, nil
 }
 
+// FetchRunDetails fetches job and step timing for a single workflow run.
 func (c *Client) FetchRunDetails(owner, repo string, runID int) (*RunTiming, error) {
 	path := fmt.Sprintf("repos/%s/%s/actions/runs/%d/jobs", owner, repo, runID)
 
@@ -218,7 +235,8 @@ func (c *Client) FetchRunDetails(owner, repo string, runID int) (*RunTiming, err
 	}
 
 	var jobs []JobTiming
-	for _, j := range response.Jobs {
+	for i := range response.Jobs {
+		j := &response.Jobs[i]
 		if j.Status != "completed" {
 			continue
 		}
@@ -257,6 +275,7 @@ func (c *Client) FetchRunDetails(owner, repo string, runID int) (*RunTiming, err
 	return &RunTiming{Jobs: jobs}, nil
 }
 
+// FetchWorkflowRunsWithDetails fetches workflow runs and enriches each with job timing details.
 func (c *Client) FetchWorkflowRunsWithDetails(
 	owner, repo string,
 	opts FetchWorkflowRunsOptions,
@@ -277,10 +296,12 @@ func (c *Client) FetchWorkflowRunsWithDetails(
 	return runs, nil
 }
 
+// ComputeWorkflowStats aggregates run timing and success rate per workflow.
 func ComputeWorkflowStats(runs []RunTiming) map[string]*WorkflowStats {
 	stats := make(map[string]*WorkflowStats)
 
-	for _, r := range runs {
+	for i := range runs {
+		r := &runs[i]
 		wf := r.Workflow
 		if _, ok := stats[wf]; !ok {
 			stats[wf] = &WorkflowStats{
@@ -302,28 +323,31 @@ func ComputeWorkflowStats(runs []RunTiming) map[string]*WorkflowStats {
 		}
 
 		switch r.Conclusion {
-		case "success":
-		case "failure":
+		case ConclusionSuccess:
+		case ConclusionFailure:
 			s.FailureCount++
 		}
 	}
 
 	for _, s := range stats {
 		if s.TotalRuns > 0 {
-			s.AvgDuration = s.AvgDuration / time.Duration(s.TotalRuns)
+			s.AvgDuration /= time.Duration(s.TotalRuns)
 			successCount := s.TotalRuns - s.FailureCount
-			s.SuccessRate = float64(successCount) / float64(s.TotalRuns) * 100
+			s.SuccessRate = float64(successCount) / float64(s.TotalRuns) * percentMultiplier
 		}
 	}
 
 	return stats
 }
 
+// ComputeJobStats aggregates job timing per workflow:job key.
 func ComputeJobStats(runs []RunTiming) map[string]*JobStats {
 	stats := make(map[string]*JobStats)
 
-	for _, r := range runs {
-		for _, j := range r.Jobs {
+	for i := range runs {
+		r := &runs[i]
+		for k := range r.Jobs {
+			j := &r.Jobs[k]
 			key := fmt.Sprintf("%s:%s", r.Workflow, j.Name)
 			if _, ok := stats[key]; !ok {
 				stats[key] = &JobStats{
@@ -348,93 +372,111 @@ func ComputeJobStats(runs []RunTiming) map[string]*JobStats {
 
 	for _, s := range stats {
 		if s.TotalRuns > 0 {
-			s.AvgDuration = s.AvgDuration / time.Duration(s.TotalRuns)
+			s.AvgDuration /= time.Duration(s.TotalRuns)
 		}
 	}
 
 	return stats
 }
 
-func ComputeBranchStats(runs []RunTiming, baseBranch string) map[string]*BranchStats {
-	stats := make(map[string]*BranchStats)
-
-	for _, r := range runs {
-		branch := r.Branch
-		if _, ok := stats[branch]; !ok {
-			stats[branch] = &BranchStats{
-				Branch:        branch,
-				WorkflowStats: make(map[string]*WorkflowStats),
-			}
-		}
-
-		s := stats[branch]
-		s.TotalRuns++
-		s.AvgDuration += r.Duration
-
-		wf := r.Workflow
-		if _, ok := s.WorkflowStats[wf]; !ok {
-			s.WorkflowStats[wf] = &WorkflowStats{
-				Workflow:    wf,
-				MinDuration: r.Duration,
-				MaxDuration: r.Duration,
-			}
-		}
-
-		ws := s.WorkflowStats[wf]
-		ws.TotalRuns++
-		ws.AvgDuration += r.Duration
-		if r.Duration < ws.MinDuration {
-			ws.MinDuration = r.Duration
-		}
-		if r.Duration > ws.MaxDuration {
-			ws.MaxDuration = r.Duration
+// accumulateBranchRun folds one run's duration into its branch and
+// branch:workflow buckets, creating either bucket on first sight.
+func accumulateBranchRun(stats map[string]*BranchStats, r *RunTiming) {
+	branch := r.Branch
+	if _, ok := stats[branch]; !ok {
+		stats[branch] = &BranchStats{
+			Branch:        branch,
+			WorkflowStats: make(map[string]*WorkflowStats),
 		}
 	}
 
+	s := stats[branch]
+	s.TotalRuns++
+	s.AvgDuration += r.Duration
+
+	wf := r.Workflow
+	if _, ok := s.WorkflowStats[wf]; !ok {
+		s.WorkflowStats[wf] = &WorkflowStats{
+			Workflow:    wf,
+			MinDuration: r.Duration,
+			MaxDuration: r.Duration,
+		}
+	}
+
+	ws := s.WorkflowStats[wf]
+	ws.TotalRuns++
+	ws.AvgDuration += r.Duration
+	if r.Duration < ws.MinDuration {
+		ws.MinDuration = r.Duration
+	}
+	if r.Duration > ws.MaxDuration {
+		ws.MaxDuration = r.Duration
+	}
+}
+
+// finalizeBranchAverages converts each bucket's summed duration into an average.
+func finalizeBranchAverages(stats map[string]*BranchStats) {
 	for _, s := range stats {
 		if s.TotalRuns > 0 {
-			s.AvgDuration = s.AvgDuration / time.Duration(s.TotalRuns)
+			s.AvgDuration /= time.Duration(s.TotalRuns)
 		}
 		for _, ws := range s.WorkflowStats {
 			if ws.TotalRuns > 0 {
-				ws.AvgDuration = ws.AvgDuration / time.Duration(ws.TotalRuns)
+				ws.AvgDuration /= time.Duration(ws.TotalRuns)
 			}
 		}
+	}
+}
+
+// applyBranchDeltas sets each non-base branch's average-duration delta against baseBranch.
+func applyBranchDeltas(stats map[string]*BranchStats, baseBranch string) {
+	baseStats, ok := stats[baseBranch]
+	if !ok || baseStats.AvgDuration <= 0 {
+		return
 	}
 
-	if baseStats, ok := stats[baseBranch]; ok {
-		for branch, s := range stats {
-			if branch == baseBranch {
-				continue
-			}
-			if baseStats.AvgDuration > 0 {
-				s.DeltaVsBase = float64(s.AvgDuration-baseStats.AvgDuration) / float64(time.Second)
-				s.DeltaVsBasePct = float64(
-					s.AvgDuration-baseStats.AvgDuration,
-				) / float64(
-					baseStats.AvgDuration,
-				) * 100
-			}
+	for branch, s := range stats {
+		if branch == baseBranch {
+			continue
 		}
+
+		delta := s.AvgDuration - baseStats.AvgDuration
+		s.DeltaVsBase = float64(delta) / float64(time.Second)
+		s.DeltaVsBasePct = float64(delta) / float64(baseStats.AvgDuration) * percentMultiplier
 	}
+}
+
+// ComputeBranchStats aggregates run timing per branch, including each non-base
+// branch's average-duration delta against baseBranch.
+func ComputeBranchStats(runs []RunTiming, baseBranch string) map[string]*BranchStats {
+	stats := make(map[string]*BranchStats)
+
+	for i := range runs {
+		accumulateBranchRun(stats, &runs[i])
+	}
+
+	finalizeBranchAverages(stats)
+	applyBranchDeltas(stats, baseBranch)
 
 	return stats
 }
 
+// FilterRunsByBranch returns the runs matching branch, or all runs when branch is empty.
 func FilterRunsByBranch(runs []RunTiming, branch string) []RunTiming {
 	if branch == "" {
 		return runs
 	}
 	var filtered []RunTiming
-	for _, r := range runs {
-		if r.Branch == branch {
-			filtered = append(filtered, r)
+	for i := range runs {
+		if runs[i].Branch == branch {
+			filtered = append(filtered, runs[i])
 		}
 	}
 
 	return filtered
 }
 
+// FilterRunsByWorkflows returns the runs whose workflow is in workflows, or all runs when workflows is empty.
 func FilterRunsByWorkflows(runs []RunTiming, workflows []string) []RunTiming {
 	if len(workflows) == 0 {
 		return runs
@@ -444,30 +486,32 @@ func FilterRunsByWorkflows(runs []RunTiming, workflows []string) []RunTiming {
 		workflowSet[w] = true
 	}
 	var filtered []RunTiming
-	for _, r := range runs {
-		if workflowSet[r.Workflow] {
-			filtered = append(filtered, r)
+	for i := range runs {
+		if workflowSet[runs[i].Workflow] {
+			filtered = append(filtered, runs[i])
 		}
 	}
 
 	return filtered
 }
 
+// FilterRunsByTimeRange returns the runs created within [since, until], treating a zero bound as unbounded.
 func FilterRunsByTimeRange(runs []RunTiming, since, until time.Time) []RunTiming {
 	var filtered []RunTiming
-	for _, r := range runs {
-		if !since.IsZero() && r.CreatedAt.Before(since) {
+	for i := range runs {
+		if !since.IsZero() && runs[i].CreatedAt.Before(since) {
 			continue
 		}
-		if !until.IsZero() && r.CreatedAt.After(until) {
+		if !until.IsZero() && runs[i].CreatedAt.After(until) {
 			continue
 		}
-		filtered = append(filtered, r)
+		filtered = append(filtered, runs[i])
 	}
 
 	return filtered
 }
 
+// SortRunsByDate sorts runs in place by creation time.
 func SortRunsByDate(runs []RunTiming, ascending bool) {
 	sort.Slice(runs, func(i, j int) bool {
 		if ascending {
@@ -478,6 +522,7 @@ func SortRunsByDate(runs []RunTiming, ascending bool) {
 	})
 }
 
+// GetTopJobsByDuration returns the jobs with the highest average duration, capped at limit (0 means unlimited).
 func GetTopJobsByDuration(stats map[string]*JobStats, limit int) []*JobStats {
 	var jobs []*JobStats
 	for _, s := range stats {
@@ -495,6 +540,7 @@ func GetTopJobsByDuration(stats map[string]*JobStats, limit int) []*JobStats {
 	return jobs
 }
 
+// FormatDuration renders a duration as seconds, minutes, or hours depending on its magnitude.
 func FormatDuration(d time.Duration) string {
 	if d < time.Minute {
 		return fmt.Sprintf("%.0fs", d.Seconds())

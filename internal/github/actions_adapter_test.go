@@ -1,13 +1,17 @@
-package github
+package github_test
 
 import (
 	"testing"
 	"time"
+
+	"github.com/KyleKing/gh-sweep/internal/github"
 )
 
 func TestWorkflowRunsToTestRuns(t *testing.T) {
+	t.Parallel()
+
 	now := time.Now()
-	runs := []WorkflowRun{
+	runs := []github.WorkflowRun{
 		{
 			ID:         1,
 			Name:       "CI",
@@ -22,7 +26,7 @@ func TestWorkflowRunsToTestRuns(t *testing.T) {
 		{ID: 5, Name: "CI", Conclusion: "", HeadSHA: "def", CreatedAt: now},
 	}
 
-	testRuns := WorkflowRunsToTestRuns("owner/repo", runs)
+	testRuns := github.WorkflowRunsToTestRuns("owner/repo", runs)
 
 	if len(testRuns) != 3 {
 		t.Fatalf("expected 3 test runs, got %d", len(testRuns))
@@ -48,7 +52,9 @@ func TestWorkflowRunsToTestRuns(t *testing.T) {
 }
 
 func TestWorkflowRunsToTestRunsEmpty(t *testing.T) {
-	testRuns := WorkflowRunsToTestRuns("owner/repo", nil)
+	t.Parallel()
+
+	testRuns := github.WorkflowRunsToTestRuns("owner/repo", nil)
 	if len(testRuns) != 0 {
 		t.Fatalf("expected no test runs, got %d", len(testRuns))
 	}

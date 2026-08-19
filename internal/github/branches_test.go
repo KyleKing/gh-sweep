@@ -1,60 +1,66 @@
-package github
+package github_test
 
 import (
 	"errors"
 	"testing"
+
+	"github.com/KyleKing/gh-sweep/internal/github"
 )
 
 func TestDeleteBlocked(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name    string
-		branch  BranchStatus
+		branch  github.BranchStatus
 		wantErr error
 	}{
 		{
 			name:    "plain branch is deletable",
-			branch:  BranchStatus{Branch: Branch{Name: "feature"}},
+			branch:  github.BranchStatus{Branch: github.Branch{Name: "feature"}},
 			wantErr: nil,
 		},
 		{
 			name:    "default branch is blocked",
-			branch:  BranchStatus{Branch: Branch{Name: "main"}, IsDefault: true},
-			wantErr: ErrDefaultBranchDeletion,
+			branch:  github.BranchStatus{Branch: github.Branch{Name: "main"}, IsDefault: true},
+			wantErr: github.ErrDefaultBranchDeletion,
 		},
 		{
 			name:    "protected branch is blocked",
-			branch:  BranchStatus{Branch: Branch{Name: "release", Protected: true}},
-			wantErr: ErrProtectedBranchDeletion,
+			branch:  github.BranchStatus{Branch: github.Branch{Name: "release", Protected: true}},
+			wantErr: github.ErrProtectedBranchDeletion,
 		},
 		{
 			name: "branch with open PR is blocked",
-			branch: BranchStatus{
-				Branch: Branch{Name: "feature"},
-				PR:     &PullRequest{Number: 7, State: "open"},
+			branch: github.BranchStatus{
+				Branch: github.Branch{Name: "feature"},
+				PR:     &github.PullRequest{Number: 7, State: "open"},
 			},
-			wantErr: ErrOpenPRBranchDeletion,
+			wantErr: github.ErrOpenPRBranchDeletion,
 		},
 		{
 			name: "branch with closed PR is deletable",
-			branch: BranchStatus{
-				Branch: Branch{Name: "feature"},
-				PR:     &PullRequest{Number: 7, State: "closed"},
+			branch: github.BranchStatus{
+				Branch: github.Branch{Name: "feature"},
+				PR:     &github.PullRequest{Number: 7, State: "closed"},
 			},
 			wantErr: nil,
 		},
 		{
 			name: "default branch blocked before open PR",
-			branch: BranchStatus{
-				Branch:    Branch{Name: "main"},
+			branch: github.BranchStatus{
+				Branch:    github.Branch{Name: "main"},
 				IsDefault: true,
-				PR:        &PullRequest{Number: 3, State: "open"},
+				PR:        &github.PullRequest{Number: 3, State: "open"},
 			},
-			wantErr: ErrDefaultBranchDeletion,
+			wantErr: github.ErrDefaultBranchDeletion,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			err := tt.branch.DeleteBlocked()
 			if !errors.Is(err, tt.wantErr) {
 				t.Errorf("DeleteBlocked() = %v, want %v", err, tt.wantErr)
@@ -64,13 +70,15 @@ func TestDeleteBlocked(t *testing.T) {
 }
 
 func TestMatchBranchPR(t *testing.T) {
+	t.Parallel()
+
 	repoFullName := "owner/repo"
-	prs := []PullRequest{
-		{Number: 1, State: "closed", Head: PRRef{Ref: "feature", Repo: repoFullName}},
-		{Number: 2, State: "closed", Head: PRRef{Ref: "feature", Repo: repoFullName}},
-		{Number: 3, State: "open", Head: PRRef{Ref: "active", Repo: repoFullName}},
-		{Number: 4, State: "closed", Head: PRRef{Ref: "forked", Repo: "other/fork"}},
-		{Number: 5, State: "closed", Head: PRRef{Ref: "legacy", Repo: ""}},
+	prs := []github.PullRequest{
+		{Number: 1, State: "closed", Head: github.PRRef{Ref: "feature", Repo: repoFullName}},
+		{Number: 2, State: "closed", Head: github.PRRef{Ref: "feature", Repo: repoFullName}},
+		{Number: 3, State: "open", Head: github.PRRef{Ref: "active", Repo: repoFullName}},
+		{Number: 4, State: "closed", Head: github.PRRef{Ref: "forked", Repo: "other/fork"}},
+		{Number: 5, State: "closed", Head: github.PRRef{Ref: "legacy", Repo: ""}},
 	}
 
 	tests := []struct {
@@ -87,7 +95,9 @@ func TestMatchBranchPR(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			pr := MatchBranchPR(prs, repoFullName, tt.branch)
+			t.Parallel()
+
+			pr := github.MatchBranchPR(prs, repoFullName, tt.branch)
 
 			switch {
 			case tt.wantNumber == 0 && pr != nil:

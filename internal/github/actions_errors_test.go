@@ -1,4 +1,4 @@
-package github
+package github_test
 
 import (
 	"context"
@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/KyleKing/gh-sweep/internal/github"
 )
 
 func TestFetchFailedJobLogs(t *testing.T) {
@@ -42,7 +44,7 @@ func TestFetchFailedJobLogs(t *testing.T) {
 		}
 	})
 
-	client, err := NewClientWithTransport(context.Background(), transport)
+	client, err := github.NewClientWithTransport(context.Background(), transport)
 	if err != nil {
 		t.Fatalf("failed to create test client: %v", err)
 	}
@@ -86,7 +88,7 @@ func TestFetchFailedJobLogsSkipsUnfetchableLogs(t *testing.T) {
 		}
 	})
 
-	client, err := NewClientWithTransport(context.Background(), transport)
+	client, err := github.NewClientWithTransport(context.Background(), transport)
 	if err != nil {
 		t.Fatalf("failed to create test client: %v", err)
 	}

@@ -43,7 +43,8 @@ func (c *Client) ListReleases(owner, repo string) ([]Release, error) {
 	}
 
 	releases := make([]Release, len(response))
-	for i, r := range response {
+	for i := range response {
+		r := &response[i]
 		releases[i] = Release{
 			ID:          r.ID,
 			Repository:  fmt.Sprintf("%s/%s", owner, repo),

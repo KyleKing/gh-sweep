@@ -59,6 +59,7 @@ func TestNewClientWithTransportServesFakes(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // mutates the shared global test transport
 func TestSetTestTransportRoutesNewClient(t *testing.T) {
 	var paths []string
 	restore := SetTestTransport(recordingTransport(`{"default_branch":"main"}`, &paths))
@@ -83,7 +84,7 @@ func TestSetTestTransportRoutesNewClient(t *testing.T) {
 	}
 }
 
-func TestSetTestTransportRestore(t *testing.T) {
+func TestSetTestTransportRestore(t *testing.T) { //nolint:paralleltest // mutates the shared global test transport
 	rt := recordingTransport(`{}`, nil)
 
 	restore := SetTestTransport(rt)

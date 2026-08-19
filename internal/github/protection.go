@@ -125,11 +125,15 @@ func (c *Client) GetDefaultBranchProtection(owner, repo string) (*ProtectionRule
 	return c.GetBranchProtection(owner, repo, branch)
 }
 
+// minRulesToCompare is the fewest protection rules CompareProtectionRules needs
+// to have anything to diff (a baseline plus at least one other rule).
+const minRulesToCompare = 2
+
 // CompareProtectionRules compares protection rules across repositories.
 func CompareProtectionRules(rules []*ProtectionRule) map[string][]string {
 	differences := make(map[string][]string)
 
-	if len(rules) < 2 {
+	if len(rules) < minRulesToCompare {
 		return differences
 	}
 

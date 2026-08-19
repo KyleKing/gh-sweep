@@ -1,4 +1,4 @@
-package github
+package github_test
 
 import (
 	"context"
@@ -7,157 +7,131 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/KyleKing/gh-sweep/internal/github"
 )
+
+// endpointRoutes maps "METHOD path" to the fixture body served for exact-match
+// requests in the endpointFake router. Paginated and prefix-matched paths are
+// handled separately in endpointFake before this table is consulted.
+//
+//nolint:gosec // fixture JSON: secret names like "DEPLOY_KEY" are fake test data, not credentials
+var endpointRoutes = map[string]string{
+	"GET /repos/acme/widgets": `{
+		"name":"widgets","default_branch":"main","allow_squash_merge":true,
+		"allow_merge_commit":false,"allow_rebase_merge":true,
+		"delete_branch_on_merge":true,"has_issues":true,"has_projects":false,"has_wiki":false
+	}`,
+	"GET /repos/acme/widgets/branches": `[
+		{"name":"main","protected":true,
+		 "commit":{"sha":"abc123","commit":{"author":{"date":"2026-01-10T12:00:00Z"}}}},
+		{"name":"feature",
+		 "commit":{"sha":"def456","commit":{"author":{"date":"2026-01-12T12:00:00Z"}}}}
+	]`,
+	"POST /repos/acme/widgets/pulls": `{"number":8}`,
+	"GET /repos/acme/widgets/collaborators": `[
+		{"login":"alice","permissions":{"admin":true,"push":true,"pull":true}},
+		{"login":"bob","permissions":{"push":true,"pull":true}},
+		{"login":"carol","permissions":{"pull":true}}
+	]`,
+	"PUT /repos/acme/widgets/collaborators/dave":    `{}`,
+	"DELETE /repos/acme/widgets/collaborators/dave": `{}`,
+	"GET /repos/acme/widgets/releases": `[
+		{"id":2,"tag_name":"v1.2.0","name":"v1.2.0","author":{"login":"alice"},
+		 "published_at":"2026-01-10T12:00:00Z"},
+		{"id":1,"tag_name":"v1.1.0","name":"v1.1.0","author":{"login":"alice"},
+		 "published_at":"2025-11-02T12:00:00Z"}
+	]`,
+	"GET /repos/acme/widgets/releases/latest": `{"id":2,"tag_name":"v1.2.0","name":"v1.2.0","author":{"login":"alice"},
+		"published_at":"2026-01-10T12:00:00Z"}`,
+	"GET /orgs/acme/actions/secrets": `{"secrets":[{"name":"DEPLOY_KEY","created_at":"a","updated_at":"b"}]}`,
+	"GET /repos/acme/widgets/actions/secrets": `{
+		"secrets":[{"name":"CODECOV_TOKEN","created_at":"a","updated_at":"b"}]
+	}`,
+	"GET /repos/acme/widgets/pages": `{"cname":"docs.example.com","html_url":"https://docs.example.com",
+		 "https_enforced":true,"status":"built","protected_domain_state":"verified"}`,
+	"GET /repos/acme/widgets/contents/CNAME": `{"content":"ZG9jcy5leGFtcGxlLmNvbQo=","encoding":"base64"}`,
+	"GET /repos/acme/widgets/branches/main/protection": `{
+		"required_pull_request_reviews":{"required_approving_review_count":2,"require_code_owner_reviews":true},
+		"required_status_checks":{"contexts":["ci"]},
+		"enforce_admins":{"enabled":true},
+		"required_linear_history":{"enabled":true},
+		"allow_force_pushes":{"enabled":false},
+		"allow_deletions":{"enabled":false}
+	}`,
+	"PUT /repos/acme/widgets/branches/main/protection": `{}`,
+	"PATCH /repos/acme/widgets":                        `{"name":"widgets","default_branch":"main"}`,
+	"GET /repos/acme/widgets/immutable-releases":       `{"enabled":false,"enforced_by_owner":false}`,
+	"PUT /repos/acme/widgets/immutable-releases":       `{}`,
+	"DELETE /repos/acme/widgets/immutable-releases":    `{}`,
+	"GET /repos/acme/widgets/subscription":             `{"subscribed":true,"ignored":false,"reason":""}`,
+	"PUT /repos/acme/widgets/subscription":             `{"subscribed":true,"ignored":false}`,
+	"DELETE /repos/acme/widgets/subscription":          `{}`,
+	"GET /repos/acme/widgets/hooks": `[
+		{"id":7,"config":{"url":"https://ci.example.com/hook"},"events":["push"],"active":true}
+	]`,
+	"GET /repos/acme/widgets/hooks/7/deliveries": `[
+		{"id":1,"event":"push","status_code":200,"duration":100,"delivered_at":"2026-01-10T12:00:00Z"},
+		{"id":2,"event":"push","status_code":502,"duration":300,"delivered_at":"2026-01-11T12:00:00Z"}
+	]`,
+	"GET /repos/acme/widgets/actions/workflows": `{
+		"workflows":[{"id":11,"name":"ci","path":".github/workflows/ci.yml","state":"active"}]
+	}`,
+	"GET /repos/acme/widgets/actions/runs": `{"workflow_runs":[
+		{"id":101,"name":"ci","status":"completed","conclusion":"success",
+		 "head_branch":"main","head_sha":"abc123",
+		 "created_at":"2026-01-10T12:00:00Z","updated_at":"2026-01-10T12:05:00Z"}
+	]}`,
+}
+
+// endpointNotFoundRoutes are exact-match paths the fake router serves as 404,
+// distinct from the catch-all default so intent stays explicit at the call site.
+var endpointNotFoundRoutes = map[string]bool{
+	"GET /repos/acme/nopages/pages":                        true,
+	"GET /repos/acme/nopages/contents/CNAME":               true,
+	"GET /repos/acme/unprotected/branches/main/protection": true,
+}
+
+// endpointPaginatedRoute serves a first page of body and an empty page thereafter.
+func endpointPaginatedRoute(req *http.Request, body string) *http.Response {
+	if req.URL.Query().Get("page") != "1" {
+		return okJSON(req, `[]`)
+	}
+
+	return okJSON(req, body)
+}
 
 func endpointFake() roundTripFunc {
 	return func(req *http.Request) (*http.Response, error) {
 		path := req.URL.Path
 		method := req.Method
+		key := method + " " + path
 
 		switch {
-		case method == http.MethodGet && path == "/repos/acme/widgets":
-			return okJSON(req, `{
-				"name":"widgets","default_branch":"main","allow_squash_merge":true,
-				"allow_merge_commit":false,"allow_rebase_merge":true,
-				"delete_branch_on_merge":true,"has_issues":true,"has_projects":false,"has_wiki":false
-			}`), nil
-		case method == http.MethodGet && path == "/repos/acme/widgets/branches":
-			return okJSON(req, `[
-				{"name":"main","protected":true,
-				 "commit":{"sha":"abc123","commit":{"author":{"date":"2026-01-10T12:00:00Z"}}}},
-				{"name":"feature",
-				 "commit":{"sha":"def456","commit":{"author":{"date":"2026-01-12T12:00:00Z"}}}}
-			]`), nil
 		case method == http.MethodGet && strings.HasPrefix(path, "/repos/acme/widgets/compare/"):
 			return okJSON(req, `{"ahead_by":3,"behind_by":1}`), nil
-		case method == http.MethodGet && path == "/repos/acme/widgets/pulls":
-			if req.URL.Query().Get("page") != "1" {
-				return okJSON(req, `[]`), nil
-			}
-
-			return okJSON(req, `[
+		case key == "GET /repos/acme/widgets/pulls":
+			return endpointPaginatedRoute(req, `[
 				{"number":7,"title":"Add login","state":"open",
 				 "head":{"ref":"feature","sha":"def456","repo":{"full_name":"acme/widgets"}},
 				 "base":{"ref":"main","sha":"abc123","repo":{"full_name":"acme/widgets"}}}
 			]`), nil
-		case method == http.MethodPost && path == "/repos/acme/widgets/pulls":
-			return okJSON(req, `{"number":8}`), nil
-		case method == http.MethodGet && path == "/repos/acme/widgets/collaborators":
-			return okJSON(req, `[
-				{"login":"alice","permissions":{"admin":true,"push":true,"pull":true}},
-				{"login":"bob","permissions":{"push":true,"pull":true}},
-				{"login":"carol","permissions":{"pull":true}}
-			]`), nil
-		case method == http.MethodPut && path == "/repos/acme/widgets/collaborators/dave":
-			return okJSON(req, `{}`), nil
-		case method == http.MethodDelete && path == "/repos/acme/widgets/collaborators/dave":
-			return okJSON(req, `{}`), nil
-		case method == http.MethodGet && path == "/repos/acme/widgets/releases":
-			return okJSON(req, `[
-				{"id":2,"tag_name":"v1.2.0","name":"v1.2.0","author":{"login":"alice"},
-				 "published_at":"2026-01-10T12:00:00Z"},
-				{"id":1,"tag_name":"v1.1.0","name":"v1.1.0","author":{"login":"alice"},
-				 "published_at":"2025-11-02T12:00:00Z"}
-			]`), nil
-		case method == http.MethodGet && path == "/repos/acme/widgets/releases/latest":
-			return okJSON(
-				req,
-				`{"id":2,"tag_name":"v1.2.0","name":"v1.2.0","author":{"login":"alice"},
-				"published_at":"2026-01-10T12:00:00Z"}`,
-			), nil
-		case method == http.MethodGet && path == "/orgs/acme/actions/secrets":
-			return okJSON(
-				req,
-				`{"secrets":[{"name":"DEPLOY_KEY","created_at":"a","updated_at":"b"}]}`,
-			), nil
-		case method == http.MethodGet && path == "/repos/acme/widgets/actions/secrets":
-			return okJSON(
-				req,
-				`{"secrets":[{"name":"CODECOV_TOKEN","created_at":"a","updated_at":"b"}]}`,
-			), nil
-		case method == http.MethodGet && path == "/repos/acme/widgets/pages":
-			return okJSON(
-				req,
-				`{"cname":"docs.example.com","html_url":"https://docs.example.com",
-				 "https_enforced":true,"status":"built","protected_domain_state":"verified"}`,
-			), nil
-		case method == http.MethodGet && path == "/repos/acme/nopages/pages":
-			return notFoundJSON(req), nil
-		case method == http.MethodGet && path == "/repos/acme/widgets/contents/CNAME":
-			return okJSON(req, `{"content":"ZG9jcy5leGFtcGxlLmNvbQo=","encoding":"base64"}`), nil
-		case method == http.MethodGet && path == "/repos/acme/nopages/contents/CNAME":
-			return notFoundJSON(req), nil
-		case method == http.MethodGet && path == "/repos/acme/widgets/branches/main/protection":
-			return okJSON(req, `{
-				"required_pull_request_reviews":{"required_approving_review_count":2,"require_code_owner_reviews":true},
-				"required_status_checks":{"contexts":["ci"]},
-				"enforce_admins":{"enabled":true},
-				"required_linear_history":{"enabled":true},
-				"allow_force_pushes":{"enabled":false},
-				"allow_deletions":{"enabled":false}
-			}`), nil
-		case method == http.MethodPut && path == "/repos/acme/widgets/branches/main/protection":
-			return okJSON(req, `{}`), nil
-		case method == http.MethodGet && path == "/repos/acme/unprotected/branches/main/protection":
-			return notFoundJSON(req), nil
-		case method == http.MethodPatch && path == "/repos/acme/widgets":
-			return okJSON(req, `{"name":"widgets","default_branch":"main"}`), nil
-		case method == http.MethodGet && path == "/repos/acme/widgets/immutable-releases":
-			return okJSON(req, `{"enabled":false,"enforced_by_owner":false}`), nil
-		case method == http.MethodPut && path == "/repos/acme/widgets/immutable-releases":
-			return okJSON(req, `{}`), nil
-		case method == http.MethodDelete && path == "/repos/acme/widgets/immutable-releases":
-			return okJSON(req, `{}`), nil
-		case method == http.MethodGet && path == "/repos/acme/widgets/subscription":
-			return okJSON(req, `{"subscribed":true,"ignored":false,"reason":""}`), nil
-		case method == http.MethodPut && path == "/repos/acme/widgets/subscription":
-			return okJSON(req, `{"subscribed":true,"ignored":false}`), nil
-		case method == http.MethodDelete && path == "/repos/acme/widgets/subscription":
-			return okJSON(req, `{}`), nil
-		case method == http.MethodGet && path == "/orgs/acme/repos":
-			if req.URL.Query().Get("page") != "1" {
-				return okJSON(req, `[]`), nil
-			}
-
-			return okJSON(req, `[
+		case key == "GET /orgs/acme/repos":
+			return endpointPaginatedRoute(req, `[
 				{"name":"widgets","full_name":"acme/widgets","owner":{"login":"acme"},"default_branch":"main"},
 				{"name":"gadgets","full_name":"acme/gadgets","owner":{"login":"acme"},
 				 "private":true,"archived":true,"default_branch":"main"}
 			]`), nil
-		case method == http.MethodGet && strings.HasPrefix(path, "/orgs/"):
+		case key == "GET /users/tester/repos":
+			return endpointPaginatedRoute(req, `[{"name":"dotfiles","full_name":"tester/dotfiles",
+				  "owner":{"login":"tester"},"default_branch":"main"}]`), nil
+		case endpointNotFoundRoutes[key]:
 			return notFoundJSON(req), nil
-		case method == http.MethodGet && path == "/users/tester/repos":
-			if req.URL.Query().Get("page") != "1" {
-				return okJSON(req, `[]`), nil
+		default:
+			if body, ok := endpointRoutes[key]; ok {
+				return okJSON(req, body), nil
 			}
 
-			return okJSON(
-				req,
-				`[{"name":"dotfiles","full_name":"tester/dotfiles",
-				  "owner":{"login":"tester"},"default_branch":"main"}]`,
-			), nil
-		case method == http.MethodGet && path == "/repos/acme/widgets/hooks":
-			return okJSON(
-				req,
-				`[{"id":7,"config":{"url":"https://ci.example.com/hook"},"events":["push"],"active":true}]`,
-			), nil
-		case method == http.MethodGet && path == "/repos/acme/widgets/hooks/7/deliveries":
-			return okJSON(req, `[
-				{"id":1,"event":"push","status_code":200,"duration":100,"delivered_at":"2026-01-10T12:00:00Z"},
-				{"id":2,"event":"push","status_code":502,"duration":300,"delivered_at":"2026-01-11T12:00:00Z"}
-			]`), nil
-		case method == http.MethodGet && path == "/repos/acme/widgets/actions/workflows":
-			return okJSON(
-				req,
-				`{"workflows":[{"id":11,"name":"ci","path":".github/workflows/ci.yml","state":"active"}]}`,
-			), nil
-		case method == http.MethodGet && path == "/repos/acme/widgets/actions/runs":
-			return okJSON(req, `{"workflow_runs":[
-				{"id":101,"name":"ci","status":"completed","conclusion":"success",
-				 "head_branch":"main","head_sha":"abc123",
-				 "created_at":"2026-01-10T12:00:00Z","updated_at":"2026-01-10T12:05:00Z"}
-			]}`), nil
-		default:
 			return notFoundJSON(req), nil
 		}
 	}
@@ -177,10 +151,10 @@ func notFoundJSON(req *http.Request) *http.Response {
 	return resp
 }
 
-func newEndpointClient(t *testing.T) *Client {
+func newEndpointClient(t *testing.T) *github.Client {
 	t.Helper()
 
-	client, err := NewClientWithTransport(context.Background(), endpointFake())
+	client, err := github.NewClientWithTransport(context.Background(), endpointFake())
 	if err != nil {
 		t.Fatalf("NewClientWithTransport() error = %v", err)
 	}
@@ -193,7 +167,7 @@ func TestClientContext(t *testing.T) {
 
 	ctx := context.Background()
 
-	client, err := NewClientWithTransport(ctx, endpointFake())
+	client, err := github.NewClientWithTransport(ctx, endpointFake())
 	if err != nil {
 		t.Fatalf("NewClientWithTransport() error = %v", err)
 	}
@@ -389,7 +363,7 @@ func TestGetBranchProtectionMissing(t *testing.T) {
 	t.Parallel()
 
 	_, err := newEndpointClient(t).GetBranchProtection("acme", "unprotected", "main")
-	if !errors.Is(err, ErrBranchNotProtected) {
+	if !errors.Is(err, github.ErrBranchNotProtected) {
 		t.Fatalf("GetBranchProtection() error = %v, want ErrBranchNotProtected", err)
 	}
 }
@@ -409,7 +383,7 @@ func TestGetPagesInfo(t *testing.T) {
 	}
 
 	info, err = client.GetPagesInfo("acme", "nopages")
-	if !errors.Is(err, ErrPagesNotFound) {
+	if !errors.Is(err, github.ErrPagesNotFound) {
 		t.Fatalf("GetPagesInfo() error = %v, want ErrPagesNotFound", err)
 	}
 
@@ -452,7 +426,7 @@ func TestSubscriptionLifecycle(t *testing.T) {
 		t.Fatalf("SetRepoSubscription() error = %v", err)
 	}
 
-	if !set.Subscribed || set.State != WatchStateSubscribed {
+	if !set.Subscribed || set.State != github.WatchStateSubscribed {
 		t.Errorf("set subscription = %+v", set)
 	}
 
@@ -515,7 +489,7 @@ func TestUpdateRepoSettings(t *testing.T) {
 
 	enabled := true
 	err := newEndpointClient(t).
-		UpdateRepoSettings("acme", "widgets", RepoSettingsPatch{DeleteBranchOnMerge: &enabled})
+		UpdateRepoSettings("acme", "widgets", github.RepoSettingsPatch{DeleteBranchOnMerge: &enabled})
 	if err != nil {
 		t.Errorf("UpdateRepoSettings() error = %v", err)
 	}
@@ -524,7 +498,7 @@ func TestUpdateRepoSettings(t *testing.T) {
 func TestUpdateBranchProtection(t *testing.T) {
 	t.Parallel()
 
-	err := newEndpointClient(t).UpdateBranchProtection("acme", "widgets", "main", ProtectionRule{
+	err := newEndpointClient(t).UpdateBranchProtection("acme", "widgets", "main", github.ProtectionRule{
 		RequiredReviews: 1,
 	})
 	if err != nil {

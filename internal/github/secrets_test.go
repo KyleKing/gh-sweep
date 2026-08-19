@@ -1,12 +1,16 @@
-package github
+package github_test
 
 import (
 	"testing"
+
+	"github.com/KyleKing/gh-sweep/internal/github"
 )
 
 // TestDetectUnusedSecrets tests unused secret detection.
 func TestDetectUnusedSecrets(t *testing.T) {
-	secrets := []Secret{
+	t.Parallel()
+
+	secrets := []github.Secret{
 		{Name: "ACTIVE_SECRET", Scope: "org"},
 		{Name: "UNUSED_SECRET", Scope: "org"},
 		{Name: "REPO_SECRET", Scope: "repo", Repository: "owner/repo"},
@@ -18,14 +22,14 @@ func TestDetectUnusedSecrets(t *testing.T) {
 		// UNUSED_SECRET is not referenced
 	}
 
-	usages := DetectUnusedSecrets(secrets, workflowRefs)
+	usages := github.DetectUnusedSecrets(secrets, workflowRefs)
 
 	if len(usages) != 3 {
 		t.Errorf("Expected 3 usage entries, got %d", len(usages))
 	}
 
 	// Find UNUSED_SECRET
-	var unusedUsage *SecretUsage
+	var unusedUsage *github.SecretUsage
 	for i := range usages {
 		if usages[i].Name == "UNUSED_SECRET" {
 			unusedUsage = &usages[i]
@@ -47,7 +51,7 @@ func TestDetectUnusedSecrets(t *testing.T) {
 	}
 
 	// Find ACTIVE_SECRET
-	var activeUsage *SecretUsage
+	var activeUsage *github.SecretUsage
 	for i := range usages {
 		if usages[i].Name == "ACTIVE_SECRET" {
 			activeUsage = &usages[i]
@@ -71,6 +75,8 @@ func TestDetectUnusedSecrets(t *testing.T) {
 
 // TestScanWorkflowForSecrets tests workflow scanning.
 func TestScanWorkflowForSecrets(t *testing.T) {
+	t.Parallel()
+
 	workflowYAML := `
 name: CI
 on: [push]
@@ -87,7 +93,7 @@ jobs:
         run: npm test
 `
 
-	refs := ScanWorkflowForSecrets(workflowYAML)
+	refs := github.ScanWorkflowForSecrets(workflowYAML)
 
 	expectedSecrets := map[string]bool{
 		"API_KEY":     true,
@@ -115,6 +121,8 @@ jobs:
 
 // TestScanWorkflowMultipleFormats tests various secret reference formats.
 func TestScanWorkflowMultipleFormats(t *testing.T) {
+	t.Parallel()
+
 	workflowYAML := `
 name: Multi-format
 jobs:
@@ -126,7 +134,7 @@ jobs:
       - run: echo "${{  secrets.EXTRA_SPACES  }}"
 `
 
-	refs := ScanWorkflowForSecrets(workflowYAML)
+	refs := github.ScanWorkflowForSecrets(workflowYAML)
 
 	expected := []string{"TOKEN", "ANOTHER_SECRET", "SPACED_SECRET", "EXTRA_SPACES"}
 
@@ -149,14 +157,16 @@ jobs:
 
 // TestGroupSecretsByScope tests grouping secrets.
 func TestGroupSecretsByScope(t *testing.T) {
-	secrets := []Secret{
+	t.Parallel()
+
+	secrets := []github.Secret{
 		{Name: "ORG_SECRET_1", Scope: "org"},
 		{Name: "ORG_SECRET_2", Scope: "org"},
 		{Name: "REPO_SECRET_1", Scope: "repo", Repository: "owner/repo1"},
 		{Name: "REPO_SECRET_2", Scope: "repo", Repository: "owner/repo2"},
 	}
 
-	grouped := GroupSecretsByScope(secrets)
+	grouped := github.GroupSecretsByScope(secrets)
 
 	if len(grouped["org"]) != 2 {
 		t.Errorf("Expected 2 org secrets, got %d", len(grouped["org"]))
@@ -169,14 +179,16 @@ func TestGroupSecretsByScope(t *testing.T) {
 
 // TestFindDuplicateSecrets tests duplicate detection across scopes.
 func TestFindDuplicateSecrets(t *testing.T) {
-	secrets := []Secret{
+	t.Parallel()
+
+	secrets := []github.Secret{
 		{Name: "API_KEY", Scope: "org"},
 		{Name: "API_KEY", Scope: "repo", Repository: "owner/repo1"},
 		{Name: "API_KEY", Scope: "repo", Repository: "owner/repo2"},
 		{Name: "UNIQUE_SECRET", Scope: "org"},
 	}
 
-	duplicates := FindDuplicateSecrets(secrets)
+	duplicates := github.FindDuplicateSecrets(secrets)
 
 	if len(duplicates) != 1 {
 		t.Errorf("Expected 1 duplicate secret name, got %d", len(duplicates))

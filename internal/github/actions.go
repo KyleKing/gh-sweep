@@ -5,6 +5,13 @@ import (
 	"time"
 )
 
+// Terminal conclusion values reported by the GitHub Actions API.
+const (
+	ConclusionSuccess = "success"
+	ConclusionFailure = "failure"
+	ConclusionSkipped = "skipped"
+)
+
 // WorkflowRun represents a GitHub Actions workflow run.
 type WorkflowRun struct {
 	ID         int
@@ -41,7 +48,8 @@ func (c *Client) ListWorkflowRuns(owner, repo string) ([]WorkflowRun, error) {
 	}
 
 	runs := make([]WorkflowRun, len(response.WorkflowRuns))
-	for i, r := range response.WorkflowRuns {
+	for i := range response.WorkflowRuns {
+		r := &response.WorkflowRuns[i]
 		runs[i] = WorkflowRun{
 			ID:         r.ID,
 			Name:       r.Name,
@@ -64,9 +72,10 @@ func (c *Client) ListWorkflowRuns(owner, repo string) ([]WorkflowRun, error) {
 func WorkflowRunsToTestRuns(repo string, runs []WorkflowRun) []TestRun {
 	testRuns := make([]TestRun, 0, len(runs))
 
-	for _, run := range runs {
+	for i := range runs {
+		run := &runs[i]
 		switch run.Conclusion {
-		case "success", "failure", "skipped":
+		case ConclusionSuccess, ConclusionFailure, ConclusionSkipped:
 		default:
 			continue
 		}
@@ -108,17 +117,18 @@ func AnalyzeWorkflowRuns(runs []WorkflowRun) WorkflowRunStats {
 	successCount := 0
 	var totalDuration time.Duration
 
-	for _, run := range runs {
+	for i := range runs {
+		run := &runs[i]
 		switch run.Conclusion {
-		case "success":
+		case ConclusionSuccess:
 			successCount++
-		case "failure":
+		case ConclusionFailure:
 			stats.FailureCount++
 		}
 		totalDuration += run.Duration
 	}
 
-	stats.SuccessRate = float64(successCount) / float64(len(runs)) * 100
+	stats.SuccessRate = float64(successCount) / float64(len(runs)) * percentMultiplier
 	stats.AvgDuration = totalDuration / time.Duration(len(runs))
 
 	return stats

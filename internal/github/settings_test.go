@@ -1,12 +1,13 @@
-package github
+package github_test
 
 import (
 	"testing"
+
+	"github.com/KyleKing/gh-sweep/internal/github"
 )
 
-// TestCompareSettings tests settings comparison logic.
-func TestCompareSettings(t *testing.T) {
-	baseline := &RepoSettings{
+func compareSettingsBaseline() *github.RepoSettings {
+	return &github.RepoSettings{
 		Repository:          "owner/baseline",
 		DefaultBranch:       "main",
 		AllowMergeCommit:    false,
@@ -17,16 +18,23 @@ func TestCompareSettings(t *testing.T) {
 		HasProjects:         false,
 		HasWiki:             false,
 	}
+}
 
-	tests := []struct {
+func compareSettingsCases() []struct {
+	name          string
+	current       *github.RepoSettings
+	expectedDiffs int
+	hasCritical   bool
+} {
+	return []struct {
 		name          string
-		current       *RepoSettings
+		current       *github.RepoSettings
 		expectedDiffs int
 		hasCritical   bool
 	}{
 		{
 			name: "identical settings",
-			current: &RepoSettings{
+			current: &github.RepoSettings{
 				Repository:          "owner/repo",
 				DefaultBranch:       "main",
 				AllowMergeCommit:    false,
@@ -42,7 +50,7 @@ func TestCompareSettings(t *testing.T) {
 		},
 		{
 			name: "different default branch",
-			current: &RepoSettings{
+			current: &github.RepoSettings{
 				Repository:          "owner/repo",
 				DefaultBranch:       "master", // Different
 				AllowMergeCommit:    false,
@@ -58,7 +66,7 @@ func TestCompareSettings(t *testing.T) {
 		},
 		{
 			name: "different merge strategies",
-			current: &RepoSettings{
+			current: &github.RepoSettings{
 				Repository:          "owner/repo",
 				DefaultBranch:       "main",
 				AllowMergeCommit:    true,  // Different
@@ -74,7 +82,7 @@ func TestCompareSettings(t *testing.T) {
 		},
 		{
 			name: "multiple differences",
-			current: &RepoSettings{
+			current: &github.RepoSettings{
 				Repository:          "owner/repo",
 				DefaultBranch:       "develop",
 				AllowMergeCommit:    true,
@@ -89,10 +97,19 @@ func TestCompareSettings(t *testing.T) {
 			hasCritical:   false,
 		},
 	}
+}
 
-	for _, tt := range tests {
+// TestCompareSettings tests settings comparison logic.
+func TestCompareSettings(t *testing.T) {
+	t.Parallel()
+
+	baseline := compareSettingsBaseline()
+
+	for _, tt := range compareSettingsCases() {
 		t.Run(tt.name, func(t *testing.T) {
-			diffs := CompareSettings(baseline, tt.current)
+			t.Parallel()
+
+			diffs := github.CompareSettings(baseline, tt.current)
 
 			if len(diffs) != tt.expectedDiffs {
 				t.Errorf("Expected %d diffs, got %d: %+v",
@@ -118,17 +135,19 @@ func TestCompareSettings(t *testing.T) {
 
 // TestSettingsDiffSeverity tests severity classification.
 func TestSettingsDiffSeverity(t *testing.T) {
-	baseline := &RepoSettings{
+	t.Parallel()
+
+	baseline := &github.RepoSettings{
 		DefaultBranch:       "main",
 		DeleteBranchOnMerge: true,
 	}
 
-	current := &RepoSettings{
+	current := &github.RepoSettings{
 		DefaultBranch:       "master",
 		DeleteBranchOnMerge: false,
 	}
 
-	diffs := CompareSettings(baseline, current)
+	diffs := github.CompareSettings(baseline, current)
 
 	// DefaultBranch should be warning
 	defaultBranchDiff := findDiff(diffs, "DefaultBranch")
@@ -153,20 +172,22 @@ func TestSettingsDiffSeverity(t *testing.T) {
 
 // TestBatchCompareSettings tests comparing multiple repositories.
 func TestBatchCompareSettings(t *testing.T) {
-	baseline := &RepoSettings{
+	t.Parallel()
+
+	baseline := &github.RepoSettings{
 		Repository:    "owner/baseline",
 		DefaultBranch: "main",
 	}
 
-	repos := []*RepoSettings{
+	repos := []*github.RepoSettings{
 		{Repository: "owner/repo1", DefaultBranch: "main"},
 		{Repository: "owner/repo2", DefaultBranch: "master"},
 		{Repository: "owner/repo3", DefaultBranch: "main"},
 	}
 
-	allDiffs := make(map[string][]SettingsDiff)
+	allDiffs := make(map[string][]github.SettingsDiff)
 	for _, repo := range repos {
-		diffs := CompareSettings(baseline, repo)
+		diffs := github.CompareSettings(baseline, repo)
 		if len(diffs) > 0 {
 			allDiffs[repo.Repository] = diffs
 		}
@@ -183,7 +204,7 @@ func TestBatchCompareSettings(t *testing.T) {
 }
 
 // Helper function to find a specific diff.
-func findDiff(diffs []SettingsDiff, field string) *SettingsDiff {
+func findDiff(diffs []github.SettingsDiff, field string) *github.SettingsDiff {
 	for i := range diffs {
 		if diffs[i].Field == field {
 			return &diffs[i]

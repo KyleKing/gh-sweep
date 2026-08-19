@@ -44,7 +44,7 @@ const reviewThreadsQuery = `query($owner: String!, $name: String!, $number: Int!
 }`
 
 type gqlDoer interface {
-	Do(query string, variables map[string]interface{}, response interface{}) error
+	Do(query string, variables map[string]any, response any) error
 }
 
 // GQLClient wraps the GitHub GraphQL API for review thread queries.
@@ -129,10 +129,10 @@ func mapReviewThreads(
 // ListPRReviewThreads fetches all review threads for a single pull request.
 func (g *GQLClient) ListPRReviewThreads(owner, repo string, prNumber int) ([]ReviewThread, error) {
 	var threads []ReviewThread
-	var cursor interface{}
+	var cursor any
 
 	for {
-		variables := map[string]interface{}{
+		variables := map[string]any{
 			"owner":  owner,
 			"name":   repo,
 			"number": prNumber,
@@ -178,14 +178,14 @@ func (g *GQLClient) ListOpenPRReviewThreads(
 	sem := make(chan struct{}, threadFetchConcurrency)
 
 	var wg sync.WaitGroup
-	for i, pr := range prs {
+	for i := range prs {
 		wg.Add(1)
 		go func(idx, number int) {
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
 			results[idx], errs[idx] = g.ListPRReviewThreads(owner, repo, number)
-		}(i, pr.Number)
+		}(i, prs[i].Number)
 	}
 	wg.Wait()
 
