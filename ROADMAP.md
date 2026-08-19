@@ -23,31 +23,13 @@ key press is a single reversible toggle (press again to undo), not a batch
 operation, so the stakes don't match the CLI paths. Revisit only if it turns
 out to bite in practice.
 
-## M3: Remove the golangci-lint legacy exclusion block
-
-Coverage is at 70% and `test:coverage-min`/`test:safety` are wired into the
-`ci` task, so a regression fails CI directly. What's left: the
-`.golangci.toml` `TODO(v1)` block still exempts
-`internal/(cache|cli|config|git|github|models|orphans|tui)/` from 30 linters.
-Removing it surfaces 791 issues as of this writing (`revive` 156, `mnd` 115,
-`paralleltest` 113, `gocritic` 63, `tagliatelle` 62, `goconst` 60, `err113`
-32, `testpackage` 32, `gosec` 28, `dupl` 15, `lll` 16, `gocognit` 18, `noctx`
-11, and smaller categories), verified by temporarily deleting the block and
-running `golangci-lint run ./... --max-issues-per-linter=0
---max-same-issues=0`. That count is a real multi-session refactor, not a
-single sitting, and each category needs actual judgment (a `gosec` finding
-might be a real issue or a false positive; `paralleltest` gaps need checking
-the test doesn't share mutable state first). Note: unlike `.golangci.toml`'s
-other contents, this exclusion block does not exist in `my_go_template`'s
-source, so removing it is a plain local edit, not a template sync.
-
-## M4: One GHA analytics path and live unused-secrets detection
+## M3: One GHA analytics path and live unused-secrets detection
 
 `internal/github/actions.go` and `gha_perf.go` model the same `actions/runs` payload twice (`WorkflowRun` vs `RunTiming`, `WorkflowRunStats` vs `WorkflowStats`) with split consumers (analytics vs ghaperf/CLI). Merge them onto one model. Separately, `DetectUnusedSecrets` and its helpers in `internal/github/secrets.go` have no production callers, so the secrets view's Unused tab always renders empty; wire workflow scanning into the secrets component.
 
 Starting points: `internal/github/actions.go`, `internal/github/gha_perf.go`, `internal/github/secrets.go`, `internal/tui/components/secrets/model.go`.
 
-## M5: Demo GIF and generated usage docs
+## M4: Demo GIF and generated usage docs
 
 Record a demo with VHS (`.github/assets/demo.tape`, following the gh-repo-dashboard pattern) and embed it at the top of the README. If a fixture DSL for scripted TUI sessions is adopted, generate `docs/USAGE.md` from the same fixtures so the docs cannot go stale.
 

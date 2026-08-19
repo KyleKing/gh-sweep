@@ -124,7 +124,7 @@ Four layers:
 - teatest (`internal/tui/teatest_internal_test.go`): boots the full program against a canned fake GitHub transport and drives navigation end to end
 - Safety: the runtime mutation guard in `transport.go` plus the static `scripts/check-test-safety.sh` scan
 
-Coverage targets by tier: critical paths (`internal/github`, `internal/config`, `internal/models`) above 80%, UI components above 60%. Current actuals (total ~50%): models 100%, tui 87%, github 77%, config 79% meet or near their bars; `internal/cli` (~26%, `--list` render paths untested) and the branches component (~12%) are the known gaps, tracked as ROADMAP M3. The `test:coverage-min` task gates at 70% total but is not yet wired into `ci`.
+Coverage targets by tier: critical paths (`internal/github`, `internal/config`, `internal/models`) above 80%, UI components above 60%. Current actuals (total 71%): models 100%, github 81%, config 84% meet their bars; most TUI components clear 60%, with `analytics` (41%) and `orphans` (54%) the remaining gaps; `internal/cli` sits at 53%, below the UI bar, because each command's `Run` function is the thin part exercised only by an interactive session, not unit tests. `test:coverage-min` gates the `ci` task at 70% total.
 
 ## External Dependencies
 
