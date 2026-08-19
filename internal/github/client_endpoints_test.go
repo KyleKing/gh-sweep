@@ -73,6 +73,18 @@ func endpointFake() roundTripFunc {
 				req,
 				`{"secrets":[{"name":"CODECOV_TOKEN","created_at":"a","updated_at":"b"}]}`,
 			), nil
+		case method == http.MethodGet && path == "/repos/acme/widgets/pages":
+			return okJSON(
+				req,
+				`{"cname":"docs.example.com","html_url":"https://docs.example.com",
+				 "https_enforced":true,"status":"built","protected_domain_state":"verified"}`,
+			), nil
+		case method == http.MethodGet && path == "/repos/acme/nopages/pages":
+			return notFoundJSON(req), nil
+		case method == http.MethodGet && path == "/repos/acme/widgets/contents/CNAME":
+			return okJSON(req, `{"content":"ZG9jcy5leGFtcGxlLmNvbQo=","encoding":"base64"}`), nil
+		case method == http.MethodGet && path == "/repos/acme/nopages/contents/CNAME":
+			return notFoundJSON(req), nil
 		case method == http.MethodGet && path == "/repos/acme/widgets/branches/main/protection":
 			return okJSON(req, `{
 				"required_pull_request_reviews":{"required_approving_review_count":2,"require_code_owner_reviews":true},
@@ -346,6 +358,54 @@ func TestGetBranchProtectionMissing(t *testing.T) {
 	_, err := newEndpointClient(t).GetBranchProtection("acme", "unprotected", "main")
 	if !errors.Is(err, ErrBranchNotProtected) {
 		t.Fatalf("GetBranchProtection() error = %v, want ErrBranchNotProtected", err)
+	}
+}
+
+func TestGetPagesInfo(t *testing.T) {
+	t.Parallel()
+
+	client := newEndpointClient(t)
+
+	info, err := client.GetPagesInfo("acme", "widgets")
+	if err != nil {
+		t.Fatalf("GetPagesInfo() error = %v", err)
+	}
+
+	if info.CNAME != "docs.example.com" || !info.HTTPSEnforced || !info.DomainVerified {
+		t.Errorf("info = %+v", info)
+	}
+
+	info, err = client.GetPagesInfo("acme", "nopages")
+	if err != nil {
+		t.Fatalf("GetPagesInfo() error = %v", err)
+	}
+
+	if info != nil {
+		t.Errorf("expected nil info for a repo without Pages, got %+v", info)
+	}
+}
+
+func TestGetCNAMEFile(t *testing.T) {
+	t.Parallel()
+
+	client := newEndpointClient(t)
+
+	cname, err := client.GetCNAMEFile("acme", "widgets")
+	if err != nil {
+		t.Fatalf("GetCNAMEFile() error = %v", err)
+	}
+
+	if cname != "docs.example.com" {
+		t.Errorf("cname = %q, want docs.example.com", cname)
+	}
+
+	cname, err = client.GetCNAMEFile("acme", "nopages")
+	if err != nil {
+		t.Fatalf("GetCNAMEFile() error = %v", err)
+	}
+
+	if cname != "" {
+		t.Errorf("cname = %q, want empty for a repo without a CNAME file", cname)
 	}
 }
 

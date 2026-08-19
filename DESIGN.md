@@ -4,7 +4,7 @@ Project-specific architecture, design decisions, and domain context for gh-sweep
 
 ## Overview
 
-Bubble Tea TUI plus Cobra CLI for sweeping GitHub repositories: branch cleanup, protection drift, unresolved review threads, Actions performance, and a set of read-only audit views. The bare `gh-sweep` command opens a home menu with 13 views; each subcommand (`branches`, `comments`, `protection`, `gha-perf`, `orphans`, `watching`, `policy`) opens its view directly or prints a table with `--list`.
+Bubble Tea TUI plus Cobra CLI for sweeping GitHub repositories: branch cleanup, protection drift, unresolved review threads, Actions performance, and a set of read-only audit views. The bare `gh-sweep` command opens a home menu with 13 views; each subcommand (`branches`, `comments`, `protection`, `gha-perf`, `orphans`, `watching`, `policy`) opens its view directly or prints a table with `--list`. `pages` is CLI-only (no TUI view): it always prints a table, JSON, or markdown report.
 
 - Framework: Bubble Tea v2 (`charm.land/bubbletea/v2`) with lipgloss/v2
 - Theme: Catppuccin Latte/Macchiato via a hand-rolled semantic role palette
@@ -18,11 +18,13 @@ Bubble Tea TUI plus Cobra CLI for sweeping GitHub repositories: branch cleanup, 
 │   ├── cache/             # In-memory TTL cache + JSON gha-perf run cache
 │   ├── cli/               # Cobra commands (root launches the TUI)
 │   ├── config/            # YAML config loading and defaults
+│   ├── dns/               # DNS resolution seam for the Pages domain audit
 │   ├── git/               # Local git helpers
 │   ├── github/            # REST/GraphQL client, per-domain API files,
 │   │   └── transport.go   #   test transport seam and mutation guard
 │   ├── models/            # Shared data structures
 │   ├── orphans/           # Orphan detection (scanner, detector, types)
+│   ├── pages/             # Pages CNAME vs. DNS audit (scanner, detector, types)
 │   ├── policy/            # Declared-policy diff/apply engine (settings,
 │   │                      #   security, releases, branch protection)
 │   └── tui/

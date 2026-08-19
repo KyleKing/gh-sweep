@@ -21,6 +21,7 @@ type Config struct {
 	Comments     CommentConfig `yaml:"comments"`
 	GHAPerf      GHAPerfConfig `yaml:"gha_perf"`
 	Orphans      OrphansConfig `yaml:"orphans"`
+	Pages        PagesConfig   `yaml:"pages"`
 	UI           UIConfig      `yaml:"ui"`
 }
 
@@ -68,6 +69,14 @@ type OrphansConfig struct {
 	StaleDaysThreshold int      `yaml:"stale_days_threshold"`
 	ExcludePatterns    []string `yaml:"exclude_patterns"`
 	DefaultConcurrency int      `yaml:"default_concurrency"`
+}
+
+// PagesConfig represents GitHub Pages domain audit settings.
+type PagesConfig struct {
+	// Domains reverse-checks these DNS-configured subdomains against the
+	// scanned repos' Pages configuration: each should have a live Pages
+	// site backing it.
+	Domains []string `yaml:"domains"`
 }
 
 // UIConfig represents UI preferences.

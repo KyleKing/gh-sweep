@@ -99,6 +99,13 @@ orphans:
   # Number of repositories scanned concurrently
   default_concurrency: 5
 
+# GitHub Pages domain audit settings
+pages:
+  # DNS-configured subdomains to reverse-check: each should have a live
+  # Pages site backing it
+  domains:
+    - docs.example.com
+
 # UI preferences
 ui:
   # Color scheme: auto, light, dark

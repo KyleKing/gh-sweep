@@ -116,6 +116,31 @@ gh sweep orphans --org my-org --cleanup --dry-run
 
 Always run `--cleanup --dry-run` before `--cleanup`.
 
+## pages
+
+Cross-check GitHub Pages custom domains against live DNS, in both directions:
+repos whose domain no longer resolves to GitHub Pages, repos where DNS still
+points at GitHub Pages while Pages itself is disabled (a subdomain-takeover
+risk), and repos with an unverified custom domain. Set the `pages.domains`
+[config key](./configuration.md) to reverse-check DNS-configured subdomains
+that should have a live Pages site behind them.
+
+A domain proxied through Cloudflare or another CDN resolves to the proxy's
+IPs rather than GitHub's, so the audit can't see past the proxy and reports a
+false "dangling" finding for it; verify those by hand.
+
+```bash
+gh sweep pages --org my-org
+gh sweep pages --namespace my-user --format json
+```
+
+| Flag | Effect |
+|------|--------|
+| `--org` | Organization to scan |
+| `--namespace` | Namespace, org or user, to scan |
+| `-o`, `--output` | Output file path |
+| `--format` | `table`, `json`, or `markdown`, default `table` |
+
 ## policy
 
 Diff and sync repo settings, security & analysis, release immutability, and
