@@ -11,6 +11,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/KyleKing/gh-sweep/internal/github"
+	"github.com/KyleKing/gh-sweep/internal/tui/scroll"
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
@@ -139,8 +140,6 @@ func (m Model) loadSecrets() tea.Msg {
 }
 
 // Update handles messages.
-//
-//nolint:unparam // matches every TUI component's Update(Model, tea.Cmd) shape
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -239,15 +238,15 @@ func (m Model) View() string {
 		return fmt.Sprintf("Error: %v\n", m.err)
 	}
 
-	var b strings.Builder
+	var header strings.Builder
 
 	// Header
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(theme.Current().Primary)
 
-	b.WriteString(titleStyle.Render("🔐 Secrets Audit (Read-Only)"))
-	b.WriteString("\n\n")
+	header.WriteString(titleStyle.Render("🔐 Secrets Audit (Read-Only)"))
+	header.WriteString("\n\n")
 
 	// View mode tabs
 	activeTab := lipgloss.NewStyle().
@@ -258,44 +257,80 @@ func (m Model) View() string {
 		Foreground(theme.Current().Muted)
 
 	if m.viewMode == viewModeOrg {
-		b.WriteString(activeTab.Render("[1] Organization"))
+		header.WriteString(activeTab.Render("[1] Organization"))
 	} else {
-		b.WriteString(inactiveTab.Render("[1] Organization"))
+		header.WriteString(inactiveTab.Render("[1] Organization"))
 	}
-	b.WriteString("  ")
+	header.WriteString("  ")
 	if m.viewMode == viewModeRepo {
-		b.WriteString(activeTab.Render("[2] Repository"))
+		header.WriteString(activeTab.Render("[2] Repository"))
 	} else {
-		b.WriteString(inactiveTab.Render("[2] Repository"))
+		header.WriteString(inactiveTab.Render("[2] Repository"))
 	}
-	b.WriteString("  ")
+	header.WriteString("  ")
 	if m.viewMode == viewModeUnused {
-		b.WriteString(activeTab.Render("[3] Unused"))
+		header.WriteString(activeTab.Render("[3] Unused"))
 	} else {
-		b.WriteString(inactiveTab.Render("[3] Unused"))
+		header.WriteString(inactiveTab.Render("[3] Unused"))
 	}
-	b.WriteString("\n\n")
+	header.WriteString("\n\n")
 
 	if m.showHelp {
-		return renderHelp(&b)
+		return renderHelp(&header)
 	}
 
-	// Content based on view mode
-	switch m.viewMode {
-	case viewModeOrg:
-		b.WriteString(m.renderOrgSecrets())
-	case viewModeRepo:
-		b.WriteString(m.renderRepoSecrets())
-	case viewModeUnused:
-		b.WriteString(m.renderUnusedSecrets())
-	}
-
-	// Help
-	b.WriteString("\n")
+	var footer strings.Builder
+	footer.WriteString("\n")
 	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
-	b.WriteString(helpStyle.Render("↑/↓: navigate | 1/2/3: switch view | ?: help | q: quit"))
+	footer.WriteString(helpStyle.Render("↑/↓: navigate | 1/2/3: switch view | ?: help | q: quit"))
 
-	return b.String()
+	preamble, lines, cursorLine := m.currentContent()
+	header.WriteString(preamble)
+
+	headerLines := strings.Count(header.String(), "\n")
+	footerLines := strings.Count(footer.String(), "\n")
+	available := m.height - headerLines - footerLines
+
+	renderSecretList(&header, lines, cursorLine, available)
+	header.WriteString(footer.String())
+
+	return header.String()
+}
+
+// currentContent returns the header text above the list for the active view
+// mode, the list rendered as one line per row, and the row index the cursor
+// is on among those lines.
+func (m Model) currentContent() (string, []string, int) {
+	switch m.viewMode {
+	case viewModeRepo:
+		return m.repoSecretsContent()
+	case viewModeUnused:
+		return m.unusedSecretsContent()
+	default:
+		return m.orgSecretsContent()
+	}
+}
+
+// renderSecretList windows lines to the visible range around cursorLine,
+// adding "more above"/"more below" hints when the list overflows available.
+func renderSecretList(b *strings.Builder, lines []string, cursorLine, available int) {
+	if len(lines) == 0 {
+		return
+	}
+
+	start, end := scroll.Window(len(lines), cursorLine, available)
+
+	scrollHintStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
+	if start > 0 {
+		fmt.Fprintf(b, "%s\n", scrollHintStyle.Render(fmt.Sprintf("↑ %d more above", start)))
+	}
+
+	b.WriteString(strings.Join(lines[start:end], "\n"))
+	b.WriteString("\n")
+
+	if end < len(lines) {
+		fmt.Fprintf(b, "%s\n", scrollHintStyle.Render(fmt.Sprintf("↓ %d more below", len(lines)-end)))
+	}
 }
 
 func renderHelp(b *strings.Builder) string {
@@ -321,21 +356,27 @@ func renderHelp(b *strings.Builder) string {
 	return b.String()
 }
 
-func (m Model) renderOrgSecrets() string {
-	var b strings.Builder
+// orgSecretsContent renders each org secret, and its "Updated" line, as its
+// own two lines so the caller can window by line rather than by item.
+func (m Model) orgSecretsContent() (string, []string, int) {
+	var preamble strings.Builder
 
-	fmt.Fprintf(&b, "🏢 Organization Secrets: %s\n\n", m.org)
+	fmt.Fprintf(&preamble, "🏢 Organization Secrets: %s\n\n", m.org)
 
 	if len(m.orgSecrets) == 0 {
-		b.WriteString("No organization secrets found.\n")
-		return b.String()
+		preamble.WriteString("No organization secrets found.\n")
+		return preamble.String(), nil, 0
 	}
 
-	fmt.Fprintf(&b, "Total: %d secrets\n\n", len(m.orgSecrets))
+	fmt.Fprintf(&preamble, "Total: %d secrets\n\n", len(m.orgSecrets))
+
+	var lines []string
+
+	cursorLine := 0
 
 	for i, secret := range m.orgSecrets {
-		if i >= m.height-10 {
-			break
+		if i == m.cursor {
+			cursorLine = len(lines)
 		}
 
 		cursor := " "
@@ -355,24 +396,31 @@ func (m Model) renderOrgSecrets() string {
 			line += fmt.Sprintf("   Updated: %s\n", secret.UpdatedAt)
 		}
 
-		b.WriteString(secretStyle.Render(line))
-		b.WriteString("\n")
+		lines = append(lines, strings.Split(secretStyle.Render(line), "\n")...)
 	}
 
-	return b.String()
+	return preamble.String(), lines, cursorLine
 }
 
-func (m Model) renderRepoSecrets() string {
-	var b strings.Builder
+func (m Model) repoSecretsContent() (string, []string, int) {
+	var preamble strings.Builder
 
-	b.WriteString("📦 Repository Secrets\n\n")
+	preamble.WriteString("📦 Repository Secrets\n\n")
 
 	if len(m.repoSecrets) == 0 {
-		b.WriteString("No repository secrets found.\n")
-		return b.String()
+		preamble.WriteString("No repository secrets found.\n")
+		return preamble.String(), nil, 0
 	}
 
+	var lines []string
+
+	cursorLine := 0
+
 	for i, repo := range m.repos {
+		if i == m.cursor {
+			cursorLine = len(lines)
+		}
+
 		cursor := " "
 		if m.cursor == i {
 			cursor = ">"
@@ -398,26 +446,33 @@ func (m Model) renderRepoSecrets() string {
 		}
 		line += lineSb288.String()
 
-		b.WriteString(repoStyle.Render(line))
-		b.WriteString("\n")
+		lines = append(lines, strings.Split(repoStyle.Render(line), "\n")...)
 	}
 
-	return b.String()
+	return preamble.String(), lines, cursorLine
 }
 
-func (m Model) renderUnusedSecrets() string {
-	var b strings.Builder
+func (m Model) unusedSecretsContent() (string, []string, int) {
+	var preamble strings.Builder
 
-	b.WriteString("⚠️  Potentially Unused Secrets\n\n")
-	b.WriteString("No ${{ secrets.NAME }} reference found in any scanned repo's workflow files.\n\n")
+	preamble.WriteString("⚠️  Potentially Unused Secrets\n\n")
+	preamble.WriteString("No ${{ secrets.NAME }} reference found in any scanned repo's workflow files.\n\n")
 
 	if len(m.unusedSecrets) == 0 {
-		b.WriteString("✅ All secrets appear to be in use.\n")
+		preamble.WriteString("✅ All secrets appear to be in use.\n")
 
-		return b.String()
+		return preamble.String(), nil, 0
 	}
 
+	var lines []string
+
+	cursorLine := 0
+
 	for i, secret := range m.unusedSecrets {
+		if i == m.cursor {
+			cursorLine = len(lines)
+		}
+
 		cursor := " "
 		if m.cursor == i {
 			cursor = ">"
@@ -433,8 +488,8 @@ func (m Model) renderUnusedSecrets() string {
 			line = fmt.Sprintf("%s %s (%s, %s)\n", cursor, secret.Name, secret.Scope, secret.Repository)
 		}
 
-		b.WriteString(secretStyle.Render(line))
+		lines = append(lines, strings.Split(secretStyle.Render(line), "\n")...)
 	}
 
-	return b.String()
+	return preamble.String(), lines, cursorLine
 }

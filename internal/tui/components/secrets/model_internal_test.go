@@ -2,6 +2,7 @@ package secrets
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -11,6 +12,53 @@ import (
 )
 
 var errForbidden = errors.New("forbidden")
+
+func press(m Model, key string) (Model, tea.Cmd) {
+	return m.Update(tea.KeyPressMsg{Code: rune(key[0]), Text: key})
+}
+
+func manyOrgSecretsFixture(count int) []github.Secret {
+	secrets := make([]github.Secret, count)
+	for i := range secrets {
+		secrets[i] = github.Secret{Name: fmt.Sprintf("secret-%02d", i)}
+	}
+
+	return secrets
+}
+
+func TestOrgSecretsListScrollsWhenTallerThanViewport(t *testing.T) {
+	t.Parallel()
+
+	m := NewModel("acme", nil)
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 120, Height: 15})
+	m, _ = m.Update(secretsLoadedMsg{
+		orgSecrets:  manyOrgSecretsFixture(50),
+		repoSecrets: make(map[string][]github.Secret),
+	})
+
+	top := m.View()
+	if !strings.Contains(top, "secret-00") {
+		t.Errorf("top-of-list view missing first item, got %q", top)
+	}
+	if strings.Contains(top, "secret-49") {
+		t.Errorf("top-of-list view should not show the last item yet, got %q", top)
+	}
+	if !strings.Contains(top, "more below") {
+		t.Errorf("top-of-list view missing a below-fold hint, got %q", top)
+	}
+
+	for range 40 {
+		m, _ = press(m, "down")
+	}
+
+	bottom := m.View()
+	if !strings.Contains(bottom, "secret-40") {
+		t.Errorf("scrolled view missing the cursor row, got %q", bottom)
+	}
+	if !strings.Contains(bottom, "more above") {
+		t.Errorf("scrolled view missing an above-fold hint, got %q", bottom)
+	}
+}
 
 func loadedSecretsModel() Model {
 	m := NewModel("acme", []string{"acme/widgets"})
