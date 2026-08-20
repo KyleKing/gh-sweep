@@ -3,6 +3,7 @@ package branches
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os/exec"
@@ -506,4 +507,48 @@ type roundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req)
+}
+
+func manyBranchesFixture(count int) []github.BranchStatus {
+	branches := make([]github.BranchStatus, count)
+	for i := range branches {
+		branches[i] = github.BranchStatus{Branch: github.Branch{Name: fmt.Sprintf("branch-%02d", i)}}
+	}
+
+	return branches
+}
+
+func press(m Model, key string) (Model, tea.Cmd) {
+	return m.handleListKeys(tea.KeyPressMsg{Code: rune(key[0]), Text: key})
+}
+
+func TestListScrollsWhenTallerThanViewport(t *testing.T) {
+	t.Parallel()
+
+	m := NewModel("acme/widgets", "")
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 120, Height: 15})
+	m, _ = m.Update(branchesLoadedMsg{branches: manyBranchesFixture(50)})
+
+	top := m.View()
+	if !strings.Contains(top, "branch-00") {
+		t.Errorf("top-of-list view missing first item, got %q", top)
+	}
+	if strings.Contains(top, "branch-49") {
+		t.Errorf("top-of-list view should not show the last item yet, got %q", top)
+	}
+	if !strings.Contains(top, "more below") {
+		t.Errorf("top-of-list view missing a below-fold hint, got %q", top)
+	}
+
+	for range 40 {
+		m, _ = press(m, "down")
+	}
+
+	bottom := m.View()
+	if !strings.Contains(bottom, "branch-40") {
+		t.Errorf("scrolled view missing the cursor row, got %q", bottom)
+	}
+	if !strings.Contains(bottom, "more above") {
+		t.Errorf("scrolled view missing an above-fold hint, got %q", bottom)
+	}
 }

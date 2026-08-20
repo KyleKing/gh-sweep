@@ -14,6 +14,7 @@ import (
 
 	"github.com/KyleKing/gh-sweep/internal/git"
 	"github.com/KyleKing/gh-sweep/internal/github"
+	"github.com/KyleKing/gh-sweep/internal/tui/scroll"
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
@@ -413,54 +414,52 @@ func (m Model) View() string {
 		return fmt.Sprintf("Error: %v\n\nPress 'r' to retry or 'q' to quit\n", m.err)
 	}
 
-	var b strings.Builder
+	var header strings.Builder
 
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(theme.Current().Primary)
 
-	b.WriteString(titleStyle.Render("Branches for " + m.repo))
-	b.WriteString("\n\n")
+	header.WriteString(titleStyle.Render("Branches for " + m.repo))
+	header.WriteString("\n\n")
 
 	if m.confirmDelete {
-		return m.renderConfirmDialog(&b)
+		return m.renderConfirmDialog(&header)
 	}
 
 	if m.showHelp {
-		return renderHelp(&b)
+		return renderHelp(&header)
 	}
 
 	if m.searching || m.searchQuery != "" {
 		searchStyle := lipgloss.NewStyle().Foreground(theme.Current().Warning)
-		fmt.Fprintf(&b, "%s %s\n\n", searchStyle.Render("Search:"), m.searchQuery)
+		fmt.Fprintf(&header, "%s %s\n\n", searchStyle.Render("Search:"), m.searchQuery)
 	}
 
-	visible := m.getVisibleBranches()
-
-	if len(visible) == 0 {
-		b.WriteString("No branches found.\n")
-	} else {
-		for i, branch := range visible {
-			m.renderBranchLine(&b, i, branch)
-		}
-	}
-
+	var footer strings.Builder
 	if m.statusMsg != "" {
-		b.WriteString("\n")
+		footer.WriteString("\n")
 		statusStyle := lipgloss.NewStyle().Foreground(theme.Current().Primary)
-		b.WriteString(statusStyle.Render(m.statusMsg))
-		b.WriteString("\n")
+		footer.WriteString(statusStyle.Render(m.statusMsg))
+		footer.WriteString("\n")
 	}
-
-	b.WriteString("\n")
+	footer.WriteString("\n")
 	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
-	b.WriteString(
+	footer.WriteString(
 		helpStyle.Render(
 			"j/k: navigate | space: select | a/n/I: all/none/invert | d: delete | r: refresh | ?: help | q: quit",
 		),
 	)
 
-	return b.String()
+	headerLines := strings.Count(header.String(), "\n")
+	footerLines := strings.Count(footer.String(), "\n")
+	available := m.height - headerLines - footerLines
+
+	visible := m.getVisibleBranches()
+	m.renderBranchList(&header, visible, available)
+	header.WriteString(footer.String())
+
+	return header.String()
 }
 
 func renderHelp(b *strings.Builder) string {
@@ -490,7 +489,33 @@ func renderHelp(b *strings.Builder) string {
 	return b.String()
 }
 
-func (m Model) renderBranchLine(b *strings.Builder, i int, branch github.BranchStatus) {
+func (m Model) renderBranchList(b *strings.Builder, visible []github.BranchStatus, available int) {
+	if len(visible) == 0 {
+		b.WriteString("No branches found.\n")
+		return
+	}
+
+	lines := make([]string, len(visible))
+	for i, branch := range visible {
+		lines[i] = m.renderBranchLine(i, branch)
+	}
+
+	start, end := scroll.Window(len(lines), m.cursor, available)
+
+	scrollHintStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
+	if start > 0 {
+		fmt.Fprintf(b, "%s\n", scrollHintStyle.Render(fmt.Sprintf("↑ %d more above", start)))
+	}
+
+	b.WriteString(strings.Join(lines[start:end], "\n"))
+	b.WriteString("\n")
+
+	if end < len(lines) {
+		fmt.Fprintf(b, "%s\n", scrollHintStyle.Render(fmt.Sprintf("↓ %d more below", len(lines)-end)))
+	}
+}
+
+func (m Model) renderBranchLine(i int, branch github.BranchStatus) string {
 	cursor := " "
 	if m.cursor == i {
 		cursor = ">"
@@ -510,6 +535,8 @@ func (m Model) renderBranchLine(b *strings.Builder, i int, branch github.BranchS
 		branch.Behind,
 	)
 
+	var b strings.Builder
+
 	if m.cursor == i {
 		selectedStyle := lipgloss.NewStyle().
 			Bold(true).
@@ -521,7 +548,8 @@ func (m Model) renderBranchLine(b *strings.Builder, i int, branch github.BranchS
 
 	mutedStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
 	b.WriteString(mutedStyle.Render(branchAnnotations(branch)))
-	b.WriteString("\n")
+
+	return b.String()
 }
 
 func branchAnnotations(branch github.BranchStatus) string {
