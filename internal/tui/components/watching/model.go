@@ -13,6 +13,7 @@ import (
 	"github.com/cli/browser"
 
 	"github.com/KyleKing/gh-sweep/internal/github"
+	"github.com/KyleKing/gh-sweep/internal/tui/scroll"
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
@@ -161,8 +162,6 @@ func (m Model) setState(fullName string, state github.WatchState) {
 }
 
 // Update handles messages.
-//
-//nolint:unparam // matches every TUI component's Update(Model, tea.Cmd) shape
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -503,30 +502,35 @@ func (m Model) View() string {
 		fmt.Fprintf(&b, "%s %s\n\n", searchStyle.Render("Search:"), m.searchQuery)
 	}
 
-	filtered := m.getFilteredRepos()
-	m.renderRepoList(&b, filtered)
-
+	var footer strings.Builder
 	if m.statusMsg != "" {
-		b.WriteString("\n")
+		footer.WriteString("\n")
 		statusStyle := lipgloss.NewStyle().Foreground(theme.Current().Primary)
-		b.WriteString(statusStyle.Render(m.statusMsg))
-		b.WriteString("\n")
+		footer.WriteString(statusStyle.Render(m.statusMsg))
+		footer.WriteString("\n")
 	}
-
-	b.WriteString("\n")
+	footer.WriteString("\n")
 	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
-	b.WriteString(
+	footer.WriteString(
 		helpStyle.Render(
 			"j/k: navigate | space: select | I: invert selection | w: watch all activity | u: unwatch (default) | " +
 				"i: ignore | o: open on github.com | 1/2/3/4: view mode | ?: help | esc: back",
 		),
 	)
-	b.WriteString("\n")
-	b.WriteString(
+	footer.WriteString("\n")
+	footer.WriteString(
 		helpStyle.Render(
 			"GitHub's API can't see or set \"Custom\" per-notification-type settings; manage those on github.com.",
 		),
 	)
+
+	headerLines := strings.Count(b.String(), "\n")
+	footerLines := strings.Count(footer.String(), "\n")
+	available := m.height - headerLines - footerLines
+
+	filtered := m.getFilteredRepos()
+	m.renderRepoList(&b, filtered, available)
+	b.WriteString(footer.String())
 
 	return b.String()
 }
@@ -557,41 +561,67 @@ func (m Model) renderTabs(b *strings.Builder) {
 	b.WriteString("\n\n")
 }
 
-func (m Model) renderRepoList(b *strings.Builder, filtered []github.RepoWatchInfo) {
+func (m Model) renderRepoList(b *strings.Builder, filtered []github.RepoWatchInfo, available int) {
 	if len(filtered) == 0 {
 		b.WriteString("No repositories in this view.\n")
 		return
 	}
 
-	for i := range filtered {
-		repo := &filtered[i]
+	lines := m.buildRepoLines(filtered)
 
-		cursor := " "
-		if m.cursor == i {
-			cursor = ">"
-		}
+	start, end := scroll.Window(len(lines), m.cursor, available)
 
-		selectMark := " "
-		if m.selected[i] {
-			selectMark = "*"
-		}
-
-		status, statusStyle := repoStatus(repo.State)
-
-		lineStyle := lipgloss.NewStyle()
-		if m.cursor == i {
-			lineStyle = lineStyle.Bold(true).Foreground(theme.Current().Warning)
-		}
-
-		line := fmt.Sprintf("%s%s %s ", cursor, selectMark, repo.FullName)
-		b.WriteString(lineStyle.Render(line))
-		b.WriteString(statusStyle.Render(fmt.Sprintf("[%s]", status)))
-
-		metaStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
-		b.WriteString(" ")
-		b.WriteString(metaStyle.Render(repoMetadata(*repo)))
-		b.WriteString("\n")
+	scrollHintStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
+	if start > 0 {
+		fmt.Fprintf(b, "%s\n", scrollHintStyle.Render(fmt.Sprintf("↑ %d more above", start)))
 	}
+
+	b.WriteString(strings.Join(lines[start:end], "\n"))
+	b.WriteString("\n")
+
+	if end < len(lines) {
+		fmt.Fprintf(b, "%s\n", scrollHintStyle.Render(fmt.Sprintf("↓ %d more below", len(lines)-end)))
+	}
+}
+
+func (m Model) buildRepoLines(filtered []github.RepoWatchInfo) []string {
+	lines := make([]string, len(filtered))
+	for i := range filtered {
+		lines[i] = m.renderRepoLine(&filtered[i], i)
+	}
+
+	return lines
+}
+
+func (m Model) renderRepoLine(repo *github.RepoWatchInfo, i int) string {
+	cursor := " "
+	if m.cursor == i {
+		cursor = ">"
+	}
+
+	selectMark := " "
+	if m.selected[i] {
+		selectMark = "*"
+	}
+
+	status, statusStyle := repoStatus(repo.State)
+
+	lineStyle := lipgloss.NewStyle()
+	if m.cursor == i {
+		lineStyle = lineStyle.Bold(true).Foreground(theme.Current().Warning)
+	}
+
+	var b strings.Builder
+
+	line := fmt.Sprintf("%s%s %s ", cursor, selectMark, repo.FullName)
+	b.WriteString(lineStyle.Render(line))
+	b.WriteString(statusStyle.Render(fmt.Sprintf("[%s]", status)))
+
+	metaStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
+	b.WriteString(" ")
+	b.WriteString(metaStyle.Render(repoMetadata(*repo)))
+
+	return b.String()
 }
 
 func renderHelp(b *strings.Builder) string {

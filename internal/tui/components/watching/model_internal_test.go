@@ -2,6 +2,7 @@ package watching
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -198,6 +199,58 @@ func TestIgnoreResultUpdatesStatus(t *testing.T) {
 	m, _ = m.Update(tea.KeyPressMsg{Code: '3', Text: "3"})
 	if m.viewMode != "ignored" || !strings.Contains(m.View(), "acme/gadgets") {
 		t.Errorf("ignored view = %q", m.View())
+	}
+}
+
+func press(m Model, key string) (Model, tea.Cmd) {
+	return m.Update(tea.KeyPressMsg{Code: rune(key[0]), Text: key})
+}
+
+func manyReposFixture(count int) []github.RepoWatchInfo {
+	repos := make([]github.RepoWatchInfo, count)
+	for i := range repos {
+		repos[i] = github.RepoWatchInfo{
+			RepoBasic: github.RepoBasic{
+				Name:     fmt.Sprintf("repo-%02d", i),
+				FullName: fmt.Sprintf("acme/repo-%02d", i),
+				Owner:    "acme",
+			},
+			State: github.WatchStateSubscribed,
+		}
+	}
+
+	return repos
+}
+
+func TestListScrollsWhenTallerThanViewport(t *testing.T) {
+	t.Parallel()
+
+	m := NewModel()
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 120, Height: 15})
+	m, _ = m.Update(dataLoadedMsg{username: "tester", repos: manyReposFixture(50)})
+	m, _ = m.Update(tea.KeyPressMsg{Code: '2', Text: "2"}) // watched view: all fixture repos
+
+	top := m.View()
+	if !strings.Contains(top, "repo-00") {
+		t.Errorf("top-of-list view missing first item, got %q", top)
+	}
+	if strings.Contains(top, "repo-49") {
+		t.Errorf("top-of-list view should not show the last item yet, got %q", top)
+	}
+	if !strings.Contains(top, "more below") {
+		t.Errorf("top-of-list view missing a below-fold hint, got %q", top)
+	}
+
+	for range 40 {
+		m, _ = press(m, "down")
+	}
+
+	bottom := m.View()
+	if !strings.Contains(bottom, "repo-40") {
+		t.Errorf("scrolled view missing the cursor row, got %q", bottom)
+	}
+	if !strings.Contains(bottom, "more above") {
+		t.Errorf("scrolled view missing an above-fold hint, got %q", bottom)
 	}
 }
 
