@@ -2,6 +2,7 @@ package comments
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -141,6 +142,54 @@ func TestFormatAge(t *testing.T) {
 		if got := formatAge(time.Now().Add(-tt.offset)); got != tt.want {
 			t.Errorf("formatAge(-%v) = %q, want %q", tt.offset, got, tt.want)
 		}
+	}
+}
+
+func manyThreadsFixture(count int) []github.ReviewThread {
+	threads := make([]github.ReviewThread, count)
+	for i := range threads {
+		threads[i] = github.ReviewThread{
+			Repository: "acme/widgets",
+			PRNumber:   1,
+			PRTitle:    "Add login flow",
+			Path:       fmt.Sprintf("path-%02d.go", i),
+			Comments: []github.ReviewComment{
+				{Author: "alice", Body: "Extract a helper here.", CreatedAt: time.Now().Add(-3 * time.Hour)},
+			},
+		}
+	}
+
+	return threads
+}
+
+func TestListScrollsWhenTallerThanViewport(t *testing.T) {
+	t.Parallel()
+
+	m := NewModel("acme/widgets")
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 120, Height: 15})
+	m, _ = m.Update(threadsLoadedMsg{threads: manyThreadsFixture(50)})
+
+	top := m.View()
+	if !strings.Contains(top, "path-00.go") {
+		t.Errorf("top-of-list view missing first item, got %q", top)
+	}
+	if strings.Contains(top, "path-49.go") {
+		t.Errorf("top-of-list view should not show the last item yet, got %q", top)
+	}
+	if !strings.Contains(top, "more below") {
+		t.Errorf("top-of-list view missing a below-fold hint, got %q", top)
+	}
+
+	for range 40 {
+		m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
+	}
+
+	bottom := m.View()
+	if !strings.Contains(bottom, "path-40.go") {
+		t.Errorf("scrolled view missing the cursor row, got %q", bottom)
+	}
+	if !strings.Contains(bottom, "more above") {
+		t.Errorf("scrolled view missing an above-fold hint, got %q", bottom)
 	}
 }
 

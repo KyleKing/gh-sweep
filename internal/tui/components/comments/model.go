@@ -13,6 +13,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/KyleKing/gh-sweep/internal/github"
+	"github.com/KyleKing/gh-sweep/internal/tui/scroll"
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
@@ -200,36 +201,45 @@ func (m Model) View() string {
 		return fmt.Sprintf("Error: %v\n", m.err)
 	}
 
-	var b strings.Builder
+	var header strings.Builder
 
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(theme.Current().Primary)
 
-	b.WriteString(titleStyle.Render("💬 PR Review Threads: " + m.repo))
-	b.WriteString("\n\n")
+	header.WriteString(titleStyle.Render("💬 PR Review Threads: " + m.repo))
+	header.WriteString("\n\n")
 
 	if m.showResolved {
-		b.WriteString("Showing: All threads\n")
+		header.WriteString("Showing: All threads\n")
 	} else {
-		b.WriteString("Showing: Unresolved only\n")
+		header.WriteString("Showing: Unresolved only\n")
 	}
-	fmt.Fprintf(&b, "Total: %d | Unresolved: %d\n\n", len(m.threads), len(m.unresolved))
+	fmt.Fprintf(&header, "Total: %d | Unresolved: %d\n\n", len(m.threads), len(m.unresolved))
 
 	if m.showHelp {
-		return renderHelp(&b)
+		return renderHelp(&header)
 	}
+
+	var footer strings.Builder
+	footer.WriteString("\n")
+	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
+	footer.WriteString(helpStyle.Render("↑/↓: navigate | r: toggle resolved | ?: help | q: quit"))
+
+	var b strings.Builder
+	b.WriteString(header.String())
 
 	visible := m.visibleThreads()
 	if len(visible) == 0 {
 		b.WriteString("No review threads found.\n")
 	} else {
-		m.renderThreads(&b, visible)
+		headerLines := strings.Count(header.String(), "\n")
+		footerLines := strings.Count(footer.String(), "\n")
+		available := m.height - headerLines - footerLines
+		m.renderThreads(&b, visible, available)
 	}
 
-	b.WriteString("\n")
-	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
-	b.WriteString(helpStyle.Render("↑/↓: navigate | r: toggle resolved | ?: help | q: quit"))
+	b.WriteString(footer.String())
 
 	return b.String()
 }
@@ -257,38 +267,64 @@ func renderHelp(b *strings.Builder) string {
 	return b.String()
 }
 
-func (m Model) renderThreads(b *strings.Builder, visible []github.ReviewThread) {
+func (m Model) renderThreads(b *strings.Builder, visible []github.ReviewThread, available int) {
+	lines, cursorLine := m.buildThreadLines(visible)
+
+	start, end := scroll.Window(len(lines), cursorLine, available)
+
+	scrollHintStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
+	if start > 0 {
+		fmt.Fprintf(b, "%s\n", scrollHintStyle.Render(fmt.Sprintf("↑ %d more above", start)))
+	}
+
+	b.WriteString(strings.Join(lines[start:end], "\n"))
+	b.WriteString("\n")
+
+	if end < len(lines) {
+		fmt.Fprintf(b, "%s\n", scrollHintStyle.Render(fmt.Sprintf("↓ %d more below", len(lines)-end)))
+	}
+}
+
+// buildThreadLines renders each thread, and its PR group header when the PR
+// changes, as one line each so the caller can window by line rather than by
+// item, returning the lines and the cursor row's index among them.
+func (m Model) buildThreadLines(visible []github.ReviewThread) ([]string, int) {
+	var lines []string
+
+	cursorLine := 0
+	lastPR := 0
 	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Secondary)
 
-	lastPR := 0
-	rendered := 0
 	for i, thread := range visible {
-		if rendered >= m.height-10 && m.height > 0 {
-			break
-		}
-
 		if thread.PRNumber != lastPR {
-			b.WriteString(
-				headerStyle.Render(fmt.Sprintf("PR #%d: %s", thread.PRNumber, thread.PRTitle)),
-			)
-			b.WriteString("\n")
+			lines = append(lines, headerStyle.Render(fmt.Sprintf("PR #%d: %s", thread.PRNumber, thread.PRTitle)))
 			lastPR = thread.PRNumber
 		}
 
-		cursor := " "
-		if m.cursor == i {
-			cursor = ">"
+		if i == m.cursor {
+			cursorLine = len(lines)
 		}
 
-		threadStyle := lipgloss.NewStyle()
-		if m.cursor == i {
-			threadStyle = threadStyle.Bold(true).Foreground(theme.Current().Warning)
-		}
-
-		b.WriteString(threadStyle.Render(renderThread(cursor, thread)))
-		b.WriteString("\n")
-		rendered++
+		lines = append(lines, m.renderThreadLines(thread, i)...)
 	}
+
+	return lines, cursorLine
+}
+
+func (m Model) renderThreadLines(thread github.ReviewThread, i int) []string {
+	cursor := " "
+	if m.cursor == i {
+		cursor = ">"
+	}
+
+	threadStyle := lipgloss.NewStyle()
+	if m.cursor == i {
+		threadStyle = threadStyle.Bold(true).Foreground(theme.Current().Warning)
+	}
+
+	rendered := threadStyle.Render(renderThread(cursor, thread))
+
+	return strings.Split(rendered, "\n")
 }
 
 func renderThread(cursor string, thread github.ReviewThread) string {
