@@ -12,6 +12,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/KyleKing/gh-sweep/internal/github"
+	"github.com/KyleKing/gh-sweep/internal/tui/scroll"
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
@@ -218,18 +219,18 @@ func (m Model) View() string {
 		return fmt.Sprintf("Error: %v\n", m.err)
 	}
 
-	var b strings.Builder
+	var header strings.Builder
 
 	// Header
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(theme.Current().Primary)
 
-	b.WriteString(titleStyle.Render("📦 Release Overview"))
-	b.WriteString("\n\n")
+	header.WriteString(titleStyle.Render("📦 Release Overview"))
+	header.WriteString("\n\n")
 
 	if m.showHelp {
-		return renderHelp(&b)
+		return renderHelp(&header)
 	}
 
 	// View mode tabs
@@ -241,40 +242,87 @@ func (m Model) View() string {
 		Foreground(theme.Current().Muted)
 
 	if m.viewMode == viewModeLatest {
-		b.WriteString(activeTab.Render("[1] Latest"))
+		header.WriteString(activeTab.Render("[1] Latest"))
 	} else {
-		b.WriteString(inactiveTab.Render("[1] Latest"))
+		header.WriteString(inactiveTab.Render("[1] Latest"))
 	}
-	b.WriteString("  ")
+	header.WriteString("  ")
 	if m.viewMode == viewModeAll {
-		b.WriteString(activeTab.Render("[2] All Releases"))
+		header.WriteString(activeTab.Render("[2] All Releases"))
 	} else {
-		b.WriteString(inactiveTab.Render("[2] All Releases"))
+		header.WriteString(inactiveTab.Render("[2] All Releases"))
 	}
-	b.WriteString("  ")
+	header.WriteString("  ")
 	if m.viewMode == viewModeOutdated {
-		b.WriteString(activeTab.Render("[3] Outdated"))
+		header.WriteString(activeTab.Render("[3] Outdated"))
 	} else {
-		b.WriteString(inactiveTab.Render("[3] Outdated"))
+		header.WriteString(inactiveTab.Render("[3] Outdated"))
 	}
-	b.WriteString("\n\n")
+	header.WriteString("\n\n")
 
-	// Content based on view mode
 	switch m.viewMode {
-	case viewModeLatest:
-		b.WriteString(m.renderLatest())
 	case viewModeAll:
-		b.WriteString(m.renderAll())
+		header.WriteString("📋 All Releases\n\n")
 	case viewModeOutdated:
-		b.WriteString(m.renderOutdated())
+		header.WriteString("⚠️  Outdated Releases (>90 days)\n\n")
+	default:
+		header.WriteString("📌 Latest Releases\n\n")
 	}
 
-	// Help
-	b.WriteString("\n")
+	var footer strings.Builder
+	footer.WriteString("\n")
 	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
-	b.WriteString(helpStyle.Render("↑/↓: navigate | 1/2/3: switch view | ?: help | q: quit"))
+	footer.WriteString(helpStyle.Render("↑/↓: navigate | 1/2/3: switch view | ?: help | q: quit"))
 
-	return b.String()
+	headerLines := strings.Count(header.String(), "\n")
+	footerLines := strings.Count(footer.String(), "\n")
+	available := m.height - headerLines - footerLines
+
+	var body strings.Builder
+
+	switch m.viewMode {
+	case viewModeAll:
+		lines, cursorLine := m.buildAllLines()
+		renderScrolledList(&body, lines, cursorLine, available)
+
+	case viewModeOutdated:
+		lines, cursorLine, outdatedCount := m.buildOutdatedLines()
+		if outdatedCount == 0 {
+			body.WriteString("✅ All repositories have recent releases!\n")
+		} else {
+			renderScrolledList(&body, lines, cursorLine, available)
+			fmt.Fprintf(&body, "\nFound %d repositories with outdated releases.\n", outdatedCount)
+		}
+
+	default:
+		lines, cursorLine := m.buildLatestLines()
+		renderScrolledList(&body, lines, cursorLine, available)
+	}
+
+	return header.String() + body.String() + footer.String()
+}
+
+// renderScrolledList windows lines to the available height, keeping
+// cursorLine visible, and prepends/appends a muted scroll hint when the
+// list overflows the viewport.
+func renderScrolledList(b *strings.Builder, lines []string, cursorLine, available int) {
+	if len(lines) == 0 {
+		return
+	}
+
+	start, end := scroll.Window(len(lines), cursorLine, available)
+
+	scrollHintStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
+	if start > 0 {
+		fmt.Fprintf(b, "%s\n", scrollHintStyle.Render(fmt.Sprintf("↑ %d more above", start)))
+	}
+
+	b.WriteString(strings.Join(lines[start:end], "\n"))
+	b.WriteString("\n")
+
+	if end < len(lines) {
+		fmt.Fprintf(b, "%s\n", scrollHintStyle.Render(fmt.Sprintf("↓ %d more below", len(lines)-end)))
+	}
 }
 
 func renderHelp(b *strings.Builder) string {
@@ -300,17 +348,23 @@ func renderHelp(b *strings.Builder) string {
 	return b.String()
 }
 
-func (m Model) renderLatest() string {
-	var b strings.Builder
-
-	b.WriteString("📌 Latest Releases\n\n")
-
+// buildLatestLines renders each repo's latest release as one or more lines,
+// returning the lines and the cursor row's index among them so the caller
+// can window by line rather than by item.
+func (m Model) buildLatestLines() ([]string, int) {
 	if len(m.latest) == 0 {
-		b.WriteString("No releases found.\n")
-		return b.String()
+		return []string{"No releases found."}, 0
 	}
 
+	var body strings.Builder
+
+	cursorLine := 0
+
 	for i, repo := range m.repos {
+		if i == m.cursor {
+			cursorLine = strings.Count(body.String(), "\n")
+		}
+
 		cursor := " "
 		if m.cursor == i {
 			cursor = ">"
@@ -325,7 +379,7 @@ func (m Model) renderLatest() string {
 
 		if release == nil {
 			line := fmt.Sprintf("%s %s: No releases\n", cursor, repo)
-			b.WriteString(releaseStyle.Render(line))
+			body.WriteString(releaseStyle.Render(line))
 
 			continue
 		}
@@ -347,19 +401,28 @@ func (m Model) renderLatest() string {
 		line += "\n"
 		line += fmt.Sprintf("   Author: %s\n", release.Author)
 
-		b.WriteString(releaseStyle.Render(line))
-		b.WriteString("\n")
+		body.WriteString(releaseStyle.Render(line))
+		body.WriteString("\n")
 	}
 
-	return b.String()
+	trimmed := strings.TrimSuffix(body.String(), "\n")
+
+	return strings.Split(trimmed, "\n"), cursorLine
 }
 
-func (m Model) renderAll() string {
-	var b strings.Builder
+// buildAllLines renders each repo's release history as one or more lines,
+// returning the lines and the cursor row's index among them so the caller
+// can window by line rather than by item.
+func (m Model) buildAllLines() ([]string, int) {
+	var body strings.Builder
 
-	b.WriteString("📋 All Releases\n\n")
+	cursorLine := 0
 
 	for i, repo := range m.repos {
+		if i == m.cursor {
+			cursorLine = strings.Count(body.String(), "\n")
+		}
+
 		cursor := " "
 		if m.cursor == i {
 			cursor = ">"
@@ -388,19 +451,28 @@ func (m Model) renderAll() string {
 		}
 		line += lineSb281.String()
 
-		b.WriteString(repoStyle.Render(line))
-		b.WriteString("\n")
+		body.WriteString(repoStyle.Render(line))
+		body.WriteString("\n")
 	}
 
-	return b.String()
+	if body.Len() == 0 {
+		return nil, 0
+	}
+
+	trimmed := strings.TrimSuffix(body.String(), "\n")
+
+	return strings.Split(trimmed, "\n"), cursorLine
 }
 
-func (m Model) renderOutdated() string {
-	var b strings.Builder
+// buildOutdatedLines renders each outdated repo as one or more lines,
+// returning the lines, the cursor row's index among them, and the count of
+// outdated repos found.
+func (m Model) buildOutdatedLines() ([]string, int, int) {
+	var body strings.Builder
 
-	b.WriteString("⚠️  Outdated Releases (>90 days)\n\n")
-
+	cursorLine := 0
 	outdatedCount := 0
+
 	for i, repo := range m.repos {
 		release := m.latest[repo]
 		if release == nil {
@@ -413,6 +485,11 @@ func (m Model) renderOutdated() string {
 		}
 
 		outdatedCount++
+
+		if i == m.cursor {
+			cursorLine = strings.Count(body.String(), "\n")
+		}
+
 		cursor := " "
 		if m.cursor == i {
 			cursor = ">"
@@ -431,15 +508,15 @@ func (m Model) renderOutdated() string {
 		line += warningStyle.Render(fmt.Sprintf("⚠️  %d days old", daysSince))
 		line += "\n"
 
-		b.WriteString(releaseStyle.Render(line))
-		b.WriteString("\n")
+		body.WriteString(releaseStyle.Render(line))
+		body.WriteString("\n")
 	}
 
-	if outdatedCount == 0 {
-		b.WriteString("✅ All repositories have recent releases!\n")
-	} else {
-		fmt.Fprintf(&b, "\nFound %d repositories with outdated releases.\n", outdatedCount)
+	if body.Len() == 0 {
+		return nil, 0, outdatedCount
 	}
 
-	return b.String()
+	trimmed := strings.TrimSuffix(body.String(), "\n")
+
+	return strings.Split(trimmed, "\n"), cursorLine, outdatedCount
 }
