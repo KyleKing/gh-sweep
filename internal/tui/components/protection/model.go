@@ -11,6 +11,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/KyleKing/gh-sweep/internal/github"
+	"github.com/KyleKing/gh-sweep/internal/tui/scroll"
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
@@ -185,26 +186,86 @@ func (m Model) View() string {
 		return fmt.Sprintf("Error: %v\n", m.err)
 	}
 
-	var b strings.Builder
+	var header strings.Builder
 
-	// Header
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(theme.Current().Primary)
 
-	b.WriteString(titleStyle.Render("🛡️  Branch Protection Rules"))
-	b.WriteString("\n\n")
+	header.WriteString(titleStyle.Render("Branch Protection Rules"))
+	header.WriteString("\n\n")
 
 	if m.baseline != "" {
-		fmt.Fprintf(&b, "Baseline: %s\n\n", m.baseline)
+		fmt.Fprintf(&header, "Baseline: %s\n\n", m.baseline)
 	}
 
 	if m.showHelp {
-		return renderHelp(&b)
+		return renderHelp(&header)
 	}
 
-	// Repository list with rules
+	var footer strings.Builder
+
+	if len(m.diffs) > 0 {
+		footer.WriteString("\nDifferences from baseline:\n\n")
+		for field, differences := range m.diffs {
+			footer.WriteString(field + ":\n")
+			for _, diff := range differences {
+				fmt.Fprintf(&footer, "  - %s\n", diff)
+			}
+		}
+	}
+
+	footer.WriteString("\n")
+	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
+	footer.WriteString(helpStyle.Render("↑/↓: navigate | ?: help | q: quit"))
+
+	headerLines := strings.Count(header.String(), "\n")
+	footerLines := strings.Count(footer.String(), "\n")
+	available := m.height - headerLines - footerLines
+
+	var b strings.Builder
+	b.WriteString(header.String())
+	m.renderRepoList(&b, available)
+	b.WriteString(footer.String())
+
+	return b.String()
+}
+
+func (m Model) renderRepoList(b *strings.Builder, available int) {
+	if len(m.repos) == 0 {
+		return
+	}
+
+	lines, cursorLine := m.buildRepoLines()
+
+	start, end := scroll.Window(len(lines), cursorLine, available)
+
+	scrollHintStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
+	if start > 0 {
+		fmt.Fprintf(b, "%s\n", scrollHintStyle.Render(fmt.Sprintf("↑ %d more above", start)))
+	}
+
+	b.WriteString(strings.Join(lines[start:end], "\n"))
+	b.WriteString("\n")
+
+	if end < len(lines) {
+		fmt.Fprintf(b, "%s\n", scrollHintStyle.Render(fmt.Sprintf("↓ %d more below", len(lines)-end)))
+	}
+}
+
+// buildRepoLines renders each repo's protection summary as one multi-line
+// block, tracking cursorLine as the index of the cursor's block within the
+// flattened lines.
+func (m Model) buildRepoLines() ([]string, int) {
+	var body strings.Builder
+
+	cursorLine := 0
+
 	for i, repo := range m.repos {
+		if i == m.cursor {
+			cursorLine = strings.Count(body.String(), "\n")
+		}
+
 		cursor := " "
 		if m.cursor == i {
 			cursor = ">"
@@ -212,7 +273,7 @@ func (m Model) View() string {
 
 		rule := m.rules[repo]
 		if rule == nil {
-			fmt.Fprintf(&b, "%s %s: No protection\n", cursor, repo)
+			fmt.Fprintf(&body, "%s %s: No protection\n", cursor, repo)
 			continue
 		}
 
@@ -230,27 +291,13 @@ func (m Model) View() string {
 		line += fmt.Sprintf("   Status Checks: %s\n",
 			strings.Join(rule.RequireStatusChecks, ", "))
 
-		b.WriteString(statusStyle.Render(line))
-		b.WriteString("\n")
+		body.WriteString(statusStyle.Render(line))
+		body.WriteString("\n")
 	}
 
-	// Differences
-	if len(m.diffs) > 0 {
-		b.WriteString("\n⚠️  Differences from baseline:\n\n")
-		for field, differences := range m.diffs {
-			b.WriteString(field + ":\n")
-			for _, diff := range differences {
-				fmt.Fprintf(&b, "  - %s\n", diff)
-			}
-		}
-	}
+	lines := strings.Split(strings.TrimSuffix(body.String(), "\n"), "\n")
 
-	// Help
-	b.WriteString("\n")
-	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
-	b.WriteString(helpStyle.Render("↑/↓: navigate | ?: help | q: quit"))
-
-	return b.String()
+	return lines, cursorLine
 }
 
 func renderHelp(b *strings.Builder) string {
