@@ -2,6 +2,7 @@ package webhooks
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -107,6 +108,46 @@ func TestHelpToggle(t *testing.T) {
 	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
 	if m.showHelp {
 		t.Error("expected showHelp false after esc")
+	}
+}
+
+func TestListScrollsWhenTallerThanViewport(t *testing.T) {
+	t.Parallel()
+
+	repos := make([]string, 0, 30)
+	webhooks := make(map[string][]github.Webhook, 30)
+
+	for i := range 30 {
+		repo := fmt.Sprintf("acme/repo-%02d", i)
+		repos = append(repos, repo)
+		webhooks[repo] = []github.Webhook{{ID: i, URL: "https://ci.example.com/hook"}}
+	}
+
+	m := NewModel(repos)
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 120, Height: 15})
+	m, _ = m.Update(webhooksLoadedMsg{webhooks: webhooks})
+
+	top := m.View()
+	if !strings.Contains(top, "repo-00") {
+		t.Errorf("top-of-list view missing first item, got %q", top)
+	}
+	if strings.Contains(top, "repo-29") {
+		t.Errorf("top-of-list view should not show the last item yet, got %q", top)
+	}
+	if !strings.Contains(top, "more below") {
+		t.Errorf("top-of-list view missing a below-fold hint, got %q", top)
+	}
+
+	for range 25 {
+		m, _ = m.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
+	}
+
+	bottom := m.View()
+	if !strings.Contains(bottom, "repo-25") {
+		t.Errorf("scrolled view missing the cursor row, got %q", bottom)
+	}
+	if !strings.Contains(bottom, "more above") {
+		t.Errorf("scrolled view missing an above-fold hint, got %q", bottom)
 	}
 }
 

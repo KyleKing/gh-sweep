@@ -11,6 +11,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/KyleKing/gh-sweep/internal/github"
+	"github.com/KyleKing/gh-sweep/internal/tui/scroll"
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
@@ -190,54 +191,101 @@ func (m Model) View() string {
 		return fmt.Sprintf("Error: %v\n", m.err)
 	}
 
-	var b strings.Builder
+	var header strings.Builder
 
-	// Header
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(theme.Current().Primary)
 
-	b.WriteString(titleStyle.Render("🔔 Webhooks"))
-	b.WriteString("\n\n")
+	header.WriteString(titleStyle.Render("🔔 Webhooks"))
+	header.WriteString("\n\n")
 
 	if m.showHelp {
-		return renderHelp(&b)
+		return renderHelp(&header)
 	}
 
-	// Webhook list by repository
+	var footer strings.Builder
+	footer.WriteString("\n")
+	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
+	footer.WriteString(helpStyle.Render("↑/↓: navigate | ?: help | q: quit"))
+
+	headerLines := strings.Count(header.String(), "\n")
+	footerLines := strings.Count(footer.String(), "\n")
+	available := m.height - headerLines - footerLines
+
+	var b strings.Builder
+	b.WriteString(header.String())
+
 	if len(m.webhooks) == 0 {
 		b.WriteString("No webhooks found.\n")
 	} else {
-		m.renderWebhookList(&b)
+		m.renderWebhookList(&b, available)
 	}
 
-	// Help
-	b.WriteString("\n")
-	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
-	b.WriteString(helpStyle.Render("↑/↓: navigate | ?: help | q: quit"))
+	b.WriteString(footer.String())
 
 	return b.String()
 }
 
-func (m Model) renderWebhookList(b *strings.Builder) {
-	for i, repo := range m.repos {
-		cursor := " "
-		if m.cursor == i {
-			cursor = ">"
-		}
+func (m Model) renderWebhookList(b *strings.Builder, available int) {
+	lines, cursorLine := m.buildWebhookLines()
 
-		repoStyle := lipgloss.NewStyle()
-		if m.cursor == i {
-			repoStyle = repoStyle.Bold(true).Foreground(theme.Current().Warning)
-		}
+	start, end := scroll.Window(len(lines), cursorLine, available)
 
-		webhooks := m.webhooks[repo]
-		line := fmt.Sprintf("%s %s (%d webhooks):\n", cursor, repo, len(webhooks))
-		line += m.renderRepoWebhooks(repo, webhooks)
-
-		b.WriteString(repoStyle.Render(line))
-		b.WriteString("\n")
+	scrollHintStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
+	if start > 0 {
+		fmt.Fprintf(b, "%s\n", scrollHintStyle.Render(fmt.Sprintf("↑ %d more above", start)))
 	}
+
+	b.WriteString(strings.Join(lines[start:end], "\n"))
+	b.WriteString("\n")
+
+	if end < len(lines) {
+		fmt.Fprintf(b, "%s\n", scrollHintStyle.Render(fmt.Sprintf("↓ %d more below", len(lines)-end)))
+	}
+}
+
+// buildWebhookLines renders each repository's block of webhook lines as
+// entries in a flat slice so the caller can window by line rather than by
+// repository, returning the lines and the cursor row's index among them.
+func (m Model) buildWebhookLines() ([]string, int) {
+	var body strings.Builder
+
+	cursorLine := 0
+
+	for i, repo := range m.repos {
+		if i == m.cursor {
+			cursorLine = strings.Count(body.String(), "\n")
+		}
+
+		m.renderWebhookRepo(&body, repo, i)
+	}
+
+	lines := strings.Split(body.String(), "\n")
+	if len(lines) > 0 && lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1]
+	}
+
+	return lines, cursorLine
+}
+
+func (m Model) renderWebhookRepo(b *strings.Builder, repo string, i int) {
+	cursor := " "
+	if m.cursor == i {
+		cursor = ">"
+	}
+
+	repoStyle := lipgloss.NewStyle()
+	if m.cursor == i {
+		repoStyle = repoStyle.Bold(true).Foreground(theme.Current().Warning)
+	}
+
+	webhooks := m.webhooks[repo]
+	line := fmt.Sprintf("%s %s (%d webhooks):\n", cursor, repo, len(webhooks))
+	line += m.renderRepoWebhooks(repo, webhooks)
+
+	b.WriteString(repoStyle.Render(line))
+	b.WriteString("\n")
 }
 
 func (m Model) renderRepoWebhooks(repo string, webhooks []github.Webhook) string {
