@@ -1,0 +1,31 @@
+name: Policy Check
+
+# Read-only smoke test: proves the gh-sweep extension installs and runs in
+# Actions against .gh-sweep-policy.yaml, without ever applying anything.
+# Widening this into the gated apply flow (policy-apply.yml) is a separate,
+# deliberate step, not a side effect of this workflow passing.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - run: gh extension install kyleking/gh-sweep
+
+      - run: gh sweep policy --list --format json
