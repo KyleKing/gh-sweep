@@ -2,6 +2,7 @@ package settings
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -95,6 +96,52 @@ func TestHelpToggle(t *testing.T) {
 	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
 	if m.showHelp {
 		t.Error("expected showHelp false after esc")
+	}
+}
+
+func manySettingsFixture(count int) ([]string, map[string]*github.RepoSettings) {
+	repos := make([]string, count)
+	settings := make(map[string]*github.RepoSettings)
+
+	for i := range repos {
+		repo := fmt.Sprintf("acme/repo-%02d", i)
+		repos[i] = repo
+		settings[repo] = &github.RepoSettings{Repository: repo, DefaultBranch: "main"}
+	}
+
+	return repos, settings
+}
+
+func TestOverviewScrollsWhenTallerThanViewport(t *testing.T) {
+	t.Parallel()
+
+	repos, repoSettings := manySettingsFixture(30)
+
+	m := NewModel(repos, "")
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 120, Height: 15})
+	m, _ = m.Update(settingsLoadedMsg{settings: repoSettings, diffs: map[string][]github.SettingsDiff{}})
+
+	top := m.View()
+	if !strings.Contains(top, "acme/repo-00") {
+		t.Errorf("top-of-list view missing first item, got %q", top)
+	}
+	if strings.Contains(top, "acme/repo-29") {
+		t.Errorf("top-of-list view should not show the last item yet, got %q", top)
+	}
+	if !strings.Contains(top, "more below") {
+		t.Errorf("top-of-list view missing a below-fold hint, got %q", top)
+	}
+
+	for range len(repos) - 1 {
+		m, _ = m.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
+	}
+
+	bottom := m.View()
+	if !strings.Contains(bottom, "acme/repo-29") {
+		t.Errorf("scrolled view missing the cursor row, got %q", bottom)
+	}
+	if !strings.Contains(bottom, "more above") {
+		t.Errorf("scrolled view missing an above-fold hint, got %q", bottom)
 	}
 }
 

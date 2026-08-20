@@ -11,6 +11,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/KyleKing/gh-sweep/internal/github"
+	"github.com/KyleKing/gh-sweep/internal/tui/scroll"
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
@@ -214,25 +215,23 @@ func (m Model) View() string {
 		return fmt.Sprintf("Error: %v\n", m.err)
 	}
 
-	var b strings.Builder
+	var header strings.Builder
 
-	// Header
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(theme.Current().Primary)
 
-	b.WriteString(titleStyle.Render("⚙️  Repository Settings Comparison"))
-	b.WriteString("\n\n")
+	header.WriteString(titleStyle.Render("⚙️  Repository Settings Comparison"))
+	header.WriteString("\n\n")
 
 	if m.baseline != "" {
-		fmt.Fprintf(&b, "Baseline: %s\n\n", m.baseline)
+		fmt.Fprintf(&header, "Baseline: %s\n\n", m.baseline)
 	}
 
 	if m.showHelp {
-		return renderHelp(&b)
+		return renderHelp(&header)
 	}
 
-	// View mode tabs
 	activeTab := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(theme.Current().Warning)
@@ -241,30 +240,42 @@ func (m Model) View() string {
 		Foreground(theme.Current().Muted)
 
 	if m.viewMode == viewModeOverview {
-		b.WriteString(activeTab.Render("[1] Overview"))
+		header.WriteString(activeTab.Render("[1] Overview"))
 	} else {
-		b.WriteString(inactiveTab.Render("[1] Overview"))
+		header.WriteString(inactiveTab.Render("[1] Overview"))
 	}
-	b.WriteString("  ")
+	header.WriteString("  ")
 	if m.viewMode == viewModeDiff {
-		b.WriteString(activeTab.Render("[2] Differences"))
+		header.WriteString(activeTab.Render("[2] Differences"))
 	} else {
-		b.WriteString(inactiveTab.Render("[2] Differences"))
+		header.WriteString(inactiveTab.Render("[2] Differences"))
 	}
-	b.WriteString("\n\n")
+	header.WriteString("\n\n")
 
-	// Content based on view mode
-	switch m.viewMode {
-	case viewModeOverview:
-		b.WriteString(m.renderOverview())
-	case viewModeDiff:
-		b.WriteString(m.renderDiff())
-	}
-
-	// Help
-	b.WriteString("\n")
+	var footer strings.Builder
+	footer.WriteString("\n")
 	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
-	b.WriteString(helpStyle.Render("↑/↓: navigate | 1/2: switch view | ?: help | q: quit"))
+	footer.WriteString(helpStyle.Render("↑/↓: navigate | 1/2: switch view | ?: help | q: quit"))
+
+	var b strings.Builder
+
+	if m.viewMode == viewModeDiff {
+		b.WriteString(header.String())
+		b.WriteString(m.renderDiff())
+		b.WriteString(footer.String())
+
+		return b.String()
+	}
+
+	header.WriteString("📋 Repository Settings\n\n")
+
+	headerLines := strings.Count(header.String(), "\n")
+	footerLines := strings.Count(footer.String(), "\n")
+	available := m.height - headerLines - footerLines
+
+	b.WriteString(header.String())
+	m.renderOverview(&b, available)
+	b.WriteString(footer.String())
 
 	return b.String()
 }
@@ -292,40 +303,68 @@ func renderHelp(b *strings.Builder) string {
 	return b.String()
 }
 
-func (m Model) renderOverview() string {
-	var b strings.Builder
+func (m Model) renderOverview(b *strings.Builder, available int) {
+	lines, cursorLine := m.buildOverviewLines()
 
-	b.WriteString("📋 Repository Settings\n\n")
+	start, end := scroll.Window(len(lines), cursorLine, available)
 
-	for i, repo := range m.repos {
-		cursor := " "
-		if m.cursor == i {
-			cursor = ">"
-		}
-
-		settings := m.settings[repo]
-		if settings == nil {
-			fmt.Fprintf(&b, "%s %s: No settings loaded\n", cursor, repo)
-			continue
-		}
-
-		statusStyle := lipgloss.NewStyle()
-		if m.cursor == i {
-			statusStyle = statusStyle.Bold(true).Foreground(theme.Current().Warning)
-		}
-
-		line := fmt.Sprintf("%s %s:\n", cursor, repo)
-		line += fmt.Sprintf("   Default Branch: %s\n", settings.DefaultBranch)
-		line += fmt.Sprintf("   Merge: %v | Squash: %v | Rebase: %v\n",
-			settings.AllowMergeCommit, settings.AllowSquashMerge, settings.AllowRebaseMerge)
-		line += fmt.Sprintf("   Delete on Merge: %v | Issues: %v | Wiki: %v\n",
-			settings.DeleteBranchOnMerge, settings.HasIssues, settings.HasWiki)
-
-		b.WriteString(statusStyle.Render(line))
-		b.WriteString("\n")
+	scrollHintStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
+	if start > 0 {
+		fmt.Fprintf(b, "%s\n", scrollHintStyle.Render(fmt.Sprintf("↑ %d more above", start)))
 	}
 
-	return b.String()
+	b.WriteString(strings.Join(lines[start:end], "\n"))
+
+	if end < len(lines) {
+		fmt.Fprintf(b, "\n%s", scrollHintStyle.Render(fmt.Sprintf("↓ %d more below", len(lines)-end)))
+	}
+}
+
+// buildOverviewLines renders each repo's settings block as its constituent
+// physical lines so the caller can window by line rather than by item,
+// returning the lines and the cursor row's index among them.
+func (m Model) buildOverviewLines() ([]string, int) {
+	var body strings.Builder
+
+	cursorLine := 0
+
+	for i, repo := range m.repos {
+		if i == m.cursor {
+			cursorLine = strings.Count(body.String(), "\n")
+		}
+
+		m.writeOverviewBlock(&body, repo, i)
+	}
+
+	return strings.Split(body.String(), "\n"), cursorLine
+}
+
+func (m Model) writeOverviewBlock(b *strings.Builder, repo string, i int) {
+	cursor := " "
+	if m.cursor == i {
+		cursor = ">"
+	}
+
+	settings := m.settings[repo]
+	if settings == nil {
+		fmt.Fprintf(b, "%s %s: No settings loaded\n", cursor, repo)
+		return
+	}
+
+	statusStyle := lipgloss.NewStyle()
+	if m.cursor == i {
+		statusStyle = statusStyle.Bold(true).Foreground(theme.Current().Warning)
+	}
+
+	line := fmt.Sprintf("%s %s:\n", cursor, repo)
+	line += fmt.Sprintf("   Default Branch: %s\n", settings.DefaultBranch)
+	line += fmt.Sprintf("   Merge: %v | Squash: %v | Rebase: %v\n",
+		settings.AllowMergeCommit, settings.AllowSquashMerge, settings.AllowRebaseMerge)
+	line += fmt.Sprintf("   Delete on Merge: %v | Issues: %v | Wiki: %v\n",
+		settings.DeleteBranchOnMerge, settings.HasIssues, settings.HasWiki)
+
+	b.WriteString(statusStyle.Render(line))
+	b.WriteString("\n")
 }
 
 func (m Model) renderDiff() string {
