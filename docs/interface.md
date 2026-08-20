@@ -19,20 +19,25 @@ the live code, so trust it over this page, which lists only enough to start.
 
 ## Home menu
 
-| Key | View |
-| --- | ------------------- |
-| `0` | Watch status |
-| `o` | Orphan branches |
-| `1` | Branch management |
-| `2` | Branch protection |
-| `3` | PR comments |
-| `4` | Analytics |
-| `p` | GHA performance |
-| `5` | Settings comparison |
-| `6` | Webhooks |
-| `7` | Collaborators |
-| `8` | Secrets audit |
-| `9` | Releases |
+The menu label carries its own shortcut as a bracketed letter (`[w]atch
+status`, `pro[t]ection`), grouped by scope rather than by when each view
+shipped:
+
+| Group | Key | View |
+| --- | --- | ------------------- |
+| Namespace audit (whole account or org, ignores `--repo`) | `w` | Watch status |
+| | `o` | Orphan branches |
+| Single repo (needs `--repo`) | `b` | Branch management |
+| | `c` | PR comments |
+| | `a` | Analytics |
+| | `g` | GHA performance |
+| Cross-repo (needs `--repos` or `--org`) | `t` | Branch protection |
+| | `s` | Settings comparison |
+| | `h` | Webhooks |
+| | `l` | Collaborators |
+| | `e` | Secrets audit |
+| | `r` | Releases |
+| Policy | `y` | Policy |
 
 Pressing a key opens that view directly. `j`/`k` and the arrow keys move through
 the list, and `enter` opens whatever the cursor sits on.

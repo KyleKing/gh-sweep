@@ -23,6 +23,24 @@ key press is a single reversible toggle (press again to undo), not a batch
 operation, so the stakes don't match the CLI paths. Revisit only if it turns
 out to bite in practice.
 
+## Needs your input
+
+- **Widen the policy-check smoke test into a real gated apply.**
+  `.github/workflows/policy-check.yml` runs `gh sweep policy --list`
+  read-only on every push to prove the extension installs and runs in
+  Actions; nothing applies yet. `policy-apply.yml` (the reusable
+  `workflow_call` with the environment-approval gate) exists but nothing
+  calls it. Before wiring that up, decide: which repo declares the real
+  policy and calls the reusable workflow (gh-sweep governing itself via
+  `.gh-sweep-policy.yaml`, a dedicated demo/reference repo such as
+  `KyleKing/kyleking`, or both), what the environment name and reviewer
+  list should be, and what token scope the apply job's secret needs
+  (repo-admin write, vs. gh-sweep's default read-only `GITHUB_TOKEN`)
+- GHA Performance view load time: 13-32+ seconds even on a full cache hit,
+  found while scripting the demo recording and dropped from that recording
+  rather than investigated. Worth profiling before the next person hits it
+  live
+
 ## Deferred
 
 Low priority; pick up when convenient.

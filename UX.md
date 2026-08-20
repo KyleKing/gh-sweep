@@ -8,27 +8,29 @@ Running `gh-sweep` with no subcommand opens a full-screen home menu. Each entry 
 +--------------------------------------------------------------+
 | gh-sweep                                                     |
 |                                                              |
-| Namespace Audit                                              |
-|   [0] Watch Status       Audit and manage repo watching      |
-|   [o] Orphan Branches    Detect and clean up orphaned...     |
+| Namespace Audit (scans your whole account or org, ignores    |
+| --repo)                                                      |
+|   [w]atch status         - Audit and manage repo watching    |
+|   [o]rphan branches      - Detect and clean up orphaned...   |
 |                                                              |
-| Phase 1: Core Management                                     |
-| > [1] Branch Management  Interactive branch operations       |
-|   [2] Branch Protection  Compare and sync protection rules   |
-|   [3] PR Comments        Review unresolved comments          |
-|   [4] Analytics          CI/CD and repository statistics     |
-|   [p] GHA Performance    Workflow timing analysis            |
+| Single Repo (needs --repo)                                   |
+| > [b]ranch management    - Interactive branch operations     |
+|   pr [c]omments          - Review unresolved comments        |
+|   [a]nalytics            - CI/CD and repository statistics   |
+|   [g]ha performance      - Workflow timing analysis          |
 |                                                              |
-| Phase 2: Analytics & Settings                                |
-|   [5] Settings Comparison  Cross-repo settings diff          |
-|   [6] Webhooks           Webhook health monitoring           |
+| Cross-Repo (needs --repos or --org)                          |
+|   branch pro[t]ection    - Compare and sync protection rules |
+|   [s]ettings comparison  - Cross-repo settings diff          |
+|   web[h]ooks             - Webhook health monitoring         |
+|   co[l]laborators        - Manage repository access          |
+|   s[e]crets audit        - Review secrets usage (read-only)  |
+|   [r]releases             - Release version overview          |
 |                                                              |
-| Phase 3: Access & Releases                                   |
-|   [7] Collaborators      Manage repository access            |
-|   [8] Secrets Audit      Review secrets usage (read-only)    |
-|   [9] Releases           Release version overview            |
+| Policy (diffs and applies against a declared policy file)    |
+|   polic[y]               - Diff and sync settings against... |
 |                                                              |
-| Press 0-9/o/p to select a view | q to quit                   |
+| j/k or ↑/↓: move | enter: select | letter in [brackets]: jump|
 +--------------------------------------------------------------+
 ```
 
