@@ -11,6 +11,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/KyleKing/gh-sweep/internal/github"
+	"github.com/KyleKing/gh-sweep/internal/tui/scroll"
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
@@ -194,18 +195,17 @@ func (m Model) View() string {
 		return fmt.Sprintf("Error: %v\n", m.err)
 	}
 
-	var b strings.Builder
+	var header strings.Builder
 
-	// Header
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(theme.Current().Primary)
 
-	b.WriteString(titleStyle.Render("👥 Collaborator Management"))
-	b.WriteString("\n\n")
+	header.WriteString(titleStyle.Render("👥 Collaborator Management"))
+	header.WriteString("\n\n")
 
 	if m.showHelp {
-		return renderHelp(&b)
+		return renderHelp(&header)
 	}
 
 	// View mode tabs
@@ -217,30 +217,45 @@ func (m Model) View() string {
 		Foreground(theme.Current().Muted)
 
 	if m.viewMode == viewModeByRepo {
-		b.WriteString(activeTab.Render("[1] By Repository"))
+		header.WriteString(activeTab.Render("[1] By Repository"))
 	} else {
-		b.WriteString(inactiveTab.Render("[1] By Repository"))
+		header.WriteString(inactiveTab.Render("[1] By Repository"))
 	}
-	b.WriteString("  ")
+	header.WriteString("  ")
 	if m.viewMode == viewModeByUser {
-		b.WriteString(activeTab.Render("[2] By User"))
+		header.WriteString(activeTab.Render("[2] By User"))
 	} else {
-		b.WriteString(inactiveTab.Render("[2] By User"))
+		header.WriteString(inactiveTab.Render("[2] By User"))
 	}
-	b.WriteString("\n\n")
+	header.WriteString("\n\n")
 
-	// Content based on view mode
 	switch m.viewMode {
 	case viewModeByRepo:
-		b.WriteString(m.renderByRepo())
+		header.WriteString("📦 Collaborators by Repository\n\n")
 	case viewModeByUser:
-		b.WriteString(m.renderByUser())
+		header.WriteString("👤 Cross-Repo Access by User\n\n")
 	}
 
-	// Help
-	b.WriteString("\n")
+	var footer strings.Builder
+	footer.WriteString("\n")
 	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
-	b.WriteString(helpStyle.Render("↑/↓: navigate | 1/2: switch view | ?: help | q: quit"))
+	footer.WriteString(helpStyle.Render("↑/↓: navigate | 1/2: switch view | ?: help | q: quit"))
+
+	headerLines := strings.Count(header.String(), "\n")
+	footerLines := strings.Count(footer.String(), "\n")
+	available := m.height - headerLines - footerLines
+
+	var b strings.Builder
+	b.WriteString(header.String())
+
+	switch m.viewMode {
+	case viewModeByRepo:
+		m.renderRepoList(&b, available)
+	case viewModeByUser:
+		m.renderUserList(&b, available)
+	}
+
+	b.WriteString(footer.String())
 
 	return b.String()
 }
@@ -268,10 +283,22 @@ func renderHelp(b *strings.Builder) string {
 	return b.String()
 }
 
-func (m Model) renderByRepo() string {
-	var b strings.Builder
+func (m Model) renderRepoList(b *strings.Builder, available int) {
+	lines, cursorLine := m.buildRepoLines()
+	if len(lines) == 0 {
+		return
+	}
 
-	b.WriteString("📦 Collaborators by Repository\n\n")
+	renderScrolledList(b, lines, cursorLine, available)
+}
+
+// buildRepoLines renders each repository row, split into one entry per
+// terminal line, so the caller can window by line rather than by row,
+// returning the lines and the cursor row's index among them.
+func (m Model) buildRepoLines() ([]string, int) {
+	lines := make([]string, 0, len(m.repos))
+
+	cursorLine := 0
 
 	for i, repo := range m.repos {
 		cursor := " "
@@ -309,19 +336,28 @@ func (m Model) renderByRepo() string {
 		}
 		line += lineSb214.String()
 
-		b.WriteString(statusStyle.Render(line))
-		b.WriteString("\n")
+		if i == m.cursor {
+			cursorLine = len(lines)
+		}
+
+		lines = append(lines, strings.Split(statusStyle.Render(line), "\n")...)
 	}
 
-	return b.String()
+	return lines, cursorLine
 }
 
-func (m Model) renderByUser() string {
-	var b strings.Builder
+func (m Model) renderUserList(b *strings.Builder, available int) {
+	lines, cursorLine := m.buildUserLines()
+	if len(lines) == 0 {
+		return
+	}
 
-	b.WriteString("👤 Cross-Repo Access by User\n\n")
+	renderScrolledList(b, lines, cursorLine, available)
+}
 
-	// Build user -> repos mapping
+// userAccess builds the user -> repos mapping and the user -> repo ->
+// permission mapping shown by the by-user view.
+func (m Model) userAccess() (map[string][]string, map[string]map[string]string) {
 	userRepos := make(map[string][]string)
 	userPerms := make(map[string]map[string]string) // user -> repo -> permission
 
@@ -335,48 +371,86 @@ func (m Model) renderByUser() string {
 		}
 	}
 
-	// Display users
+	return userRepos, userPerms
+}
+
+func renderUserRow(cursor bool, user string, repos []string, userPerms map[string]map[string]string) string {
+	cursorMark := " "
+	if cursor {
+		cursorMark = ">"
+	}
+
+	userStyle := lipgloss.NewStyle()
+	if cursor {
+		userStyle = userStyle.Bold(true).Foreground(theme.Current().Warning)
+	}
+
+	line := fmt.Sprintf("%s %s (access to %d repos):\n", cursorMark, user, len(repos))
+
+	var lineSb273 strings.Builder
+	for j, repo := range repos {
+		if j >= maxPreviewItems {
+			fmt.Fprintf(&lineSb273, "   ... and %d more\n", len(repos)-maxPreviewItems)
+			break
+		}
+		perm := userPerms[user][repo]
+		permColor := theme.Current().Success
+		switch perm {
+		case permissionAdmin:
+			permColor = theme.Current().Error
+		case permissionWrite:
+			permColor = theme.Current().Warning
+		}
+		permStyle := lipgloss.NewStyle().Foreground(permColor)
+		fmt.Fprintf(&lineSb273, "   - %s ", repo)
+		lineSb273.WriteString(permStyle.Render(fmt.Sprintf("[%s]", perm)))
+		lineSb273.WriteString("\n")
+	}
+	line += lineSb273.String()
+
+	return userStyle.Render(line)
+}
+
+// buildUserLines renders each user row, split into one entry per terminal
+// line, so the caller can window by line rather than by row, returning the
+// lines and the cursor row's index among them.
+func (m Model) buildUserLines() ([]string, int) {
+	userRepos, userPerms := m.userAccess()
+
+	lines := make([]string, 0, len(userRepos))
+
+	cursorLine := 0
 	currentIdx := 0
+
 	for user, repos := range userRepos {
-		cursor := " "
-		if m.cursor == currentIdx {
-			cursor = ">"
+		if currentIdx == m.cursor {
+			cursorLine = len(lines)
 		}
 
-		userStyle := lipgloss.NewStyle()
-		if m.cursor == currentIdx {
-			userStyle = userStyle.Bold(true).Foreground(theme.Current().Warning)
-		}
-
-		line := fmt.Sprintf("%s %s (access to %d repos):\n", cursor, user, len(repos))
-
-		// Show repos with permissions
-		var lineSb273 strings.Builder
-		for j, repo := range repos {
-			if j >= maxPreviewItems {
-				fmt.Fprintf(&lineSb273, "   ... and %d more\n", len(repos)-maxPreviewItems)
-				break
-			}
-			perm := userPerms[user][repo]
-			permColor := theme.Current().Success
-			switch perm {
-			case permissionAdmin:
-				permColor = theme.Current().Error
-			case permissionWrite:
-				permColor = theme.Current().Warning
-			}
-			permStyle := lipgloss.NewStyle().Foreground(permColor)
-			fmt.Fprintf(&lineSb273, "   - %s ", repo)
-			lineSb273.WriteString(permStyle.Render(fmt.Sprintf("[%s]", perm)))
-			lineSb273.WriteString("\n")
-		}
-		line += lineSb273.String()
-
-		b.WriteString(userStyle.Render(line))
-		b.WriteString("\n")
+		rendered := renderUserRow(currentIdx == m.cursor, user, repos, userPerms)
+		lines = append(lines, strings.Split(rendered, "\n")...)
 
 		currentIdx++
 	}
 
-	return b.String()
+	return lines, cursorLine
+}
+
+// renderScrolledList windows lines around cursorLine to fit available
+// terminal rows, joining the visible slice and adding a muted scroll hint
+// above and/or below it when rows are hidden off-screen.
+func renderScrolledList(b *strings.Builder, lines []string, cursorLine, available int) {
+	start, end := scroll.Window(len(lines), cursorLine, available)
+
+	scrollHintStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
+	if start > 0 {
+		fmt.Fprintf(b, "%s\n", scrollHintStyle.Render(fmt.Sprintf("↑ %d more above", start)))
+	}
+
+	b.WriteString(strings.Join(lines[start:end], "\n"))
+	b.WriteString("\n")
+
+	if end < len(lines) {
+		fmt.Fprintf(b, "%s\n", scrollHintStyle.Render(fmt.Sprintf("↓ %d more below", len(lines)-end)))
+	}
 }
