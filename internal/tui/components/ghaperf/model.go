@@ -17,6 +17,7 @@ import (
 
 	"github.com/KyleKing/gh-sweep/internal/cache"
 	"github.com/KyleKing/gh-sweep/internal/github"
+	"github.com/KyleKing/gh-sweep/internal/tui/scroll"
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
@@ -34,15 +35,12 @@ const (
 
 	defaultBaseBranch          = "main"
 	defaultFilterDays          = 30
-	defaultMaxVisible          = 15
 	defaultRegressionThreshold = 20.0
 	defaultRunsFetchLimit      = 100
 
-	windowChromeHeight = 12
-	minVisibleRows     = 5
-	helpKeyWidth       = 16
-	percentMultiplier  = 100.0
-	recentRunsLimit    = 10
+	helpKeyWidth      = 16
+	percentMultiplier = 100.0
+	recentRunsLimit   = 10
 
 	workflowNameTruncateLen   = 30
 	workflowColumnTruncateLen = 35
@@ -60,17 +58,15 @@ var errInvalidRepoFormat = errors.New("invalid repo format, expected owner/repo"
 // Model is the ghaperf TUI state: the loaded run data, the active tab, and
 // the cursor/scroll position within it.
 type Model struct {
-	repo       string
-	owner      string
-	repoName   string
-	width      int
-	height     int
-	loading    bool
-	err        error
-	viewMode   viewMode
-	cursor     int
-	scrollTop  int
-	maxVisible int
+	repo     string
+	owner    string
+	repoName string
+	width    int
+	height   int
+	loading  bool
+	err      error
+	viewMode viewMode
+	cursor   int
 
 	workflows           []github.WorkflowFile
 	selectedWorkflow    string
@@ -108,7 +104,6 @@ func NewModel(repo string, opts ...Option) Model {
 		viewMode:            viewOverview,
 		filterDays:          defaultFilterDays,
 		baseBranch:          defaultBaseBranch,
-		maxVisible:          defaultMaxVisible,
 		regressionThreshold: defaultRegressionThreshold,
 	}
 
@@ -304,10 +299,6 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		m.maxVisible = msg.Height - windowChromeHeight
-		if m.maxVisible < minVisibleRows {
-			m.maxVisible = minVisibleRows
-		}
 
 		return m, nil
 
@@ -364,9 +355,6 @@ func (m Model) updateKeyMsg(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 
 	case "g":
 		m.cursor = 0
-		if m.cursor < m.scrollTop {
-			m.scrollTop = m.cursor
-		}
 
 	case "G":
 		m.jumpToBottom()
@@ -389,7 +377,6 @@ func (m Model) updateKeyMsg(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 func (m *Model) switchView(mode viewMode) {
 	m.viewMode = mode
 	m.cursor = 0
-	m.scrollTop = 0
 }
 
 func (m *Model) jumpToBottom() {
@@ -397,17 +384,11 @@ func (m *Model) jumpToBottom() {
 	if maxCursor >= 0 {
 		m.cursor = maxCursor
 	}
-	if m.cursor >= m.scrollTop+m.maxVisible {
-		m.scrollTop = m.cursor - m.maxVisible + 1
-	}
 }
 
 func (m *Model) moveCursorUp() {
 	if m.cursor > 0 {
 		m.cursor--
-		if m.cursor < m.scrollTop {
-			m.scrollTop = m.cursor
-		}
 	}
 }
 
@@ -415,9 +396,6 @@ func (m *Model) moveCursorDown() {
 	maxCursor := m.getMaxCursor()
 	if m.cursor < maxCursor {
 		m.cursor++
-		if m.cursor >= m.scrollTop+m.maxVisible {
-			m.scrollTop = m.cursor - m.maxVisible + 1
-		}
 	}
 }
 
@@ -444,25 +422,25 @@ func (m Model) View() string {
 		return fmt.Sprintf("Error: %v\n", m.err)
 	}
 
-	var b strings.Builder
+	var header strings.Builder
 
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(theme.Current().Primary)
 
-	b.WriteString(titleStyle.Render("GHA Performance: " + m.repo))
-	b.WriteString("\n")
+	header.WriteString(titleStyle.Render("GHA Performance: " + m.repo))
+	header.WriteString("\n")
 
 	subtitleStyle := lipgloss.NewStyle().
 		Foreground(theme.Current().Muted)
 
-	b.WriteString(subtitleStyle.Render(fmt.Sprintf(
+	header.WriteString(subtitleStyle.Render(fmt.Sprintf(
 		"Last %d days | %d runs (%d cached, %d new)",
 		m.filterDays, len(m.runs), m.cachedCount, m.newCount)))
-	b.WriteString("\n\n")
+	header.WriteString("\n\n")
 
 	if m.showHelp {
-		return renderHelp(&b)
+		return renderHelp(&header)
 	}
 
 	activeTab := lipgloss.NewStyle().
@@ -484,30 +462,67 @@ func (m Model) View() string {
 
 	for _, tab := range tabs {
 		if m.viewMode == tab.mode {
-			b.WriteString(activeTab.Render(tab.label))
+			header.WriteString(activeTab.Render(tab.label))
 		} else {
-			b.WriteString(inactiveTab.Render(tab.label))
+			header.WriteString(inactiveTab.Render(tab.label))
 		}
-		b.WriteString("  ")
+		header.WriteString("  ")
 	}
-	b.WriteString("\n\n")
+	header.WriteString("\n\n")
 
-	switch m.viewMode {
-	case viewOverview:
-		b.WriteString(m.renderOverview())
-	case viewWorkflows:
-		b.WriteString(m.renderWorkflows())
-	case viewJobs:
-		b.WriteString(m.renderJobs())
-	case viewBranches:
-		b.WriteString(m.renderBranches())
-	}
-
-	b.WriteString("\n")
+	var footer strings.Builder
+	footer.WriteString("\n")
 	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
-	b.WriteString(helpStyle.Render("1-4: views | j/k: navigate | r: refresh | ?: help | esc: back | q: quit"))
+	footer.WriteString(helpStyle.Render("1-4: views | j/k: navigate | r: refresh | ?: help | esc: back | q: quit"))
 
-	return b.String()
+	if m.viewMode == viewOverview {
+		return header.String() + m.renderOverview() + footer.String()
+	}
+
+	lines, cursorLine := m.buildListLines(&header)
+
+	headerLines := strings.Count(header.String(), "\n")
+	footerLines := strings.Count(footer.String(), "\n")
+	available := m.height - headerLines - footerLines
+
+	var body strings.Builder
+	renderScrollList(&body, lines, cursorLine, available)
+
+	return header.String() + body.String() + footer.String()
+}
+
+// buildListLines writes the section title and column header for the active
+// tabbed view into header, then returns one rendered row per item alongside
+// the cursor row's index among them, so View can window the rows by line.
+func (m Model) buildListLines(header *strings.Builder) ([]string, int) {
+	switch m.viewMode {
+	case viewJobs:
+		return m.buildJobLines(header)
+	case viewBranches:
+		return m.buildBranchLines(header)
+	default:
+		return m.buildWorkflowLines(header)
+	}
+}
+
+func renderScrollList(b *strings.Builder, lines []string, cursorLine, available int) {
+	if len(lines) == 0 {
+		return
+	}
+
+	start, end := scroll.Window(len(lines), cursorLine, available)
+
+	scrollHintStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
+	if start > 0 {
+		fmt.Fprintf(b, "%s\n", scrollHintStyle.Render(fmt.Sprintf("↑ %d more above", start)))
+	}
+
+	b.WriteString(strings.Join(lines[start:end], "\n"))
+	b.WriteString("\n")
+
+	if end < len(lines) {
+		fmt.Fprintf(b, "%s\n", scrollHintStyle.Render(fmt.Sprintf("↓ %d more below", len(lines)-end)))
+	}
 }
 
 func renderHelp(b *strings.Builder) string {
@@ -632,21 +647,22 @@ func (m Model) runDurationsFor(workflow string) []float64 {
 	return durations
 }
 
-func (m Model) renderWorkflows() string {
-	var b strings.Builder
-
+// buildWorkflowLines writes the Workflows tab's section title and column
+// header into header, then returns one rendered row per workflow alongside
+// the cursor row's index among them.
+func (m Model) buildWorkflowLines(header *strings.Builder) ([]string, int) {
 	sectionStyle := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(theme.Current().Text)
 
-	b.WriteString(sectionStyle.Render("Workflow Performance"))
-	b.WriteString("\n\n")
+	header.WriteString(sectionStyle.Render("Workflow Performance"))
+	header.WriteString("\n\n")
 
 	headerStyle := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(theme.Current().Muted)
 
-	b.WriteString(headerStyle.Render(fmt.Sprintf("  %-35s %8s %8s %8s %8s %8s  %s\n",
+	header.WriteString(headerStyle.Render(fmt.Sprintf("  %-35s %8s %8s %8s %8s %8s  %s\n",
 		"Workflow", "Runs", "Avg", "Min", "Max", "Success", "Trend")))
 
 	workflows := make([]*github.WorkflowStats, 0, len(m.workflowStats))
@@ -660,11 +676,10 @@ func (m Model) renderWorkflows() string {
 	selectedStyle := lipgloss.NewStyle().
 		Background(theme.Current().Secondary)
 
-	for i, ws := range workflows {
-		if i < m.scrollTop || i >= m.scrollTop+m.maxVisible {
-			continue
-		}
+	lines := make([]string, len(workflows))
+	cursorLine := 0
 
+	for i, ws := range workflows {
 		name := ws.Workflow
 		if len(name) > workflowColumnTruncateLen {
 			name = name[:workflowColumnTruncateLen-3] + "..."
@@ -682,31 +697,32 @@ func (m Model) renderWorkflows() string {
 			trend)
 
 		if i == m.cursor {
-			b.WriteString(selectedStyle.Render(line))
-		} else {
-			b.WriteString(line)
+			cursorLine = i
+			line = selectedStyle.Render(line)
 		}
-		b.WriteString("\n")
+
+		lines[i] = line
 	}
 
-	return b.String()
+	return lines, cursorLine
 }
 
-func (m Model) renderJobs() string {
-	var b strings.Builder
-
+// buildJobLines writes the Jobs tab's section title and column header into
+// header, then returns one rendered row per job alongside the cursor row's
+// index among them.
+func (m Model) buildJobLines(header *strings.Builder) ([]string, int) {
 	sectionStyle := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(theme.Current().Text)
 
-	b.WriteString(sectionStyle.Render("Job Performance (Top by Avg Duration)"))
-	b.WriteString("\n\n")
+	header.WriteString(sectionStyle.Render("Job Performance (Top by Avg Duration)"))
+	header.WriteString("\n\n")
 
 	headerStyle := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(theme.Current().Muted)
 
-	b.WriteString(headerStyle.Render(fmt.Sprintf("  %-50s %8s %8s %8s %8s\n",
+	header.WriteString(headerStyle.Render(fmt.Sprintf("  %-50s %8s %8s %8s %8s\n",
 		"Job", "Runs", "Avg", "Min", "Max")))
 
 	jobs := github.GetTopJobsByDuration(m.jobStats, 0)
@@ -714,11 +730,10 @@ func (m Model) renderJobs() string {
 	selectedStyle := lipgloss.NewStyle().
 		Background(theme.Current().Secondary)
 
-	for i, js := range jobs {
-		if i < m.scrollTop || i >= m.scrollTop+m.maxVisible {
-			continue
-		}
+	lines := make([]string, len(jobs))
+	cursorLine := 0
 
+	for i, js := range jobs {
 		name := js.WorkflowJob
 		if len(name) > jobNameTruncateLen {
 			name = name[:jobNameTruncateLen-3] + "..."
@@ -732,31 +747,32 @@ func (m Model) renderJobs() string {
 			github.FormatDuration(js.MaxDuration))
 
 		if i == m.cursor {
-			b.WriteString(selectedStyle.Render(line))
-		} else {
-			b.WriteString(line)
+			cursorLine = i
+			line = selectedStyle.Render(line)
 		}
-		b.WriteString("\n")
+
+		lines[i] = line
 	}
 
-	return b.String()
+	return lines, cursorLine
 }
 
-func (m Model) renderBranches() string {
-	var b strings.Builder
-
+// buildBranchLines writes the Branches tab's section title and column header
+// into header, then returns one rendered row per branch alongside the
+// cursor row's index among them.
+func (m Model) buildBranchLines(header *strings.Builder) ([]string, int) {
 	sectionStyle := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(theme.Current().Text)
 
-	b.WriteString(sectionStyle.Render(fmt.Sprintf("Performance by Branch (vs %s)", m.baseBranch)))
-	b.WriteString("\n\n")
+	header.WriteString(sectionStyle.Render(fmt.Sprintf("Performance by Branch (vs %s)", m.baseBranch)))
+	header.WriteString("\n\n")
 
 	headerStyle := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(theme.Current().Muted)
 
-	b.WriteString(headerStyle.Render(fmt.Sprintf("  %-30s %8s %10s %12s  %s\n",
+	header.WriteString(headerStyle.Render(fmt.Sprintf("  %-30s %8s %10s %12s  %s\n",
 		"Branch", "Runs", "Avg", "Delta", "Relative")))
 
 	branches, maxAvg := m.sortedBranchStats()
@@ -764,22 +780,21 @@ func (m Model) renderBranches() string {
 	selectedStyle := lipgloss.NewStyle().
 		Background(theme.Current().Secondary)
 
-	for i, bs := range branches {
-		if i < m.scrollTop || i >= m.scrollTop+m.maxVisible {
-			continue
-		}
+	lines := make([]string, len(branches))
+	cursorLine := 0
 
+	for i, bs := range branches {
 		line := m.branchRowLine(bs, maxAvg)
 
 		if i == m.cursor {
-			b.WriteString(selectedStyle.Render(line))
-		} else {
-			b.WriteString(line)
+			cursorLine = i
+			line = selectedStyle.Render(line)
 		}
-		b.WriteString("\n")
+
+		lines[i] = line
 	}
 
-	return b.String()
+	return lines, cursorLine
 }
 
 // sortedBranchStats returns m.branchStats as a slice with the baseline

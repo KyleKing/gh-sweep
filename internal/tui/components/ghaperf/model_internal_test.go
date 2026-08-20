@@ -1,6 +1,7 @@
 package ghaperf
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -218,7 +219,6 @@ func TestTabKeysSwitchViews(t *testing.T) {
 	m := NewModel("acme/widgets")
 	m, _ = m.Update(loadedFixture())
 	m.cursor = 1
-	m.scrollTop = 1
 
 	tests := []struct {
 		key  string
@@ -237,8 +237,8 @@ func TestTabKeysSwitchViews(t *testing.T) {
 			t.Errorf("key %s: viewMode = %d, want %d", tt.key, m.viewMode, tt.want)
 		}
 
-		if m.cursor != 0 || m.scrollTop != 0 {
-			t.Errorf("key %s: cursor/scrollTop = %d/%d, want 0/0", tt.key, m.cursor, m.scrollTop)
+		if m.cursor != 0 {
+			t.Errorf("key %s: cursor = %d, want 0", tt.key, m.cursor)
 		}
 	}
 }
@@ -260,22 +260,6 @@ func TestCursorNavigationClamps(t *testing.T) {
 
 	if m.cursor != 1 {
 		t.Errorf("cursor after j past end = %d, want 1 (clamped to runs)", m.cursor)
-	}
-}
-
-func TestWindowSizeClampsMaxVisible(t *testing.T) {
-	t.Parallel()
-
-	m := NewModel("acme/widgets")
-
-	m, _ = m.Update(tea.WindowSizeMsg{Width: 80, Height: 10})
-	if m.maxVisible != 5 {
-		t.Errorf("maxVisible at height 10 = %d, want floor of 5", m.maxVisible)
-	}
-
-	m, _ = m.Update(tea.WindowSizeMsg{Width: 80, Height: 40})
-	if m.maxVisible != 28 {
-		t.Errorf("maxVisible at height 40 = %d, want 28", m.maxVisible)
 	}
 }
 
@@ -307,9 +291,6 @@ func TestJumpTopBottom(t *testing.T) {
 	m, _ = m.Update(tea.KeyPressMsg{Code: 'g', Text: "g"})
 	if m.cursor != 0 {
 		t.Errorf("cursor after g = %d, want 0", m.cursor)
-	}
-	if m.scrollTop != 0 {
-		t.Errorf("scrollTop after g = %d, want 0", m.scrollTop)
 	}
 }
 
@@ -352,5 +333,53 @@ func TestErrorViewRendered(t *testing.T) {
 
 	if !strings.Contains(m.View(), "invalid repo format") {
 		t.Errorf("view = %q", m.View())
+	}
+}
+
+func manyWorkflowsFixture(n int) dataLoadedMsg {
+	stats := make(map[string]*github.WorkflowStats, n)
+	for i := range n {
+		name := fmt.Sprintf("wf-%02d", i)
+		stats[name] = &github.WorkflowStats{
+			Workflow:    name,
+			TotalRuns:   1,
+			AvgDuration: time.Duration(i) * time.Minute,
+		}
+	}
+
+	return dataLoadedMsg{workflowStats: stats}
+}
+
+func TestWorkflowsListScrollsWhenTallerThanViewport(t *testing.T) {
+	t.Parallel()
+
+	m := NewModel("acme/widgets")
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 120, Height: 15})
+	m, _ = m.Update(manyWorkflowsFixture(50))
+	m, _ = m.Update(tea.KeyPressMsg{Code: '2', Text: "2"})
+
+	// Sorted by AvgDuration descending, so wf-49 (the longest) lands at the
+	// top of the list and cursor 0.
+	top := m.View()
+	if !strings.Contains(top, "wf-49") {
+		t.Errorf("top-of-list view missing first item, got %q", top)
+	}
+	if strings.Contains(top, "wf-00") {
+		t.Errorf("top-of-list view should not show the last item yet, got %q", top)
+	}
+	if !strings.Contains(top, "more below") {
+		t.Errorf("top-of-list view missing a below-fold hint, got %q", top)
+	}
+
+	for range 40 {
+		m, _ = m.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
+	}
+
+	bottom := m.View()
+	if !strings.Contains(bottom, "wf-09") {
+		t.Errorf("scrolled view missing the cursor row, got %q", bottom)
+	}
+	if !strings.Contains(bottom, "more above") {
+		t.Errorf("scrolled view missing an above-fold hint, got %q", bottom)
 	}
 }
