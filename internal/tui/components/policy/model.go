@@ -13,6 +13,7 @@ import (
 	"github.com/KyleKing/gh-sweep/internal/config"
 	"github.com/KyleKing/gh-sweep/internal/github"
 	"github.com/KyleKing/gh-sweep/internal/policy"
+	"github.com/KyleKing/gh-sweep/internal/tui/scroll"
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
@@ -257,16 +258,64 @@ func (m Model) View() string {
 		return b.String()
 	}
 
-	for i, drift := range m.report.Repos {
-		m.viewDriftLine(&b, i, drift)
-	}
+	var footer strings.Builder
+	m.viewFooter(&footer)
 
-	m.viewFooter(&b)
+	headerLines := strings.Count(b.String(), "\n")
+	footerLines := strings.Count(footer.String(), "\n")
+	available := m.height - headerLines - footerLines
+
+	m.renderDriftList(&b, available)
+	b.WriteString(footer.String())
 
 	return b.String()
 }
 
-func (m Model) viewDriftLine(b *strings.Builder, i int, drift policy.RepoDrift) {
+func (m Model) renderDriftList(b *strings.Builder, available int) {
+	lines, cursorLine := m.buildDriftLines()
+
+	start, end := scroll.Window(len(lines), cursorLine, available)
+
+	scrollHintStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
+	if start > 0 {
+		fmt.Fprintf(b, "%s\n", scrollHintStyle.Render(fmt.Sprintf("↑ %d more above", start)))
+	}
+
+	b.WriteString(strings.Join(lines[start:end], "\n"))
+	b.WriteString("\n")
+
+	if end < len(lines) {
+		fmt.Fprintf(b, "%s\n", scrollHintStyle.Render(fmt.Sprintf("↓ %d more below", len(lines)-end)))
+	}
+}
+
+// buildDriftLines renders each repo's drift summary, and its expanded diff
+// detail lines when it holds the cursor, as one line each so the caller can
+// window by line rather than by item, returning the lines and the cursor
+// row's index among them.
+func (m Model) buildDriftLines() ([]string, int) {
+	var lines []string
+
+	cursorLine := 0
+
+	for i, drift := range m.report.Repos {
+		if i == m.cursor {
+			cursorLine = len(lines)
+		}
+
+		lines = append(lines, m.renderDriftLine(i, drift))
+
+		if m.cursor == i && drift.Err == nil && len(drift.Diffs) > 0 {
+			for _, d := range drift.Diffs {
+				lines = append(lines, fmt.Sprintf("     [%s] %s: %s -> %s", d.Domain, d.Field, d.Current, d.Desired))
+			}
+		}
+	}
+
+	return lines, cursorLine
+}
+
+func (m Model) renderDriftLine(i int, drift policy.RepoDrift) string {
 	cursor := " "
 	if m.cursor == i {
 		cursor = ">"
@@ -279,18 +328,12 @@ func (m Model) viewDriftLine(b *strings.Builder, i int, drift policy.RepoDrift) 
 
 	switch {
 	case drift.Err != nil:
-		b.WriteString(lineStyle.Render(fmt.Sprintf("%s %s: ERROR %v\n", cursor, drift.Repository, drift.Err)))
+		return lineStyle.Render(fmt.Sprintf("%s %s: ERROR %v", cursor, drift.Repository, drift.Err))
 	case len(drift.Diffs) == 0:
 		okStyle := lineStyle.Foreground(theme.Current().Success)
-		b.WriteString(okStyle.Render(fmt.Sprintf("%s %s: in sync\n", cursor, drift.Repository)))
+		return okStyle.Render(fmt.Sprintf("%s %s: in sync", cursor, drift.Repository))
 	default:
-		line := fmt.Sprintf("%s %s: %d field(s) drifted\n", cursor, drift.Repository, len(drift.Diffs))
-		b.WriteString(lineStyle.Render(line))
-		if m.cursor == i {
-			for _, d := range drift.Diffs {
-				fmt.Fprintf(b, "     [%s] %s: %s -> %s\n", d.Domain, d.Field, d.Current, d.Desired)
-			}
-		}
+		return lineStyle.Render(fmt.Sprintf("%s %s: %d field(s) drifted", cursor, drift.Repository, len(drift.Diffs)))
 	}
 }
 
