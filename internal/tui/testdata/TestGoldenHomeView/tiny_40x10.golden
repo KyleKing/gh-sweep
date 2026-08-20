@@ -1,30 +1,14 @@
-           
-[1;38;2;198;160;246m🧹 gh-sweep[m
-           
+        
+[1;38;2;198;160;246mgh-sweep[m
+        
                                 
 [1;38;2;198;160;246mGitHub Repository Management TUI[m
                                 
 
+[38;2;147;154;183m↑ 1 more above[m
+[1;38;2;238;212;159mNamespace Audit (scans your whole account or org, ignores --repo)[m
+[1;38;2;238;212;159m> [w]atch status       [m[38;2;147;154;183m - Audit and manage repo watching[m
+[38;2;202;211;245m  [o]rphan branches    [m[38;2;147;154;183m - Detect and clean up orphaned branches[m
+[38;2;147;154;183m↓ 17 more below[m
 
-[1;38;2;238;212;159mNamespace Audit[m
-[1;38;2;238;212;159m> [0] 👁️  Watch Status[m[38;2;147;154;183m - Audit and manage repo watching[m
-[38;2;202;211;245m  [o] 🌿 Orphan Branches[m[38;2;147;154;183m - Detect and clean up orphaned branches[m
-
-[1;38;2;238;212;159mPhase 1: Core Management[m
-[38;2;202;211;245m  [1] 🌳 Branch Management[m[38;2;147;154;183m - Interactive branch operations[m
-[38;2;202;211;245m  [2] 🛡️  Branch Protection[m[38;2;147;154;183m - Compare and sync protection rules[m
-[38;2;202;211;245m  [3] 💬 PR Comments[m[38;2;147;154;183m - Review unresolved comments[m
-[38;2;202;211;245m  [4] 📊 Analytics[m[38;2;147;154;183m - CI/CD and repository statistics[m
-[38;2;202;211;245m  [p] ⏱️  GHA Performance[m[38;2;147;154;183m - Workflow timing analysis[m
-
-[1;38;2;238;212;159mPhase 2: Analytics & Settings[m
-[38;2;202;211;245m  [5] ⚙️  Settings Comparison[m[38;2;147;154;183m - Cross-repo settings diff[m
-[38;2;202;211;245m  [6] 🔔 Webhooks[m[38;2;147;154;183m - Webhook health monitoring[m
-
-[1;38;2;238;212;159mPhase 3: Access & Releases[m
-[38;2;202;211;245m  [7] 👥 Collaborators[m[38;2;147;154;183m - Manage repository access[m
-[38;2;202;211;245m  [8] 🔐 Secrets Audit[m[38;2;147;154;183m - Review secrets usage (read-only)[m
-[38;2;202;211;245m  [9] 📦 Releases[m[38;2;147;154;183m - Release version overview[m
-[38;2;202;211;245m  [y] 📐 Policy[m[38;2;147;154;183m - Diff and sync settings against a policy file[m
-
-[38;2;147;154;183mj/k or ↑/↓: move | enter: select | /: filter | 0-9/o/p: quick jump | q: quit[m
+[38;2;147;154;183mj/k or ↑/↓: move | enter: select | /: filter | letter in [brackets]: jump | ?: help | q: quit[m

@@ -24,6 +24,7 @@ import (
 	"github.com/KyleKing/gh-sweep/internal/tui/components/settings"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/watching"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/webhooks"
+	"github.com/KyleKing/gh-sweep/internal/tui/scroll"
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
@@ -49,16 +50,20 @@ const (
 )
 
 const (
-	keyEsc        = "esc"
-	keyCtrlC      = "ctrl+c"
-	sectionPhase1 = "Phase 1: Core Management"
-	sectionPhase3 = "Phase 3: Access & Releases"
+	keyEsc   = "esc"
+	keyCtrlC = "ctrl+c"
+
+	sectionNamespace  = "Namespace Audit (scans your whole account or org, ignores --repo)"
+	sectionSingleRepo = "Single Repo (needs --repo)"
+	sectionCrossRepo  = "Cross-Repo (needs --repos or --org)"
+	sectionPolicy     = "Policy (diffs and applies against a declared policy file)"
 )
 
-// menuItem describes one selectable entry in the home menu list.
+// menuItem describes one selectable entry in the home menu list, where
+// label carries its own keyboard shortcut inline as a bracketed letter
+// (e.g. "[w]atch status") and key is that same letter for direct activation.
 type menuItem struct {
 	key     string
-	icon    string
 	label   string
 	desc    string
 	section string
@@ -174,13 +179,15 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// buildMenuItems returns the full home menu, marking items whose repo/org
-// preconditions aren't met as disabled.
+// buildMenuItems returns the full home menu, grouped by scope (namespace,
+// single-repo, cross-repo, or policy) rather than by the phase each view
+// happened to ship in, marking items whose repo/org preconditions aren't
+// met as disabled.
 func (m MainModel) buildMenuItems() []menuItem {
 	items := m.buildNamespaceAuditItems()
-	items = append(items, m.buildPhase1Items()...)
-	items = append(items, m.buildPhase2Items()...)
-	items = append(items, m.buildPhase3Items()...)
+	items = append(items, m.buildSingleRepoItems()...)
+	items = append(items, m.buildCrossRepoItems()...)
+	items = append(items, m.buildPolicyItems()...)
 
 	return items
 }
@@ -188,142 +195,126 @@ func (m MainModel) buildMenuItems() []menuItem {
 func (MainModel) buildNamespaceAuditItems() []menuItem {
 	return []menuItem{
 		{
-			key:     "0",
-			icon:    "👁️ ",
-			label:   "Watch Status",
+			key:     "w",
+			label:   "[w]atch status",
 			desc:    "Audit and manage repo watching",
-			section: "Namespace Audit",
+			section: sectionNamespace,
 			view:    ViewWatching,
 			enabled: true,
 		},
 		{
 			key:     "o",
-			icon:    "🌿",
-			label:   "Orphan Branches",
+			label:   "[o]rphan branches",
 			desc:    "Detect and clean up orphaned branches",
-			section: "Namespace Audit",
+			section: sectionNamespace,
 			view:    ViewOrphans,
 			enabled: true,
 		},
 	}
 }
 
-func (m MainModel) buildPhase1Items() []menuItem {
+func (m MainModel) buildSingleRepoItems() []menuItem {
 	hasRepo := m.repo != ""
-	hasRepos := len(m.repos) > 0
 
 	return []menuItem{
 		{
-			key:     "1",
-			icon:    "🌳",
-			label:   "Branch Management",
+			key:     "b",
+			label:   "[b]ranch management",
 			desc:    "Interactive branch operations",
-			section: sectionPhase1,
+			section: sectionSingleRepo,
 			view:    ViewBranches,
 			enabled: hasRepo,
 		},
 		{
-			key:     "2",
-			icon:    "🛡️ ",
-			label:   "Branch Protection",
-			desc:    "Compare and sync protection rules",
-			section: sectionPhase1,
-			view:    ViewProtection,
-			enabled: hasRepos,
-		},
-		{
-			key:     "3",
-			icon:    "💬",
-			label:   "PR Comments",
+			key:     "c",
+			label:   "pr [c]omments",
 			desc:    "Review unresolved comments",
-			section: sectionPhase1,
+			section: sectionSingleRepo,
 			view:    ViewComments,
 			enabled: hasRepo,
 		},
 		{
-			key:     "4",
-			icon:    "📊",
-			label:   "Analytics",
+			key:     "a",
+			label:   "[a]nalytics",
 			desc:    "CI/CD and repository statistics",
-			section: sectionPhase1,
+			section: sectionSingleRepo,
 			view:    ViewAnalytics,
 			enabled: hasRepo,
 		},
 		{
-			key:     "p",
-			icon:    "⏱️ ",
-			label:   "GHA Performance",
+			key:     "g",
+			label:   "[g]ha performance",
 			desc:    "Workflow timing analysis",
-			section: sectionPhase1,
+			section: sectionSingleRepo,
 			view:    ViewGHAPerf,
 			enabled: hasRepo,
 		},
 	}
 }
 
-func (m MainModel) buildPhase2Items() []menuItem {
-	hasRepos := len(m.repos) > 0
-
-	return []menuItem{
-		{
-			key:     "5",
-			icon:    "⚙️ ",
-			label:   "Settings Comparison",
-			desc:    "Cross-repo settings diff",
-			section: "Phase 2: Analytics & Settings",
-			view:    ViewSettings,
-			enabled: hasRepos,
-		},
-		{
-			key:     "6",
-			icon:    "🔔",
-			label:   "Webhooks",
-			desc:    "Webhook health monitoring",
-			section: "Phase 2: Analytics & Settings",
-			view:    ViewWebhooks,
-			enabled: hasRepos,
-		},
-	}
-}
-
-func (m MainModel) buildPhase3Items() []menuItem {
+func (m MainModel) buildCrossRepoItems() []menuItem {
 	hasRepos := len(m.repos) > 0
 	hasOrgAndRepos := m.org != "" && hasRepos
 
 	return []menuItem{
 		{
-			key:     "7",
-			icon:    "👥",
-			label:   "Collaborators",
+			key:     "t",
+			label:   "branch pro[t]ection",
+			desc:    "Compare and sync protection rules",
+			section: sectionCrossRepo,
+			view:    ViewProtection,
+			enabled: hasRepos,
+		},
+		{
+			key:     "s",
+			label:   "[s]ettings comparison",
+			desc:    "Cross-repo settings diff",
+			section: sectionCrossRepo,
+			view:    ViewSettings,
+			enabled: hasRepos,
+		},
+		{
+			key:     "h",
+			label:   "web[h]ooks",
+			desc:    "Webhook health monitoring",
+			section: sectionCrossRepo,
+			view:    ViewWebhooks,
+			enabled: hasRepos,
+		},
+		{
+			key:     "l",
+			label:   "co[l]laborators",
 			desc:    "Manage repository access",
-			section: sectionPhase3,
+			section: sectionCrossRepo,
 			view:    ViewCollaborators,
 			enabled: hasRepos,
 		},
 		{
-			key:     "8",
-			icon:    "🔐",
-			label:   "Secrets Audit",
+			key:     "e",
+			label:   "s[e]crets audit",
 			desc:    "Review secrets usage (read-only)",
-			section: sectionPhase3,
+			section: sectionCrossRepo,
 			view:    ViewSecrets,
 			enabled: hasOrgAndRepos,
 		},
 		{
-			key:     "9",
-			icon:    "📦",
-			label:   "Releases",
+			key:     "r",
+			label:   "[r]eleases",
 			desc:    "Release version overview",
-			section: sectionPhase3,
+			section: sectionCrossRepo,
 			view:    ViewReleases,
 			enabled: hasRepos,
 		},
+	}
+}
+
+func (MainModel) buildPolicyItems() []menuItem {
+	return []menuItem{
 		{
 			key:     "y",
-			icon:    "📐",
-			label:   "Policy",
+			label:   "polic[y]",
 			desc:    "Diff and sync settings against a policy file",
-			section: sectionPhase3,
+			section: sectionPolicy,
 			view:    ViewPolicy,
 			enabled: true,
 		},
@@ -767,62 +758,109 @@ func (m MainModel) renderHome() string {
 	helpStyle := lipgloss.NewStyle().
 		Foreground(theme.Current().Muted)
 
-	content := titleStyle.Render("🧹 gh-sweep") + "\n"
-	content += titleStyle.Render("GitHub Repository Management TUI") + "\n\n"
+	var header strings.Builder
+	header.WriteString(titleStyle.Render("gh-sweep") + "\n")
+	header.WriteString(titleStyle.Render("GitHub Repository Management TUI") + "\n\n")
 
 	if m.menuFiltering || m.menuFilter != "" {
-		content += filterStyle.Render("/ "+m.menuFilter) + "\n\n"
+		header.WriteString(filterStyle.Render("/ "+m.menuFilter) + "\n\n")
+	}
+
+	var footer strings.Builder
+	if m.repo == "" && len(m.repos) == 0 {
+		footer.WriteString(helpStyle.Render("Configure with --repo flag or .gh-sweep.yaml") + "\n\n")
+	}
+	if m.menuFiltering {
+		footer.WriteString(helpStyle.Render("↑/↓ or ctrl+p/n: move | enter: select | esc: clear filter"))
+	} else {
+		footer.WriteString(helpStyle.Render(
+			"j/k or ↑/↓: move | enter: select | /: filter | letter in [brackets]: jump | ?: help | q: quit",
+		))
 	}
 
 	items := m.filteredMenuItems()
 	if len(items) == 0 {
-		content += helpStyle.Render("No views match filter") + "\n"
-	} else {
-		currentSection := ""
-		var contentSb541 strings.Builder
-		for i, item := range items {
-			if item.section != currentSection {
-				currentSection = item.section
-				contentSb541.WriteString("\n" + sectionStyle.Render(currentSection) + "\n")
-			}
+		return header.String() + helpStyle.Render("No views match filter") + "\n" + footer.String()
+	}
 
-			cursor := "  "
-			if i == m.menuCursor {
-				cursor = "> "
-			}
+	headerLines := strings.Count(header.String(), "\n")
+	footerLines := strings.Count(footer.String(), "\n")
+	available := m.height - headerLines - footerLines
 
-			label := fmt.Sprintf("[%s] %s %s", item.key, item.icon, item.label)
+	lines, cursorLine := m.buildMenuLines(items, sectionStyle, menuItemStyle, selectedStyle, disabledStyle, descStyle)
+	start, end := scroll.Window(len(lines), cursorLine, available)
 
-			lineStyle := menuItemStyle
-			switch {
-			case i == m.menuCursor:
-				lineStyle = selectedStyle
-			case !item.enabled:
-				lineStyle = disabledStyle
-			}
+	var body strings.Builder
 
-			contentSb541.WriteString(lineStyle.Render(cursor + label))
-			contentSb541.WriteString(descStyle.Render(" - " + item.desc))
-			if !item.enabled {
-				contentSb541.WriteString(descStyle.Render(" (unavailable)"))
-			}
-			contentSb541.WriteString("\n")
+	scrollHintStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
+	if start > 0 {
+		fmt.Fprintf(&body, "%s\n", scrollHintStyle.Render(fmt.Sprintf("↑ %d more above", start)))
+	}
+
+	body.WriteString(strings.Join(lines[start:end], "\n"))
+	body.WriteString("\n")
+
+	if end < len(lines) {
+		fmt.Fprintf(&body, "%s\n", scrollHintStyle.Render(fmt.Sprintf("↓ %d more below", len(lines)-end)))
+	}
+
+	return header.String() + body.String() + "\n" + footer.String()
+}
+
+// buildMenuLines renders each menu item, and its section header, as one
+// line each, aligning every item's " - description" on the same column so
+// the caller can window by line, returning the lines and the selected
+// row's index among them.
+func (m MainModel) buildMenuLines(
+	items []menuItem,
+	sectionStyle, menuItemStyle, selectedStyle, disabledStyle, descStyle lipgloss.Style,
+) ([]string, int) {
+	maxLabelWidth := 0
+	for _, item := range items {
+		if w := lipgloss.Width(item.label); w > maxLabelWidth {
+			maxLabelWidth = w
 		}
-		content += contentSb541.String()
-		content += "\n"
 	}
 
-	if m.repo == "" && len(m.repos) == 0 {
-		content += helpStyle.Render("💡 Configure with --repo flag or .gh-sweep.yaml") + "\n\n"
+	var lines []string
+
+	cursorLine := 0
+	currentSection := ""
+
+	for i, item := range items {
+		if item.section != currentSection {
+			currentSection = item.section
+			lines = append(lines, "", sectionStyle.Render(currentSection))
+		}
+
+		if i == m.menuCursor {
+			cursorLine = len(lines)
+		}
+
+		cursor := "  "
+		if i == m.menuCursor {
+			cursor = "> "
+		}
+
+		lineStyle := menuItemStyle
+		switch {
+		case i == m.menuCursor:
+			lineStyle = selectedStyle
+		case !item.enabled:
+			lineStyle = disabledStyle
+		}
+
+		padding := strings.Repeat(" ", maxLabelWidth-lipgloss.Width(item.label))
+
+		var line strings.Builder
+		line.WriteString(lineStyle.Render(cursor + item.label + padding))
+		line.WriteString(descStyle.Render(" - " + item.desc))
+		if !item.enabled {
+			line.WriteString(descStyle.Render(" (unavailable)"))
+		}
+
+		lines = append(lines, line.String())
 	}
 
-	if m.menuFiltering {
-		content += helpStyle.Render("↑/↓ or ctrl+p/n: move | enter: select | esc: clear filter")
-	} else {
-		content += helpStyle.Render(
-			"j/k or ↑/↓: move | enter: select | /: filter | 0-9/o/p: quick jump | q: quit",
-		)
-	}
-
-	return content
+	return lines, cursorLine
 }

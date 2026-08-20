@@ -45,18 +45,18 @@ func TestHomeNavigation(t *testing.T) {
 		wantMode ViewMode
 		wantCmd  bool
 	}{
-		{"0", ViewWatching, true},
-		{"1", ViewBranches, true},
-		{"2", ViewProtection, true},
-		{"3", ViewComments, true},
-		{"4", ViewAnalytics, true},
-		{"5", ViewSettings, true},
-		{"6", ViewWebhooks, true},
-		{"7", ViewCollaborators, true},
-		{"8", ViewSecrets, true},
-		{"9", ViewReleases, true},
+		{"w", ViewWatching, true},
+		{"b", ViewBranches, true},
+		{"t", ViewProtection, true},
+		{"c", ViewComments, true},
+		{"a", ViewAnalytics, true},
+		{"s", ViewSettings, true},
+		{"h", ViewWebhooks, true},
+		{"l", ViewCollaborators, true},
+		{"e", ViewSecrets, true},
+		{"r", ViewReleases, true},
 		{"o", ViewOrphans, true},
-		{"p", ViewGHAPerf, true},
+		{"g", ViewGHAPerf, true},
 	}
 
 	for _, tt := range tests {
@@ -83,16 +83,16 @@ func TestHomeNavigationUnconfigured(t *testing.T) {
 		key      string
 		wantMode ViewMode
 	}{
-		{"1", ViewBranches},
-		{"2", ViewProtection},
-		{"3", ViewComments},
-		{"4", ViewAnalytics},
-		{"5", ViewSettings},
-		{"6", ViewWebhooks},
-		{"7", ViewCollaborators},
-		{"8", ViewSecrets},
-		{"9", ViewReleases},
-		{"p", ViewGHAPerf},
+		{"b", ViewBranches},
+		{"t", ViewProtection},
+		{"c", ViewComments},
+		{"a", ViewAnalytics},
+		{"s", ViewSettings},
+		{"h", ViewWebhooks},
+		{"l", ViewCollaborators},
+		{"e", ViewSecrets},
+		{"r", ViewReleases},
+		{"g", ViewGHAPerf},
 	}
 
 	for _, tt := range tests {
@@ -189,9 +189,9 @@ func TestHomeViewListsAllMenuEntries(t *testing.T) {
 
 	content := m.renderContent()
 	for _, want := range []string{
-		"Watch Status", "Orphan Branches", "Branch Management", "Branch Protection",
-		"PR Comments", "Analytics", "GHA Performance", "Settings Comparison",
-		"Webhooks", "Collaborators", "Secrets Audit", "Releases",
+		"[w]atch status", "[o]rphan branches", "[b]ranch management", "branch pro[t]ection",
+		"pr [c]omments", "[a]nalytics", "[g]ha performance", "[s]ettings comparison",
+		"web[h]ooks", "co[l]laborators", "s[e]crets audit", "[r]eleases",
 	} {
 		if !strings.Contains(content, want) {
 			t.Errorf("home view missing menu entry %q", want)

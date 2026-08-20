@@ -134,21 +134,25 @@ func TestTUINavigateViewsAndBack(t *testing.T) {
 
 	waitForOutput(t, tm, "Namespace Audit")
 
-	pressKey(tm, '0')
+	pressKey(tm, 'w')
 	waitForOutput(t, tm, "Watch Status Audit")
 	tm.Send(tea.KeyPressMsg{Code: tea.KeyEscape})
+	waitForOutput(t, tm, "Namespace Audit")
 
-	pressKey(tm, '1')
+	pressKey(tm, 'b')
 	waitForOutput(t, tm, "Branches for acme/widgets")
 	tm.Send(tea.KeyPressMsg{Code: tea.KeyEscape})
+	waitForOutput(t, tm, "Namespace Audit")
 
-	pressKey(tm, '2')
+	pressKey(tm, 't')
 	waitForOutput(t, tm, "Branch Protection Rules")
 	tm.Send(tea.KeyPressMsg{Code: tea.KeyEscape})
+	waitForOutput(t, tm, "Namespace Audit")
 
-	pressKey(tm, '9')
+	pressKey(tm, 'r')
 	waitForOutput(t, tm, "Release Overview")
 	tm.Send(tea.KeyPressMsg{Code: tea.KeyEscape})
+	waitForOutput(t, tm, "Namespace Audit")
 
 	pressKey(tm, 'q')
 	tm.WaitFinished(t, teatest.WithFinalTimeout(3*time.Second))
