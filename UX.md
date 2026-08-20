@@ -25,7 +25,7 @@ Running `gh-sweep` with no subcommand opens a full-screen home menu. Each entry 
 |   web[h]ooks             - Webhook health monitoring         |
 |   co[l]laborators        - Manage repository access          |
 |   s[e]crets audit        - Review secrets usage (read-only)  |
-|   [r]releases             - Release version overview          |
+|   [r]eleases             - Release version overview          |
 |                                                              |
 | Policy (diffs and applies against a declared policy file)    |
 |   polic[y]               - Diff and sync settings against... |
