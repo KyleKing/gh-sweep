@@ -40,6 +40,22 @@ out to bite in practice.
   found while scripting the demo recording and dropped from that recording
   rather than investigated. Worth profiling before the next person hits it
   live
+- **Move `internal/tui/theme` into `aragonite`.** Investigated whether
+  gh-sweep's orphan/merged-branch detection (`internal/orphans/detector.go`)
+  could share code with gh-repo-dashboard's equivalent: it can't cleanly.
+  gh-sweep classifies branches from direct GitHub REST API responses;
+  gh-repo-dashboard works from local git/jj checkouts via the `gh` CLI
+  binary and deletes local branches, not remote ones. Different access
+  strategy, different deletion target, no shared interface without
+  redesigning one side. Left alone.
+  The theme package is a real match, though: it's self-contained (no
+  GitHub or domain coupling) and already does more than gh-repo-dashboard's
+  `internal/ui/styles` (which hardcodes Macchiato with no light/dark
+  detection, while gh-sweep auto-detects the terminal background and
+  switches Catppuccin Latte/Macchiato, plus a `CATPPUCCIN_THEME` override).
+  Moving it to `aragonite` would be a real upgrade for gh-repo-dashboard,
+  not just deduplication. Decide whether to do the move now or wait for a
+  third consumer
 
 ## Deferred
 
