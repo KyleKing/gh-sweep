@@ -2,6 +2,7 @@ package orphans
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -383,5 +384,61 @@ func TestScanProgressRendered(t *testing.T) {
 	view := m.View()
 	if !strings.Contains(view, "3/10") || !strings.Contains(view, "acme/widgets") {
 		t.Errorf("progress view = %q", view)
+	}
+}
+
+func manyOrphansFixture(count int) *orphanscore.NamespaceScanResult {
+	orphansList := make([]orphanscore.OrphanedBranch, count)
+	for i := range orphansList {
+		orphansList[i] = orphanscore.OrphanedBranch{
+			Repository:        "acme/widgets",
+			BranchName:        fmt.Sprintf("branch-%02d", i),
+			Type:              orphanscore.OrphanTypeStale,
+			DaysSinceActivity: i,
+			LastCommitDate:    time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC).AddDate(0, 0, -i),
+		}
+	}
+
+	return &orphanscore.NamespaceScanResult{
+		Namespace:    "acme",
+		TotalRepos:   1,
+		TotalOrphans: count,
+		Results: []orphanscore.ScanResult{
+			{Repository: github.Repository{Owner: "acme", Name: "widgets"}, Orphans: orphansList},
+		},
+	}
+}
+
+func TestListScrollsWhenTallerThanViewport(t *testing.T) {
+	t.Parallel()
+
+	m := NewModel("acme", orphanscore.DefaultScanOptions())
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 120, Height: 15})
+	m, _ = m.Update(scanCompleteMsg{result: manyOrphansFixture(50)})
+	m.viewMode = ViewModeFlat
+
+	// Flat view sorts by last-commit date ascending, so the highest-index
+	// (oldest) branch lands at the top of the list and cursor 0.
+	top := m.View()
+	if !strings.Contains(top, "branch-49") {
+		t.Errorf("top-of-list view missing first item, got %q", top)
+	}
+	if strings.Contains(top, "branch-00") {
+		t.Errorf("top-of-list view should not show the last item yet, got %q", top)
+	}
+	if !strings.Contains(top, "more below") {
+		t.Errorf("top-of-list view missing a below-fold hint, got %q", top)
+	}
+
+	for range 40 {
+		m, _ = press(m, "down")
+	}
+
+	bottom := m.View()
+	if !strings.Contains(bottom, "branch-09") {
+		t.Errorf("scrolled view missing the cursor row, got %q", bottom)
+	}
+	if !strings.Contains(bottom, "more above") {
+		t.Errorf("scrolled view missing an above-fold hint, got %q", bottom)
 	}
 }

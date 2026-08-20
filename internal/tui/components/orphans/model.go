@@ -14,6 +14,7 @@ import (
 
 	"github.com/KyleKing/gh-sweep/internal/github"
 	"github.com/KyleKing/gh-sweep/internal/orphans"
+	"github.com/KyleKing/gh-sweep/internal/tui/scroll"
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
@@ -539,24 +540,29 @@ func (m Model) View() string {
 		fmt.Fprintf(&b, "%s %s\n\n", searchStyle.Render("Search:"), m.searchQuery)
 	}
 
-	filtered := m.getFilteredOrphans()
-	m.renderOrphanList(&b, filtered)
-
+	var footer strings.Builder
 	if m.statusMsg != "" {
-		b.WriteString("\n")
+		footer.WriteString("\n")
 		statusStyle := lipgloss.NewStyle().Foreground(theme.Current().Primary)
-		b.WriteString(statusStyle.Render(m.statusMsg))
-		b.WriteString("\n")
+		footer.WriteString(statusStyle.Render(m.statusMsg))
+		footer.WriteString("\n")
 	}
-
-	b.WriteString("\n")
+	footer.WriteString("\n")
 	helpStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
-	b.WriteString(
+	footer.WriteString(
 		helpStyle.Render(
 			"j/k: navigate | space: select | a/n/I: all/none/invert | d: delete | v: view mode | " +
 				"r: refresh | ?: help | esc: back",
 		),
 	)
+
+	headerLines := strings.Count(b.String(), "\n")
+	footerLines := strings.Count(footer.String(), "\n")
+	available := m.height - headerLines - footerLines
+
+	filtered := m.getFilteredOrphans()
+	m.renderOrphanList(&b, filtered, available)
+	b.WriteString(footer.String())
 
 	return b.String()
 }
@@ -606,27 +612,56 @@ func (m Model) renderTypeTabs(b *strings.Builder) {
 	b.WriteString("\n\n")
 }
 
-func (m Model) renderOrphanList(b *strings.Builder, filtered []orphans.OrphanedBranch) {
+func (m Model) renderOrphanList(b *strings.Builder, filtered []orphans.OrphanedBranch, available int) {
 	if len(filtered) == 0 {
 		b.WriteString("No orphaned branches in this view.\n")
 		return
 	}
 
+	lines, cursorLine := m.buildOrphanLines(filtered)
+
+	start, end := scroll.Window(len(lines), cursorLine, available)
+
+	scrollHintStyle := lipgloss.NewStyle().Foreground(theme.Current().Muted)
+	if start > 0 {
+		fmt.Fprintf(b, "%s\n", scrollHintStyle.Render(fmt.Sprintf("↑ %d more above", start)))
+	}
+
+	b.WriteString(strings.Join(lines[start:end], "\n"))
+	b.WriteString("\n")
+
+	if end < len(lines) {
+		fmt.Fprintf(b, "%s\n", scrollHintStyle.Render(fmt.Sprintf("↓ %d more below", len(lines)-end)))
+	}
+}
+
+// buildOrphanLines renders each orphan, and its group header in by-repo
+// mode, as one line each so the caller can window by line rather than by
+// item, returning the lines and the cursor row's index among them.
+func (m Model) buildOrphanLines(filtered []orphans.OrphanedBranch) ([]string, int) {
+	var lines []string
+
+	cursorLine := 0
 	currentRepo := ""
+
 	for i, orphan := range filtered {
 		if m.viewMode == ViewModeByRepo && orphan.Repository != currentRepo {
 			currentRepo = orphan.Repository
 			repoStyle := lipgloss.NewStyle().Bold(true).Foreground(theme.Current().Primary)
-			b.WriteString("\n")
-			b.WriteString(repoStyle.Render(currentRepo))
-			b.WriteString("\n")
+			lines = append(lines, "", repoStyle.Render(currentRepo))
 		}
 
-		m.renderOrphanLine(b, orphan, i)
+		if i == m.cursor {
+			cursorLine = len(lines)
+		}
+
+		lines = append(lines, m.renderOrphanLine(orphan, i))
 	}
+
+	return lines, cursorLine
 }
 
-func (m Model) renderOrphanLine(b *strings.Builder, orphan orphans.OrphanedBranch, i int) {
+func (m Model) renderOrphanLine(orphan orphans.OrphanedBranch, i int) string {
 	cursor := " "
 	if m.cursor == i {
 		cursor = ">"
@@ -650,9 +685,13 @@ func (m Model) renderOrphanLine(b *strings.Builder, orphan orphans.OrphanedBranc
 	}
 
 	line := fmt.Sprintf("%s%s %s ", cursor, selectMark, orphan.BranchName)
+
+	var b strings.Builder
 	b.WriteString(lineStyle.Render(line))
 	b.WriteString(typeStyle.Render(fmt.Sprintf("[%s]", orphan.Type.Label())))
-	fmt.Fprintf(b, " %dd%s\n", orphan.DaysSinceActivity, prInfo)
+	fmt.Fprintf(&b, " %dd%s", orphan.DaysSinceActivity, prInfo)
+
+	return b.String()
 }
 
 func (m Model) renderConfirmDialog(b *strings.Builder) string {
