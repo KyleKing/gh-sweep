@@ -10,6 +10,14 @@ run = "go build -v -o gh-sweep ./cmd/gh-sweep"
 description = "Run all checks (used in GitHub Actions)"
 run = ["go test -v -coverprofile=coverage.out ./...", "go build -v -o gh-sweep ./cmd/gh-sweep"]
 
+[tasks."verify-released"]
+description = "Build and test ignoring any go.work, the way CI sees the module"
+# A go.work makes a sibling checkout win over the version go.mod pins, so local
+# green says nothing about whether the released dependency actually works. CI has
+# no workspace, so this is the only local check that matches it.
+env = { GOWORK = "off" }
+run = ["go build ./...", "go test ./..."]
+
 [tasks.clean]
 description = "Clean build artifacts"
 run = "rm -f coverage.out"

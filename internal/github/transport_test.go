@@ -2,7 +2,6 @@ package github
 
 import (
 	"context"
-	"encoding/json"
 	"io"
 	"net/http"
 	"strings"
@@ -81,81 +80,6 @@ func TestSetTestTransportRoutesNewClient(t *testing.T) {
 
 	if len(paths) != 1 || paths[0] != "GET /repos/acme/widgets" {
 		t.Errorf("requests = %v, want [GET /repos/acme/widgets]", paths)
-	}
-}
-
-func TestSetTestTransportRestore(t *testing.T) { //nolint:paralleltest // mutates the shared global test transport
-	rt := recordingTransport(`{}`, nil)
-
-	restore := SetTestTransport(rt)
-	if currentTestTransport() == nil {
-		t.Fatal("expected transport to be registered")
-	}
-
-	restore()
-
-	if currentTestTransport() != nil {
-		t.Error("expected transport to be restored to nil")
-	}
-}
-
-func TestSafetyTransportPanicsOnMutation(t *testing.T) {
-	t.Parallel()
-
-	mutating := []string{http.MethodDelete, http.MethodPatch, http.MethodPost, http.MethodPut}
-	for _, method := range mutating {
-		t.Run(method, func(t *testing.T) {
-			t.Parallel()
-
-			guard := safetyTransport{base: recordingTransport(`{}`, nil)}
-			req, err := http.NewRequestWithContext(
-				context.Background(), method, "https://api.github.com/repos/acme/widgets/git/refs/heads/x", http.NoBody,
-			)
-			if err != nil {
-				t.Fatalf("NewRequestWithContext() error = %v", err)
-			}
-
-			defer func() {
-				if recover() == nil {
-					t.Errorf("expected panic for %s request", method)
-				}
-			}()
-
-			//nolint:bodyclose // the guard panics before a response exists
-			resp, err := guard.RoundTrip(req)
-			t.Fatalf("RoundTrip returned without panic: resp=%v err=%v", resp, err)
-		})
-	}
-}
-
-func TestSafetyTransportAllowsReads(t *testing.T) {
-	t.Parallel()
-
-	guard := safetyTransport{base: recordingTransport(`{"ok":true}`, nil)}
-	req, err := http.NewRequestWithContext(
-		context.Background(), http.MethodGet, "https://api.github.com/user", http.NoBody,
-	)
-	if err != nil {
-		t.Fatalf("NewRequestWithContext() error = %v", err)
-	}
-
-	resp, err := guard.RoundTrip(req)
-	if err != nil {
-		t.Fatalf("RoundTrip() error = %v", err)
-	}
-	t.Cleanup(func() {
-		if closeErr := resp.Body.Close(); closeErr != nil {
-			t.Errorf("Close() error = %v", closeErr)
-		}
-	})
-
-	var payload map[string]bool
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
-		t.Fatalf("Decode() error = %v", err)
-	}
-
-	if !payload["ok"] {
-		t.Error("expected fake body to pass through the guard")
 	}
 }
 

@@ -10,6 +10,7 @@ require (
 	github.com/charmbracelet/x/exp/teatest/v2 v2.0.0-20260629091435-9c70f75e26a4
 	github.com/cli/browser v1.3.0
 	github.com/cli/go-gh/v2 v2.13.0
+	github.com/kyleking/aragonite v0.0.0-20260821164517-d33e020cda35
 	github.com/spf13/cobra v1.10.2
 	gopkg.in/dnaeon/go-vcr.v4 v4.0.7
 	gopkg.in/yaml.v3 v3.0.1
