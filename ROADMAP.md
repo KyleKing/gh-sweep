@@ -40,15 +40,7 @@ out to bite in practice.
   found while scripting the demo recording and dropped from that recording
   rather than investigated. Worth profiling before the next person hits it
   live
-- **Move `internal/tui/theme` into `aragonite`.** Investigated whether
-  gh-sweep's orphan/merged-branch detection (`internal/orphans/detector.go`)
-  could share code with gh-repo-dashboard's equivalent: it can't cleanly.
-  gh-sweep classifies branches from direct GitHub REST API responses;
-  gh-repo-dashboard works from local git/jj checkouts via the `gh` CLI
-  binary and deletes local branches, not remote ones. Different access
-  strategy, different deletion target, no shared interface without
-  redesigning one side. Left alone.
-  The theme package is a real match, though: it's self-contained (no
+- **Move `internal/tui/theme` into `aragonite`.** It's self-contained (no
   GitHub or domain coupling) and already does more than gh-repo-dashboard's
   `internal/ui/styles` (which hardcodes Macchiato with no light/dark
   detection, while gh-sweep auto-detects the terminal background and
@@ -56,6 +48,14 @@ out to bite in practice.
   Moving it to `aragonite` would be a real upgrade for gh-repo-dashboard,
   not just deduplication. Decide whether to do the move now or wait for a
   third consumer
+- **Sharing code with aragonite/gh-repo-dashboard beyond the theme.** Full
+  investigation (access-strategy comparison, what's already shared, why
+  the PR/workflow-run models did not move, and a feature-level synergy
+  survey between the two tools) lives in
+  [aragonite's docs/gh-sweep.md](https://github.com/KyleKing/aragonite/blob/main/docs/gh-sweep.md).
+  The transport-seam/mutation-guard extraction from that doc is in
+  progress; everything else there waits for a concrete want or a third
+  consumer
 
 ## Deferred
 
