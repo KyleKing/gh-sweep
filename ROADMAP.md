@@ -49,13 +49,24 @@ out to bite in practice.
   not just deduplication. Decide whether to do the move now or wait for a
   third consumer
 - **Sharing code with aragonite/gh-repo-dashboard beyond the theme.** Full
-  investigation (access-strategy comparison, what's already shared, why
-  the PR/workflow-run models did not move, and a feature-level synergy
-  survey between the two tools) lives in
+  investigation (access-strategy comparison, what's shared, why the
+  PR/workflow-run models did not move, and a feature-level synergy survey
+  between the two tools) lives in
   [aragonite's docs/gh-sweep.md](https://github.com/KyleKing/aragonite/blob/main/docs/gh-sweep.md).
-  The transport-seam/mutation-guard extraction from that doc is in
-  progress; everything else there waits for a concrete want or a third
-  consumer
+  The transport-seam/mutation-guard extraction from that doc has landed:
+  `internal/github/transport.go` now wraps aragonite's `transport` package,
+  `go.mod` pins a released aragonite commit, a gitignored `go.work`
+  overrides it for local dev against the sibling checkout, and
+  `mise run verify-released` (already wired into `hk`'s `pre-push` hook)
+  proves the pinned version builds with `GOWORK=off` before a push.
+  Everything else in that doc waits for a concrete want or a third
+  consumer. One loose end found along the way: `my_go_template`'s `main`
+  already has this same `verify-released`/`go.work` pattern
+  (`feat: guard pushes against an unpublished sibling module`), just not
+  in a tagged release yet — gh-sweep's copy was hand-applied to match
+  rather than pulled in via `copier update`, since bumping the pin would
+  have also pulled in several unrelated commits. Worth cutting a new
+  template tag so the next `copier update` picks this up for free
 
 ## Deferred
 
