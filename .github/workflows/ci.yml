@@ -75,6 +75,29 @@ jobs:
         with:
           version: v2.12.2
 
+  project:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: 'go.mod'
+
+      - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+
+      # A project defines ci:project in its own .config/mise/conf.d file, so a
+      # gate that only it needs runs in CI without editing this workflow, which
+      # copier overwrites on every update.
+      - name: Run project checks
+        run: |
+          if mise tasks ls | grep -qE '^ci:project([[:space:]]|$)'; then
+            mise run ci:project
+          else
+            echo "No ci:project task defined; nothing project-specific to check."
+          fi
+
   benchmark:
     runs-on: ubuntu-latest
     timeout-minutes: 15

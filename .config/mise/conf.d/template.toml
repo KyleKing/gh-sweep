@@ -8,7 +8,10 @@ run = "go build -v -o gh-sweep ./cmd/gh-sweep"
 
 [tasks.ci]
 description = "Run all checks (used in GitHub Actions)"
-run = ["go test -v -coverprofile=coverage.out ./...", "go build -v -o gh-sweep ./cmd/gh-sweep"]
+run = [
+  "go test -v -coverprofile=coverage.out ./...",
+  "go build -v -o gh-sweep ./cmd/gh-sweep",
+]
 
 [tasks."verify-released"]
 description = "Build and test ignoring any go.work, the way CI sees the module"
@@ -66,12 +69,9 @@ fi
 description = "View coverage report in browser"
 run = "go tool cover -html=coverage.out"
 
-# Every version here comes from copier.yml, which is the one place they are
-# defined, so mise and the workflows can never disagree. "latest" is deliberately
-# absent: a formatter or linter that resolves differently on a laptop than on a
-# runner fails only in CI, which is the worst place to find out.
-# PLANNED: hand these pins to doner (../doner) once it reads mise TOML as well as
-# Dockerfiles, so they update on its schedule instead of by hand.
+# Every literal here is listed in .doneram.pkl and updated by doneram. "latest"
+# is deliberately absent: a formatter or linter that resolves differently on a
+# laptop than on a runner fails only in CI, which is the worst place to find out.
 [tools]
 actionlint = "1.7.12"
 go = "1.26.6"

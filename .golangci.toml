@@ -21,9 +21,100 @@ disable = [
   "forbidigo",  # requires custom regex configuration
   "gochecknoglobals",  # BubbleTea/lipgloss styles use package-level vars
   "goheader",  # copyright headers add noise for personal projects
-  "wsl"  # whitespace linting too nitpicky
+  "wsl",  # whitespace linting too nitpicky
 ]
-enable = ["asciicheck", "bidichk", "bodyclose", "containedctx", "contextcheck", "copyloopvar", "cyclop", "decorder", "dogsled", "dupl", "dupword", "durationcheck", "err113", "errcheck", "errchkjson", "errname", "errorlint", "exhaustive", "fatcontext", "forcetypeassert", "funlen", "ginkgolinter", "gocheckcompilerdirectives", "gochecknoinits", "gochecksumtype", "gocognit", "goconst", "gocritic", "gocyclo", "godot", "godox", "gomoddirectives", "goprintffuncname", "gosec", "gosmopolitan", "govet", "grouper", "iface", "importas", "inamedparam", "ineffassign", "interfacebloat", "intrange", "ireturn", "lll", "loggercheck", "maintidx", "makezero", "mirror", "misspell", "mnd", "musttag", "nakedret", "nestif", "nilerr", "nilnil", "nlreturn", "noctx", "nolintlint", "nonamedreturns", "nosprintfhostport", "paralleltest", "perfsprint", "prealloc", "predeclared", "promlinter", "protogetter", "reassign", "revive", "rowserrcheck", "sloglint", "spancheck", "sqlclosecheck", "staticcheck", "tagalign", "tagliatelle", "testableexamples", "testifylint", "testpackage", "thelper", "tparallel", "unconvert", "unparam", "unused", "usestdlibvars", "usetesting", "wastedassign", "whitespace", "wrapcheck", "zerologlint"]
+enable = [
+  "asciicheck",
+  "bidichk",
+  "bodyclose",
+  "containedctx",
+  "contextcheck",
+  "copyloopvar",
+  "cyclop",
+  "decorder",
+  "dogsled",
+  "dupl",
+  "dupword",
+  "durationcheck",
+  "err113",
+  "errcheck",
+  "errchkjson",
+  "errname",
+  "errorlint",
+  "exhaustive",
+  "fatcontext",
+  "forcetypeassert",
+  "funlen",
+  "ginkgolinter",
+  "gocheckcompilerdirectives",
+  "gochecknoinits",
+  "gochecksumtype",
+  "gocognit",
+  "goconst",
+  "gocritic",
+  "gocyclo",
+  "godot",
+  "godox",
+  "gomoddirectives",
+  "goprintffuncname",
+  "gosec",
+  "gosmopolitan",
+  "govet",
+  "grouper",
+  "iface",
+  "importas",
+  "inamedparam",
+  "ineffassign",
+  "interfacebloat",
+  "intrange",
+  "ireturn",
+  "lll",
+  "loggercheck",
+  "maintidx",
+  "makezero",
+  "mirror",
+  "misspell",
+  "mnd",
+  "musttag",
+  "nakedret",
+  "nestif",
+  "nilerr",
+  "nilnil",
+  "nlreturn",
+  "noctx",
+  "nolintlint",
+  "nonamedreturns",
+  "nosprintfhostport",
+  "paralleltest",
+  "perfsprint",
+  "prealloc",
+  "predeclared",
+  "promlinter",
+  "protogetter",
+  "reassign",
+  "revive",
+  "rowserrcheck",
+  "sloglint",
+  "spancheck",
+  "sqlclosecheck",
+  "staticcheck",
+  "tagalign",
+  "tagliatelle",
+  "testableexamples",
+  "testifylint",
+  "testpackage",
+  "thelper",
+  "tparallel",
+  "unconvert",
+  "unparam",
+  "unused",
+  "usestdlibvars",
+  "usetesting",
+  "wastedassign",
+  "whitespace",
+  "wrapcheck",
+  "zerologlint",
+]
 
 [[linters.exclusions.rules]]
 # Table-driven tests grow long cases and repeat literals without adding real complexity.
@@ -89,12 +180,25 @@ min-len = 3
 min-occurrences = 3
 
 [linters.settings.gocritic]
-enabled-tags = ["diagnostic", "style", "performance", "experimental", "opinionated"]
+enabled-tags = [
+  "diagnostic",
+  "style",
+  "performance",
+  "experimental",
+  "opinionated",
+]
 disabled-checks = [
   "hugeParam",  # BubbleTea root Models are large by design; value receivers keep Update/View copy semantics
-  "unnamedResult",  # contradicts nonamedreturns, which is also enabled and wins
-  "whyNoLint"
+  "unnamedResult",  # contradicts nonamedreturns, which is enabled and wins
+  "whyNoLint",
 ]
+
+[linters.settings.gocyclo]
+min-complexity = 15
+
+[linters.settings.godot]
+scope = "declarations"
+capital = true
 
 [linters.settings.gosec]
 excludes = [
@@ -104,13 +208,6 @@ excludes = [
   "G304",
   "G703",  # same taint-analysis rule as G304, newer rule ID
 ]
-
-[linters.settings.gocyclo]
-min-complexity = 15
-
-[linters.settings.godot]
-scope = "declarations"
-capital = true
 
 [linters.settings.govet]
 enable-all = true
@@ -159,7 +256,54 @@ require-specific = true
 
 [linters.settings.revive]
 enable-all-rules = false
-rules = [{ name = "atomic" }, { name = "blank-imports" }, { name = "bool-literal-in-expr" }, { name = "call-to-gc" }, { name = "confusing-naming" }, { name = "constant-logical-expr" }, { name = "context-as-argument" }, { name = "context-keys-type" }, { name = "defer" }, { name = "dot-imports" }, { name = "early-return" }, { name = "empty-block" }, { name = "empty-lines" }, { name = "error-naming" }, { name = "error-return" }, { name = "error-strings" }, { name = "errorf" }, { name = "exported" }, { name = "if-return" }, { name = "import-shadowing" }, { name = "increment-decrement" }, { name = "indent-error-flow" }, { name = "modifies-parameter" }, { name = "modifies-value-receiver" }, { name = "package-comments" }, { name = "range" }, { name = "range-val-address" }, { name = "range-val-in-closure" }, { name = "receiver-naming" }, { name = "redefines-builtin-id" }, { name = "string-of-int" }, { name = "struct-tag" }, { name = "superfluous-else" }, { name = "time-equal" }, { name = "time-naming" }, { name = "unexported-naming" }, { name = "unexported-return" }, { name = "unnecessary-stmt" }, { name = "unreachable-code" }, { name = "unused-parameter" }, { name = "unused-receiver" }, { name = "use-any" }, { name = "useless-break" }, { name = "var-declaration" }, { name = "var-naming" }, { name = "waitgroup-by-value" }]
+rules = [
+  { name = "atomic" },
+  { name = "blank-imports" },
+  { name = "bool-literal-in-expr" },
+  { name = "call-to-gc" },
+  { name = "confusing-naming" },
+  { name = "constant-logical-expr" },
+  { name = "context-as-argument" },
+  { name = "context-keys-type" },
+  { name = "defer" },
+  { name = "dot-imports" },
+  { name = "early-return" },
+  { name = "empty-block" },
+  { name = "empty-lines" },
+  { name = "error-naming" },
+  { name = "error-return" },
+  { name = "error-strings" },
+  { name = "errorf" },
+  { name = "exported" },
+  { name = "if-return" },
+  { name = "import-shadowing" },
+  { name = "increment-decrement" },
+  { name = "indent-error-flow" },
+  { name = "modifies-parameter" },
+  { name = "modifies-value-receiver" },
+  { name = "package-comments" },
+  { name = "range" },
+  { name = "range-val-address" },
+  { name = "range-val-in-closure" },
+  { name = "receiver-naming" },
+  { name = "redefines-builtin-id" },
+  { name = "string-of-int" },
+  { name = "struct-tag" },
+  { name = "superfluous-else" },
+  { name = "time-equal" },
+  { name = "time-naming" },
+  { name = "unexported-naming" },
+  { name = "unexported-return" },
+  { name = "unnecessary-stmt" },
+  { name = "unreachable-code" },
+  { name = "unused-parameter" },
+  { name = "unused-receiver" },
+  { name = "use-any" },
+  { name = "useless-break" },
+  { name = "var-declaration" },
+  { name = "var-naming" },
+  { name = "waitgroup-by-value" },
+]
 
 [linters.settings.staticcheck]
 checks = ["all", "-ST1000"]
@@ -178,7 +322,17 @@ enable-all = true
 check-exported = true
 
 [linters.settings.wrapcheck]
-ignore-sigs = [".Errorf(", "errors.New(", "errors.Unwrap(", "errors.Join(", ".Wrap(", ".Wrapf(", ".WithMessage(", ".WithMessagef(", ".WithStack("]
+ignore-sigs = [
+  ".Errorf(",
+  "errors.New(",
+  "errors.Unwrap(",
+  "errors.Join(",
+  ".Wrap(",
+  ".Wrapf(",
+  ".WithMessage(",
+  ".WithMessagef(",
+  ".WithStack(",
+]
 
 [run]
 timeout = "5m"

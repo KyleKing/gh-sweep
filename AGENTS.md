@@ -1,11 +1,11 @@
 # AI Agent Guidelines for gh-sweep
 
-How to work in this Go project. Architecture and domain context live in
-[DESIGN.md](DESIGN.md), task and release mechanics live in
+How to work in this Go project. Task and release mechanics live in
 [CONTRIBUTING.md](CONTRIBUTING.md), worked code examples live in
 [docs/go-best-practices.md](docs/go-best-practices.md), and toolchain failures live
-in [docs/troubleshooting.md](docs/troubleshooting.md). This file covers only what
-those do not.
+in [docs/troubleshooting.md](docs/troubleshooting.md). Architecture and domain
+context, where the project keeps a DESIGN.md, live there. This file covers only
+what those do not.
 
 ## Verify before you report
 

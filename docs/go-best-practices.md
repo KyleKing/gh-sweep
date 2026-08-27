@@ -10,7 +10,7 @@ Worked examples for the conventions [AGENTS.md](../AGENTS.md) states as rules.
 - Package names: short, lowercase, no underscores (`httputil`, not `http_util`)
 - Avoid `util`, `common`, and `misc` packages. Find a specific name or split the package
 - `internal/` blocks external imports at the compiler level, so anything under it stays free to change
-- `pkg/` is importable by other modules, so every exported symbol there is a compatibility promise
+- Every exported symbol a downstream module can import is a compatibility promise, whether it lives under `pkg/` or at the top level
 - Each entry point is its own main package under `cmd/<binary-name>/`
 
 ### File Organization
