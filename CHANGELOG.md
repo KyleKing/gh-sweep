@@ -1,3 +1,10 @@
+## v0.8.0 (2026-08-27)
+
+### Feat
+
+- **github**: share the transport test seam and mutation guard via aragonite
+- **tui**: reorganize home menu by scope with letter shortcuts and scrolling
+
 ## v0.7.0 (2026-08-20)
 
 ### Feat
