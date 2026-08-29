@@ -25,30 +25,11 @@ out to bite in practice.
 
 ## Needs your input
 
-- **Widen the policy-check smoke test into a real gated apply.**
-  `.github/workflows/policy-check.yml` runs `gh sweep policy --list`
-  read-only on every push to prove the extension installs and runs in
-  Actions; nothing applies yet. `policy-apply.yml` (the reusable
-  `workflow_call` with the environment-approval gate) exists but nothing
-  calls it. Before wiring that up, decide: which repo declares the real
-  policy and calls the reusable workflow (gh-sweep governing itself via
-  `.gh-sweep-policy.yaml`, a dedicated demo/reference repo such as
-  `KyleKing/kyleking`, or both), what the environment name and reviewer
-  list should be, and what token scope the apply job's secret needs
-  (repo-admin write, vs. gh-sweep's default read-only `GITHUB_TOKEN`)
 - GHA Performance view load time: 13-32+ seconds even on a full cache hit,
   found while scripting the demo recording and dropped from that recording
   rather than investigated. Worth profiling before the next person hits it
   live
-- **Move `internal/tui/theme` into `aragonite`.** It's self-contained (no
-  GitHub or domain coupling) and already does more than gh-repo-dashboard's
-  `internal/ui/styles` (which hardcodes Macchiato with no light/dark
-  detection, while gh-sweep auto-detects the terminal background and
-  switches Catppuccin Latte/Macchiato, plus a `CATPPUCCIN_THEME` override).
-  Moving it to `aragonite` would be a real upgrade for gh-repo-dashboard,
-  not just deduplication. Decide whether to do the move now or wait for a
-  third consumer
-- **Sharing code with aragonite/gh-repo-dashboard beyond the theme.** Full
+- **Sharing code with aragonite/gh-repo-dashboard beyond the rendering packages.** Full
   investigation (access-strategy comparison, what's shared, why the
   PR/workflow-run models did not move, and a feature-level synergy survey
   between the two tools) lives in

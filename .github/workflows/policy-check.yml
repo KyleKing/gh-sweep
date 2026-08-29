@@ -1,9 +1,9 @@
 name: Policy Check
 
 # Read-only smoke test: proves the gh-sweep extension installs and runs in
-# Actions against .gh-sweep-policy.yaml, without ever applying anything.
-# Widening this into the gated apply flow (policy-apply.yml) is a separate,
-# deliberate step, not a side effect of this workflow passing.
+# Actions against .gh-sweep-policy.yaml, without ever applying anything, and
+# on the default GITHUB_TOKEN so it needs no secret. A red run here means live
+# settings have drifted; policy.yml is what closes it, on demand.
 
 on:
   workflow_dispatch:

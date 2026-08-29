@@ -1,0 +1,25 @@
+name: Policy
+
+# Closes drift between .gh-sweep-policy.yaml and this repo's live settings.
+# Manual only: the read-only smoke test in policy-check.yml is what runs on
+# every push, so routine work never queues an approval request.
+#
+# The apply job needs a token that can write repo admin settings and toggle
+# secret scanning, which the default GITHUB_TOKEN cannot do. Set
+# POLICY_APPLY_TOKEN to a fine-grained PAT scoped to this repo with
+# Administration: read and write, and create a policy-apply environment with
+# yourself as a required reviewer.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  policy:
+    uses: ./.github/workflows/policy-apply.yml
+    with:
+      environment: policy-apply
+    secrets:
+      token: ${{ secrets.POLICY_APPLY_TOKEN }}

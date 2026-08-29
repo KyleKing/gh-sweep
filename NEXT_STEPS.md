@@ -2,17 +2,15 @@
 
 ## 2026-08-27
 
-- Policy Check is red by design, not a bug: `.gh-sweep-policy.yaml` declares
-  `delete_branch_on_merge`, `allow_squash_merge`, and secret scanning as
-  desired, but the live repo doesn't match, and `gh sweep policy --list`
-  exits 1 on any drift for exactly this reason. Applying the policy
-  (`gh sweep policy --apply --yes`) also closes drift on `required_reviews: 1`
-  and `require_status_checks: ci` in branch protection, which would block
-  direct pushes to `main` (your workflow and this freshen pass both rely on
-  that). Left untouched pending your call: apply and adjust the push
-  workflow, relax the protection block in the policy file, or wire up the
-  already-built `policy-apply.yml` (gated by a GitHub Environment) instead of
-  hand-applying.
+- Policy Check stays red until you run the new apply. The `protection:` block
+  is gone from `.gh-sweep-policy.yaml`, so applying it no longer locks `main`,
+  and `.github/workflows/policy.yml` calls the gated `policy-apply.yml` on
+  `workflow_dispatch`. Two things only you can do: create a `policy-apply`
+  GitHub Environment with yourself as a required reviewer, and set
+  `POLICY_APPLY_TOKEN` to a fine-grained PAT scoped to this repo with
+  Administration read and write. The default `GITHUB_TOKEN` cannot write repo
+  admin settings or toggle secret scanning, which is why the apply job takes a
+  secret at all
 - Noticed while investigating the above: the CI run's default `GITHUB_TOKEN`
   reported different drift (`allow_squash_merge`, `secret_scanning`,
   `secret_scanning_push_protection`) than my personal `gh auth token` did
