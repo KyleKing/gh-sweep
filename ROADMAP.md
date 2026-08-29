@@ -41,13 +41,9 @@ out to bite in practice.
   `mise run verify-released` (already wired into `hk`'s `pre-push` hook)
   proves the pinned version builds with `GOWORK=off` before a push.
   Everything else in that doc waits for a concrete want or a third
-  consumer. One loose end found along the way: `my_go_template`'s `main`
-  already has this same `verify-released`/`go.work` pattern
-  (`feat: guard pushes against an unpublished sibling module`), just not
-  in a tagged release yet — gh-sweep's copy was hand-applied to match
-  rather than pulled in via `copier update`, since bumping the pin would
-  have also pulled in several unrelated commits. Worth cutting a new
-  template tag so the next `copier update` picks this up for free
+  consumer. The `verify-released`/`go.work` pattern this repo hand-applied
+  is now in my_go_template v0.12.1, so a `copier update` reconciles the
+  hand-applied copy with the template's
 
 ## Deferred
 
