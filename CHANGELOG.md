@@ -1,3 +1,13 @@
+## v0.9.0 (2026-08-29)
+
+### Feat
+
+- **ci**: wire the gated policy apply and drop the protection block
+
+### Refactor
+
+- **theme**: source the Catppuccin palettes from aragonite
+
 ## v0.8.0 (2026-08-27)
 
 ### Feat
