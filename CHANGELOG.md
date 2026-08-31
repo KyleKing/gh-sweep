@@ -1,3 +1,9 @@
+## v0.9.1 (2026-08-31)
+
+### Fix
+
+- **scripts**: generate the tap deploy key inside 1Password
+
 ## v0.9.0 (2026-08-29)
 
 ### Feat
