@@ -10,3 +10,4 @@ importas = "importas"
 # "[r]eleases"-style bracketed-shortcut labels: typos sees "eleases" alone and
 # corrects it to "releases", ignoring the "r]" that already supplies the r.
 eleases = "eleases"
+nalytics = "nalytics"
