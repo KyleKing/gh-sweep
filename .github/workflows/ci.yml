@@ -44,9 +44,10 @@ jobs:
       # checkout that never ran `hk install --mise` cannot bypass them.
       - run: hk check --all
         env:
-          # `ci` duplicates the ci job above, and `commitizen-branch` needs an
-          # origin/HEAD..HEAD range that does not exist on a PR checkout.
-          HK_SKIP_STEPS: ci,commitizen-branch
+          # `ci` and `verify-released` both duplicate the ci job above, and
+          # `commitizen-branch` needs an origin/HEAD..HEAD range that does not
+          # exist on a PR checkout.
+          HK_SKIP_STEPS: ci,verify-released,commitizen-branch
 
   # Its own job so a workflow error reads as an actionlint failure instead of
   # surfacing inside `hk check --all`. actionlint owns .github/workflows/, which
@@ -73,7 +74,7 @@ jobs:
 
       - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
-          version: v2.12.2
+          version: v2.13.2
 
   project:
     runs-on: ubuntu-latest
