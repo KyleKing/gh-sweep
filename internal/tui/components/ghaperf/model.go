@@ -436,7 +436,8 @@ func (m Model) View() string {
 
 	header.WriteString(subtitleStyle.Render(fmt.Sprintf(
 		"Last %d days | %d runs (%d cached, %d new)",
-		m.filterDays, len(m.runs), m.cachedCount, m.newCount)))
+		m.filterDays, len(m.runs), m.cachedCount, m.newCount,
+	)))
 	header.WriteString("\n\n")
 
 	if m.showHelp {

@@ -147,7 +147,8 @@ func (g *GQLClient) ListPRReviewThreads(owner, repo string, prNumber int) ([]Rev
 		pr := response.Repository.PullRequest
 		threads = append(
 			threads,
-			mapReviewThreads(owner, repo, prNumber, pr.Title, pr.ReviewThreads.Nodes)...)
+			mapReviewThreads(owner, repo, prNumber, pr.Title, pr.ReviewThreads.Nodes)...,
+		)
 
 		if !pr.ReviewThreads.PageInfo.HasNextPage {
 			break

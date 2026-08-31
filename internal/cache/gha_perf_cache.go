@@ -81,10 +81,12 @@ func (m *GHAPerfCacheManager) Load(owner, repo string) (*GHAPerfCache, error) {
 		cache.Runs[i].Duration = time.Duration(cache.Runs[i].DurationSeconds * float64(time.Second))
 		for j := range cache.Runs[i].Jobs {
 			cache.Runs[i].Jobs[j].Duration = time.Duration(
-				cache.Runs[i].Jobs[j].DurationSeconds * float64(time.Second))
+				cache.Runs[i].Jobs[j].DurationSeconds * float64(time.Second),
+			)
 			for k := range cache.Runs[i].Jobs[j].Steps {
 				cache.Runs[i].Jobs[j].Steps[k].Duration = time.Duration(
-					cache.Runs[i].Jobs[j].Steps[k].DurationSeconds * float64(time.Second))
+					cache.Runs[i].Jobs[j].Steps[k].DurationSeconds * float64(time.Second),
+				)
 			}
 		}
 	}
