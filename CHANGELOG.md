@@ -1,3 +1,9 @@
+## v0.9.2 (2026-08-31)
+
+### Fix
+
+- **typos**: exclude nalytics false positive after typos 1.50.0 bump
+
 ## v0.9.1 (2026-08-31)
 
 ### Fix
