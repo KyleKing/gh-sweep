@@ -1,3 +1,9 @@
+## v0.10.1 (2026-09-02)
+
+### Fix
+
+- **github**: rate-limit the GraphQL client and block per pool
+
 ## v0.10.0 (2026-09-02)
 
 ### Feat
