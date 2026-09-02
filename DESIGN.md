@@ -58,7 +58,8 @@ Adding a new API surface:
 ## Policy
 
 `policy` diffs and syncs repo settings, `security_and_analysis` toggles, release
-immutability, and a branch-protection baseline against a declared
+immutability, a branch-protection baseline, and a named repository ruleset
+against a declared
 `config.PolicyConfig` (`.gh-sweep-policy.yaml`, distinct from `.gh-sweep.yaml`:
 that file holds flag defaults, this one holds desired state). A field left
 unset in the policy is never reported or changed, so a narrow policy only
@@ -70,7 +71,19 @@ the whole managed subset of a domain rather than only the fields that drifted,
 so re-running an already-converged policy is a safe no-op. Branch-protection
 apply merges declared overrides onto the repo's live rule before the PUT,
 since GitHub's protection endpoint replaces the whole rule rather than
-patching fields.
+patching fields. Ruleset apply works the same way and goes further: because
+`Ruleset` flattens GitHub's `{type, parameters}` array into the rule types the
+policy models, it round-trips unmodeled rule types and bypass actors through
+`Ruleset.Unmanaged` and `BypassActors` so a full-replacement PUT cannot drop
+them. A ruleset is matched by name, and created when no ruleset carries that
+name.
+
+Rulesets and branch protection are independent GitHub features that both
+evaluate, most-restrictive-wins. gh-sweep manages each only when declared, so a
+policy can use either or both. The distinction that matters: classic protection
+cannot require a pull request with zero required approvals (a zero count sends
+`required_pull_request_reviews: null`, dropping the PR gate), while a ruleset
+`pull_request` rule can.
 
 `gh-sweep policy --list --format json` exits 1 when it finds drift, so a
 scheduled GitHub Action can fail its own job on drift without parsing output;

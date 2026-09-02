@@ -143,8 +143,9 @@ gh sweep pages --namespace my-user --format json
 
 ## policy
 
-Diff and sync repo settings, security & analysis, release immutability, and
-branch protection against a declared [policy file](./configuration.md#policy-file).
+Diff and sync repo settings, security & analysis, release immutability, branch
+protection, and repository rulesets against a declared
+[policy file](./configuration.md#policy-file).
 A field left out of the policy is never reported or changed.
 
 ```bash

@@ -70,6 +70,34 @@ releases:
 protection:
   required_reviews: 1
   require_status_checks: [ci]
+
+ruleset:
+  name: main
+  enforcement: active
+  block_deletion: true
+  block_force_push: true
+  pull_request:
+    required_approvals: 0
+    allowed_merge_methods: [squash]
 ```
+
+### Protection or ruleset
+
+The two are separate GitHub features that both apply, most-restrictive-wins, so
+declaring both means two rules to reason about. Pick one per repo unless you
+want that.
+
+`protection:` writes a classic branch-protection rule on the default branch. It
+cannot require a pull request without also requiring an approval: setting
+`required_reviews: 0` sends `required_pull_request_reviews: null`, which drops
+the PR requirement entirely and re-opens direct pushes to the branch.
+
+`ruleset:` writes a repository ruleset, matched by `name`. A `pull_request:`
+block with `required_approvals: 0` requires the PR and no approval on it, which
+is the usual want for a repo with one or two maintainers. gh-sweep manages only
+the rule types it models (`block_deletion`, `block_force_push`,
+`require_linear_history`, `require_status_checks`, and `pull_request`); other
+rule types and every bypass actor on a live ruleset are carried across
+untouched when it updates one.
 
 See [gh sweep policy](./cli.md#policy) for diffing and applying it.

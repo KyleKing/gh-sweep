@@ -49,3 +49,25 @@ protection:
   require_linear_history: false
   allow_force_pushes: false
   allow_deletions: false
+
+# A repository ruleset, managed by name (GET/POST/PUT /repos/{owner}/{repo}/rulesets).
+# Rulesets sit alongside branch protection rather than replacing it, and express
+# rules protection cannot: a `pull_request` block with `required_approvals: 0`
+# requires a PR without requiring an approval on it. Rules and bypass actors
+# gh-sweep does not model are preserved when it updates an existing ruleset.
+ruleset:
+  name: main
+  enforcement: active # active | evaluate | disabled
+  include_refs: ["~DEFAULT_BRANCH"]
+  block_deletion: true
+  block_force_push: true
+  # require_linear_history: false
+  # require_status_checks:
+  #   - ci
+  pull_request:
+    required_approvals: 0
+    require_code_owner_review: false
+    allowed_merge_methods: [squash]
+    # require_last_push_approval: false
+    # dismiss_stale_reviews_on_push: false
+    # required_review_thread_resolution: false
