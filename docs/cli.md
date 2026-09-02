@@ -3,10 +3,11 @@
 `gh sweep` with no subcommand opens the home menu. Each subcommand opens its own
 view, and `--list` prints a table and exits instead.
 
-`--org`, `--repos`, and `--config` are persistent flags that work on every
-command. The first two override the [config file](./configuration.md), and
-`--config` chooses which file that is, so one machine can keep a separate
-profile per org or per repo group.
+`--org`, `--repos`, `--config`, and `--policy` are persistent flags that work on
+every command and on the home menu. The first two override the
+[config file](./configuration.md), `--config` chooses which file that is, and
+`--policy` chooses the policy file, so one machine can keep a separate profile
+per org or per repo group.
 
 ## branches
 

@@ -99,16 +99,6 @@ func intFallback(cmd *cobra.Command, name string, flagValue, configValue int) in
 	return flagValue
 }
 
-// resolveScanRepos narrows a namespace scan. The flag wins over the config so
-// a one-off run can widen or narrow what the config declares.
-func resolveScanRepos(cmd *cobra.Command, cfg *config.Config) []string {
-	if repos := stringSliceFlag(cmd, "repos"); len(repos) > 0 {
-		return repos
-	}
-
-	return cfg.QualifiedRepos()
-}
-
 func scanOptions(
 	cmd *cobra.Command,
 	cfg *config.Config,
@@ -116,10 +106,13 @@ func scanOptions(
 	includeRecent bool,
 	excludePatterns []string,
 ) orphans.ScanOptions {
-	options := orphans.DefaultScanOptions()
+	options := cfg.ScanOptions()
 	options.StaleDaysThreshold = staleDays
-	options.OnlyRepos = resolveScanRepos(cmd, cfg)
 	options.IncludeRecentNoPR = includeRecent
+
+	if repos := stringSliceFlag(cmd, "repos"); len(repos) > 0 {
+		options.OnlyRepos = repos
+	}
 
 	if len(excludePatterns) > 0 {
 		options.ExcludePatterns = append(options.ExcludePatterns, excludePatterns...)

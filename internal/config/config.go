@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/KyleKing/gh-sweep/internal/orphans"
 )
 
 const defaultBranchName = "main"
@@ -160,6 +162,29 @@ func (c *Config) QualifiedRepos() []string {
 	}
 
 	return repos
+}
+
+// ScanOptions returns the orphan-scan settings this config declares, layered
+// over the defaults. Both the CLI and the TUI build their scans from this, so a
+// setting cannot reach one and not the other.
+func (c *Config) ScanOptions() orphans.ScanOptions {
+	options := orphans.DefaultScanOptions()
+
+	if c.Orphans.StaleDaysThreshold > 0 {
+		options.StaleDaysThreshold = c.Orphans.StaleDaysThreshold
+	}
+
+	if len(c.Orphans.ExcludePatterns) > 0 {
+		options.ExcludePatterns = c.Orphans.ExcludePatterns
+	}
+
+	if c.Orphans.DefaultConcurrency > 0 {
+		options.Concurrency = c.Orphans.DefaultConcurrency
+	}
+
+	options.OnlyRepos = c.QualifiedRepos()
+
+	return options
 }
 
 // Load loads configuration from the first of the searched paths that exists,

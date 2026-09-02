@@ -103,15 +103,21 @@ type MainModel struct {
 	repos               []string
 	baseline            string
 	org                 string
+	policyPath          string
+	scanOptions         orphans.ScanOptions
 	regressionThreshold float64
 }
 
 // MainModelOptions configures the initial state of the main TUI model.
 type MainModelOptions struct {
-	Baseline            string
-	Org                 string
-	Repo                string
+	Baseline string
+	Org      string
+	Repo     string
+	// PolicyPath is the policy file the policy view diffs against. Empty
+	// searches the default locations.
+	PolicyPath          string
 	Repos               []string
+	ScanOptions         orphans.ScanOptions
 	RegressionThreshold float64
 }
 
@@ -124,6 +130,8 @@ func NewMainModel(opts MainModelOptions) MainModel {
 		repos:               opts.Repos,
 		baseline:            opts.Baseline,
 		org:                 opts.Org,
+		policyPath:          opts.PolicyPath,
+		scanOptions:         opts.ScanOptions,
 		regressionThreshold: opts.RegressionThreshold,
 	}
 }
@@ -625,12 +633,12 @@ func (m MainModel) activateReleases() (tea.Model, tea.Cmd) {
 }
 
 func (m MainModel) activateOrphans() (tea.Model, tea.Cmd) {
-	m.orphansModel = orphanstui.NewModel(m.org, orphans.DefaultScanOptions())
+	m.orphansModel = orphanstui.NewModel(m.org, m.scanOptions)
 	return m, m.orphansModel.Init()
 }
 
 func (m MainModel) activatePolicy() (tea.Model, tea.Cmd) {
-	policyCfg, err := config.LoadPolicy("")
+	policyCfg, err := config.LoadPolicy(m.policyPath)
 	if err != nil {
 		m.policyModel = policytui.NewModelWithConfigError(err)
 	} else {

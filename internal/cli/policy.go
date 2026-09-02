@@ -49,7 +49,6 @@ Examples:
 func init() {
 	rootCmd.AddCommand(policyCmd)
 
-	policyCmd.Flags().String("policy", "", "Path to the policy file (default: .gh-sweep-policy.yaml)")
 	policyCmd.Flags().Bool("list", false, "CLI list mode (no TUI); exits 1 if drift is found or a repo fails to load")
 	policyCmd.Flags().Bool("apply", false, "Sync drifted repos toward the policy")
 	policyCmd.Flags().Bool(confirmYes, false, "Skip the per-repo confirmation prompt when applying")

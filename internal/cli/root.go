@@ -41,6 +41,7 @@ Use 'gh-sweep <command> --help' for more information about a command.`,
 			stringFlag(cmd, "org"),
 			stringSliceFlag(cmd, "repos"),
 		)
+		opts.PolicyPath = stringFlag(cmd, "policy")
 
 		theme.Init(theme.Detect())
 
@@ -100,6 +101,7 @@ func resolveMainOptions(cfg *config.Config, repo, org string, repos []string) tu
 		Org:                 org,
 		Repo:                repo,
 		Repos:               repos,
+		ScanOptions:         cfg.ScanOptions(),
 		RegressionThreshold: cfg.GHAPerf.RegressionThreshold,
 	}
 }
@@ -119,6 +121,8 @@ var configPath string
 func init() {
 	rootCmd.PersistentFlags().StringVar(&configPath, "config", "",
 		"Path to the config file (default: search ./.gh-sweep.yaml, ~/.gh-sweep.yaml, ~/.config/gh-sweep/)")
+	rootCmd.PersistentFlags().
+		String("policy", "", "Path to the policy file (default: .gh-sweep-policy.yaml)")
 	rootCmd.Flags().String("repo", "", "Repository (owner/repo)")
 	rootCmd.PersistentFlags().
 		String("org", "", "GitHub organization (overrides config default_org)")
