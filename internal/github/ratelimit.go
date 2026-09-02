@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -49,8 +50,8 @@ func (e *RateLimitError) Error() string {
 type rateLimitTransport struct {
 	base    http.RoundTripper
 	now     func() time.Time
+	blocked map[string]*RateLimitError
 	mu      sync.Mutex
-	blocked *RateLimitError
 }
 
 func newRateLimitTransport(base http.RoundTripper) *rateLimitTransport {
@@ -58,11 +59,27 @@ func newRateLimitTransport(base http.RoundTripper) *rateLimitTransport {
 		base = http.DefaultTransport
 	}
 
-	return &rateLimitTransport{base: base, now: time.Now}
+	return &rateLimitTransport{base: base, now: time.Now, blocked: map[string]*RateLimitError{}}
+}
+
+// pool names the allowance a request spends. GitHub's pools are separate
+// budgets rather than slices of one, so a tool out of core can still make
+// GraphQL calls and must not be blocked from trying.
+func pool(req *http.Request) string {
+	if strings.HasSuffix(req.URL.Path, "/graphql") {
+		return "graphql"
+	}
+
+	if strings.HasPrefix(req.URL.Path, "/search/") {
+		return "search"
+	}
+
+	return "core"
 }
 
 func (t *rateLimitTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	if blocked := t.current(); blocked != nil {
+	resource := pool(req)
+	if blocked := t.current(resource); blocked != nil {
 		return nil, blocked
 	}
 
@@ -72,6 +89,9 @@ func (t *rateLimitTransport) RoundTrip(req *http.Request) (*http.Response, error
 	}
 
 	if limitErr := exhausted(resp, t.now()); limitErr != nil {
+		if limitErr.Resource == "" {
+			limitErr.Resource = resource
+		}
 		t.block(limitErr)
 
 		if err := drain(resp); err != nil {
@@ -84,27 +104,28 @@ func (t *rateLimitTransport) RoundTrip(req *http.Request) (*http.Response, error
 	return resp, nil
 }
 
-func (t *rateLimitTransport) current() *RateLimitError {
+func (t *rateLimitTransport) current(resource string) *RateLimitError {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	if t.blocked == nil {
+	blocked, found := t.blocked[resource]
+	if !found {
 		return nil
 	}
 
-	if !t.now().Before(t.blocked.RetryAt) {
-		t.blocked = nil
+	if !t.now().Before(blocked.RetryAt) {
+		delete(t.blocked, resource)
 
 		return nil
 	}
 
-	return t.blocked
+	return blocked
 }
 
 func (t *rateLimitTransport) block(limitErr *RateLimitError) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	t.blocked = limitErr
+	t.blocked[limitErr.Resource] = limitErr
 }
 
 // exhausted returns an error only when the response says the quota is spent.

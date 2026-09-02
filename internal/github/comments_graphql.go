@@ -53,8 +53,8 @@ type GQLClient struct {
 }
 
 // NewGQLClient creates a GraphQL client using gh CLI auth or GITHUB_TOKEN.
-func NewGQLClient() (*GQLClient, error) {
-	client, err := api.NewGraphQLClient(*clientOptions())
+func NewGQLClient(opts ...Option) (*GQLClient, error) {
+	client, err := api.NewGraphQLClient(*applyOptions(clientOptions(), opts))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create GraphQL client: %w", err)
 	}

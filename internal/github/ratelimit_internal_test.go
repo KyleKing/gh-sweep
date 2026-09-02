@@ -9,7 +9,10 @@ import (
 	"time"
 )
 
-const userURL = "https://api.github.com/user"
+const (
+	userURL = "https://api.github.com/user"
+	gqlURL  = "https://api.github.com/graphql"
+)
 
 type stubTransport struct {
 	respond func(int) *http.Response
@@ -181,5 +184,58 @@ func TestRateLimitErrorNamesTheResetTime(t *testing.T) {
 		if !strings.Contains(limitErr.Error(), want) {
 			t.Errorf("Error() = %q, want it to mention %s", limitErr.Error(), want)
 		}
+	}
+}
+
+// GitHub's pools are separate budgets, not slices of one, so exhausting core
+// must not stop a GraphQL query that still has its own allowance.
+func TestRateLimitTransportBlocksPerPool(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, time.September, 2, 4, 0, 0, 0, time.UTC)
+
+	base := &stubTransport{respond: func(calls int) *http.Response {
+		if calls == 1 {
+			return response(http.StatusForbidden, headerOf(map[string]string{
+				headerRemaining: "0",
+				headerReset:     strconv.FormatInt(now.Add(time.Hour).Unix(), 10),
+				headerResource:  "core",
+			}))
+		}
+
+		return response(http.StatusOK, nil)
+	}}
+
+	rt := newRateLimitTransport(base)
+	rt.now = func() time.Time { return now }
+
+	restReq, err := http.NewRequestWithContext(t.Context(), http.MethodGet, userURL, http.NoBody)
+	if err != nil {
+		t.Fatalf("building REST request: %v", err)
+	}
+
+	//nolint:bodyclose // the stub serves http.NoBody
+	if _, err := rt.RoundTrip(restReq); err == nil {
+		t.Fatal("RoundTrip() error = nil, want the core pool exhausted")
+	}
+
+	gqlReq, err := http.NewRequestWithContext(t.Context(), http.MethodPost, gqlURL, http.NoBody)
+	if err != nil {
+		t.Fatalf("building GraphQL request: %v", err)
+	}
+
+	resp, err := rt.RoundTrip(gqlReq) //nolint:bodyclose // the stub serves http.NoBody
+	if err != nil {
+		t.Fatalf("GraphQL RoundTrip() error = %v, want it unaffected by the core pool", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("GraphQL status = %d, want 200", resp.StatusCode)
+	}
+
+	// The core pool stays blocked; only graphql was free.
+	//nolint:bodyclose // the stub serves http.NoBody
+	if _, err := rt.RoundTrip(restReq); err == nil {
+		t.Error("second REST RoundTrip() error = nil, want the core pool still blocked")
 	}
 }
