@@ -63,6 +63,19 @@ func (r *Report) HasDrift() bool {
 	return false
 }
 
+// HasErrors reports whether any repo failed to evaluate. A run that fetched
+// nothing must not read as converged, so callers gating on drift check this
+// too.
+func (r *Report) HasErrors() bool {
+	for _, repo := range r.Repos {
+		if repo.Err != nil {
+			return true
+		}
+	}
+
+	return false
+}
+
 // Evaluate fetches live state for every repo in cfg and diffs it against the
 // declared policy. A per-repo fetch error is recorded on that RepoDrift rather
 // than aborting the run, so one unreachable repo doesn't hide drift on the rest.

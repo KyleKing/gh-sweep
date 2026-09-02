@@ -22,9 +22,9 @@ var policyCmd = &cobra.Command{
 	Use:   "policy",
 	Short: "Diff and sync repository settings against a declared policy file",
 	Long: `Diff live repository settings, security & analysis, release immutability,
-and branch protection against a .gh-sweep-policy.yaml file, and optionally sync
-drift back to GitHub. A field left out of the policy is never reported or changed;
-only what you declare is managed.
+branch protection, and repository rulesets against a .gh-sweep-policy.yaml file,
+and optionally sync drift back to GitHub. A field left out of the policy is never
+reported or changed; only what you declare is managed.
 
 See .gh-sweep-policy.yaml.example for the schema.
 
@@ -32,7 +32,7 @@ Examples:
   # Launch interactive TUI
   gh-sweep policy
 
-  # List drift (no TUI); exits 1 if any repo has drift, for CI use
+  # List drift (no TUI); exits 1 if any repo has drift or fails to load, for CI use
   gh-sweep policy --list
 
   # Apply the policy, confirming each repo
@@ -50,7 +50,7 @@ func init() {
 	rootCmd.AddCommand(policyCmd)
 
 	policyCmd.Flags().String("policy", "", "Path to the policy file (default: .gh-sweep-policy.yaml)")
-	policyCmd.Flags().Bool("list", false, "CLI list mode (no TUI); exits 1 if drift is found")
+	policyCmd.Flags().Bool("list", false, "CLI list mode (no TUI); exits 1 if drift is found or a repo fails to load")
 	policyCmd.Flags().Bool("apply", false, "Sync drifted repos toward the policy")
 	policyCmd.Flags().Bool(confirmYes, false, "Skip the per-repo confirmation prompt when applying")
 	policyCmd.Flags().String("format", "table", "Output format: table, json, markdown")
@@ -99,7 +99,7 @@ func runPolicy(cmd *cobra.Command, _ []string) {
 
 	printReport(report, format)
 
-	if report.HasDrift() {
+	if report.HasDrift() || report.HasErrors() {
 		os.Exit(1)
 	}
 }

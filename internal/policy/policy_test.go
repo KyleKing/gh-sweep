@@ -1,12 +1,15 @@
 package policy_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/KyleKing/gh-sweep/internal/config"
 	"github.com/KyleKing/gh-sweep/internal/github"
 	"github.com/KyleKing/gh-sweep/internal/policy"
 )
+
+var errFetch = errors.New("fetching settings")
 
 func boolPtr(b bool) *bool { return &b }
 func intPtr(n int) *int    { return &n }
@@ -161,5 +164,48 @@ func TestReportHasDrift(t *testing.T) {
 	}}
 	if !dirty.HasDrift() {
 		t.Error("HasDrift() = false for a repo with a diff")
+	}
+}
+
+// A run where every repo failed to fetch must not read as converged, or a
+// token outage passes CI as a clean audit.
+func TestReportHasErrors(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		repos     []policy.RepoDrift
+		wantErrs  bool
+		wantDrift bool
+	}{
+		{
+			name:     "every repo failed to fetch",
+			repos:    []policy.RepoDrift{{Repository: "acme/a", Err: errFetch}},
+			wantErrs: true,
+		},
+		{
+			name:      "drift with no errors",
+			repos:     []policy.RepoDrift{{Repository: "acme/a", Diffs: []policy.Diff{{Field: "x"}}}},
+			wantDrift: true,
+		},
+		{
+			name:  "converged",
+			repos: []policy.RepoDrift{{Repository: "acme/a"}},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			report := &policy.Report{Repos: tc.repos}
+			if got := report.HasErrors(); got != tc.wantErrs {
+				t.Errorf("HasErrors() = %v, want %v", got, tc.wantErrs)
+			}
+
+			if got := report.HasDrift(); got != tc.wantDrift {
+				t.Errorf("HasDrift() = %v, want %v", got, tc.wantDrift)
+			}
+		})
 	}
 }
