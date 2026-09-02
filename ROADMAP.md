@@ -62,8 +62,12 @@ Low priority; pick up when convenient.
 - Branch extras: multi-select by ranges ("1-10", "all"), tree visualization of branch hierarchy, pairwise comparison matrix
 - Comment extras: surrounding-code context preview, open in browser, mark resolved from the TUI, heuristic resolution detection ("done"/"fixed" replies, merged PR with comment absent from the final diff)
 - Policy extras: a richer change-preview format than the current table/JSON/markdown diff output; git-backed shareable policy templates across users; org rulesets and custom-property coverage reporting alongside the per-repo diff
+- `--domains` to scope a policy apply to named domains (`--apply --domains rulesets`), useful for rolling one domain out a repo at a time. `--prune` already gates the only destructive domain, so this is convenience rather than safety
+- Read-only org dump (`gh sweep dump --org <org> --format json`, one blob per repo covering settings, protection, rulesets, security toggles, and default branch) so an agent or a script can read a whole org's configuration in one call instead of looping five `gh api` endpoints. Preferred over an MCP server: no long-running process, and the output is diffable
+- Cheaper branch dating: `DomainBranches` and the orphans scan both cost one request per branch, because GitHub's branches endpoint omits commit dates. A GraphQL query returning refs with target commit dates would collapse that to one request per repo
 - Analytics extras: AI-vs-human review ratios, contributor and bus-factor metrics, merge-behavior stats, review-delay percentiles, activity heatmap, CSV/JSON/markdown export
 - Release extras: version grouping across repos, semver compliance flags, aggregated release-notes export
+- Command grouping: `cobra.Group` is unused, so `--help` lists every subcommand in one flat alphabetical block while the home menu already groups the same views into Namespace Audit, Single Repo, Cross-Repo, and Policy. Mirroring the menu in `--help` is where a CLI conventionally signals which commands converge declared state (`policy`) and which answer a one-off question (`gha-perf`, `analytics`, `comments`)
 - Read-only dependency visibility (which repos have Renovate or Dependabot, version comparison)
 - Other local repo tools (ghq, myrepos, gita, meta) behind a unified read-only interface
 

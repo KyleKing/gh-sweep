@@ -43,6 +43,7 @@ Bubble Tea TUI plus Cobra CLI for sweeping GitHub repositories: branch cleanup, 
 - The mutation guard: `safetyTransport` panics on any DELETE/PATCH/POST/PUT during a test, so an unfaked test can never mutate real GitHub state. GETs pass through by design
 - `NewClientWithTransport` takes an explicit `http.RoundTripper` for httptest-style tests. `NewClientWithToken` bypasses `clientOptions()` entirely (no guard); avoid it in anything a test can reach
 - `scripts/check-test-safety.sh` statically rejects test files that call `gh.RESTClient`/`gh.HTTPClient`/`gh.GQLClient` directly and warns when a test constructs a client without a fake transport
+- `ratelimit.go` wraps the transport for real clients. It reads `x-ratelimit-remaining`/`x-ratelimit-reset` and `Retry-After`, returns a typed `RateLimitError` naming the local reset time, and refuses later requests until the window opens so a retry loop cannot spend a request per attempt relearning the same thing. A 403 without a remaining-count header is a permissions failure and passes through unchanged
 
 Unresolved comment review uses GraphQL `reviewThreads` (REST cannot report resolution state); without `--pr` it scans the newest open PRs capped at `DefaultOpenPRCap` (20) to bound API cost.
 
@@ -58,7 +59,8 @@ Adding a new API surface:
 ## Policy
 
 `policy` diffs and syncs repo settings, `security_and_analysis` toggles, release
-immutability, a branch-protection baseline, and a named repository ruleset
+immutability, a branch-protection baseline, a named repository ruleset, and
+leftover branches
 against a declared
 `config.PolicyConfig` (`.gh-sweep-policy.yaml`, distinct from `.gh-sweep.yaml`:
 that file holds flag defaults, this one holds desired state). A field left
@@ -91,6 +93,18 @@ see [docs/cli.md](docs/cli.md#policy) for a workflow example. `--apply --yes`
 skips the per-repo confirmation prompt for scripted use, but no code path
 applies a policy without that flag or an interactive `y`.
 
+`DomainBranches` states which leftover branches should not exist, turning a
+prune into convergence rather than a separate imperative command. It classifies
+with the same `orphans.Detector` the orphans view uses, so the two cannot
+disagree about what counts as prunable, and `RepoDrift.Prunable` carries the
+branches behind the diffs so `Apply` deletes exactly what `Evaluate` reported.
+
+Branch deletion is the one domain gated behind `ApplyOptions.PruneBranches`
+(`--prune`). Every other domain changes settings the API can change back,
+whereas this one removes refs, so it must not ride along with a bare
+`--apply --yes` in a scheduled job because someone added a `branches:` block to
+the policy file.
+
 ## TUI Composition
 
 `MainModel` (`internal/tui/main.go`) owns the terminal and a `ViewMode` enum. Each view is its own package under `internal/tui/components/` exposing a `Model` with value-receiver `Init`/`Update`/`View`. On a home-menu keypress the matching component is constructed fresh (`branches.NewModel(repo, base)`) and its `Init` command starts the data load; `esc` drops back to the home menu and discards the component. Async results arrive as typed messages private to each component (for example `branchesLoadedMsg`, `deleteResultMsg`) and `MainModel` forwards non-key messages to the active component only.
@@ -104,14 +118,16 @@ Adding a new TUI view:
 
 ## Configuration
 
-`config.Load()` reads the first file found of `./.gh-sweep.yaml`, `~/.gh-sweep.yaml`, `~/.config/gh-sweep/config.yaml`; a missing file means `DefaultConfig()`. `.gh-sweep.yaml.example` mirrors the `Config` struct field for field. The persistent `--org` and `--repos` flags override config values, and per-command flags (for example `--stale-days`, `--days`, `--base-branch`) fall back to config only when not passed (`cmd.Flags().Changed`). `QualifiedRepos()` expands bare repo names with `default_org`.
+`config.Load()` reads the first file found of `./.gh-sweep.yaml`, `~/.gh-sweep.yaml`, `~/.config/gh-sweep/config.yaml`; a missing file means `DefaultConfig()`. `config.LoadFrom(path)` backs the persistent `--config` flag, and an explicit path that cannot be read is an error rather than a silent fall back to defaults, so a typo never audits with the wrong settings. `.gh-sweep.yaml.example` mirrors the `Config` struct field for field. The persistent `--org` and `--repos` flags override config values, and per-command flags (for example `--stale-days`, `--days`, `--base-branch`) fall back to config only when not passed (`cmd.Flags().Changed`). `QualifiedRepos()` expands bare repo names with `default_org`, and `ScanOptions()` maps the config onto `orphans.ScanOptions`.
+
+Both the CLI and the TUI build their scans from `ScanOptions()`, and the home menu passes its resolved values into every view it activates. That single mapping is deliberate: when each subcommand resolved config separately and the menu constructed views with hardcoded defaults, a setting could reach one path and not the other, and a flag could be accepted while silently changing nothing.
 
 ## Caching
 
-Two unrelated caches live in `internal/cache`:
+Two unrelated caches, in two places:
 
-- `memory.go`: generic in-process TTL cache
-- `gha_perf_cache.go`: persistent JSON cache at `~/.cache/gh-sweep/gha-perf/<owner>_<repo>.json` storing fetched `RunTiming` records. `gha-perf` merges new runs into the cached set by run ID, so repeat invocations only fetch unseen runs; `--no-cache` skips it and `--cache-only` never fetches
+- go-gh's own disk response cache, enabled by `github.SetDefaultCache(dir, ttl)` from `cache.ttl`/`cache.path` and installed once at startup. Cached responses cost no rate-limit quota, which is what keeps a cross-repo sweep inside the hourly budget; a stale read is the price, and `ttl: 0` disables it. aragonite's `cache.DiskCache` is deliberately not used for this: its `TestNoBodyReachesDisk` walks the persisted type and fails if it can carry prose a person wrote, and raw GitHub JSON carries review-comment bodies
+- `internal/cache/gha_perf_cache.go`: persistent JSON cache at `~/.cache/gh-sweep/gha-perf/<owner>_<repo>.json` storing fetched `RunTiming` records. `gha-perf` merges new runs into the cached set by run ID, so repeat invocations only fetch unseen runs; `--no-cache` skips it and `--cache-only` never fetches
 
 ## UI Design
 

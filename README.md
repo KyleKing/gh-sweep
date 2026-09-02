@@ -38,7 +38,8 @@ views. Each view prints its keys along the bottom of the screen.
 - Follow a CI run live. `gha-perf` reports history, so use watchgha to tail a run
 - Write anything in the webhooks, collaborators, secrets, or releases views,
   which are read-only. Repo settings, security & analysis, release
-  immutability, branch protection, and rulesets are the exception:
+  immutability, branch protection, rulesets, and leftover-branch pruning are
+  the exception:
   `gh sweep policy` diffs and applies those against a file you declare (see
   [docs/alternatives.md](docs/alternatives.md))
 
