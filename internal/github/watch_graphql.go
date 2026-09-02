@@ -5,10 +5,10 @@ import (
 	"time"
 )
 
-const viewerRepoWatchInfoQuery = `query($cursor: String) {
+const viewerRepoWatchInfoQuery = `query($cursor: String, $affiliations: [RepositoryAffiliation]) {
   viewer {
     login
-    repositories(first: 100, after: $cursor, ownerAffiliations: [OWNER], orderBy: {field: NAME, direction: ASC}) {
+    repositories(first: 100, after: $cursor, ownerAffiliations: $affiliations, orderBy: {field: NAME, direction: ASC}) {
       pageInfo {
         hasNextPage
         endCursor
@@ -100,13 +100,22 @@ func watchStateFromViewerSubscription(s string) WatchState {
 // REST subscription endpoint, the query is atomic per page: a page either
 // returns full data for every repo in it or fails outright, so there's no
 // partial-failure state to silently misreport as "not watching".
-func (g *GQLClient) ListViewerRepoWatchInfo() (string, []RepoWatchInfo, error) {
+//
+// Passing includeOrgs widens the query to repositories the viewer can reach as
+// an organization member. It stays off by default because a member of a large
+// org would otherwise page through thousands of repos to audit their own.
+func (g *GQLClient) ListViewerRepoWatchInfo(includeOrgs bool) (string, []RepoWatchInfo, error) {
 	var username string
 	var infos []RepoWatchInfo
 	var cursor any
 
+	affiliations := []string{"OWNER"}
+	if includeOrgs {
+		affiliations = append(affiliations, "ORGANIZATION_MEMBER")
+	}
+
 	for {
-		variables := map[string]any{"cursor": cursor}
+		variables := map[string]any{"cursor": cursor, "affiliations": affiliations}
 
 		var response viewerRepoWatchInfoResponse
 		if err := g.doer.Do(viewerRepoWatchInfoQuery, variables, &response); err != nil {

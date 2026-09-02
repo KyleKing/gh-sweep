@@ -169,6 +169,7 @@ gh sweep policy --apply --yes
 | `--policy` | Path to the policy file, default `.gh-sweep-policy.yaml` |
 | `--list` | Print a table instead of the TUI; exits 1 if any repo has drift |
 | `--apply` | Sync drifted repos toward the policy, confirming each repo |
+| `--prune` | Let `--apply` delete the branches the `branches:` block reports |
 | `--yes` | Skip the confirmation prompt when applying (scripted or CI use) |
 | `--format` | `table`, `json`, or `markdown`, default `table` |
 

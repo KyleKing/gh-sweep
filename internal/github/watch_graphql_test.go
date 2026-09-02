@@ -115,7 +115,7 @@ func TestListViewerRepoWatchInfoPagination(t *testing.T) {
 	fake := &fakeGQLDoer{pages: []string{watchInfoPageOneFixture, watchInfoPageTwoFixture}}
 	client := &GQLClient{doer: fake}
 
-	username, infos, err := client.ListViewerRepoWatchInfo()
+	username, infos, err := client.ListViewerRepoWatchInfo(false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

@@ -17,7 +17,7 @@ func TestGoldenLoadedView(t *testing.T) {
 
 	pushedAt := time.Date(2026, 1, 10, 12, 0, 0, 0, time.UTC)
 
-	m := NewModel()
+	m := NewModel("")
 	m, _ = m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	m, _ = m.Update(dataLoadedMsg{
 		username: "tester",

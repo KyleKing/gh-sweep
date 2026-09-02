@@ -17,7 +17,7 @@ var (
 )
 
 func loadedWatchingModel() Model {
-	m := NewModel()
+	m := NewModel("")
 	m, _ = m.Update(dataLoadedMsg{
 		username: "tester",
 		repos: []github.RepoWatchInfo{
@@ -225,7 +225,7 @@ func manyReposFixture(count int) []github.RepoWatchInfo {
 func TestListScrollsWhenTallerThanViewport(t *testing.T) {
 	t.Parallel()
 
-	m := NewModel()
+	m := NewModel("")
 	m, _ = m.Update(tea.WindowSizeMsg{Width: 120, Height: 15})
 	m, _ = m.Update(dataLoadedMsg{username: "tester", repos: manyReposFixture(50)})
 	m, _ = m.Update(tea.KeyPressMsg{Code: '2', Text: "2"}) // watched view: all fixture repos
@@ -257,10 +257,43 @@ func TestListScrollsWhenTallerThanViewport(t *testing.T) {
 func TestWatchingLoadError(t *testing.T) {
 	t.Parallel()
 
-	m := NewModel()
+	m := NewModel("")
 	m, _ = m.Update(dataLoadedMsg{err: errUnauthorized})
 
 	if !strings.Contains(m.View(), "unauthorized") {
 		t.Errorf("view = %q", m.View())
+	}
+}
+
+// The GraphQL query returns every repo the viewer can see, so scoping is the
+// model's job: without it the view contradicts --org for the whole session.
+func TestScopedTo(t *testing.T) {
+	t.Parallel()
+
+	repos := []github.RepoWatchInfo{
+		{RepoBasic: github.RepoBasic{FullName: "acme/widgets", Owner: "acme"}},
+		{RepoBasic: github.RepoBasic{FullName: "KyleKing/gh-sweep", Owner: "KyleKing"}},
+		{RepoBasic: github.RepoBasic{FullName: "ACME/gadgets", Owner: "ACME"}},
+	}
+
+	tests := []struct {
+		name string
+		org  string
+		want int
+	}{
+		{name: "no org keeps everything", org: "", want: 3},
+		{name: "org filters other owners", org: "acme", want: 2},
+		{name: "owner match ignores case", org: "ACME", want: 2},
+		{name: "unknown org keeps nothing", org: "nope", want: 0},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := len(ScopedTo(tc.org, repos)); got != tc.want {
+				t.Errorf("ScopedTo(%q) = %d repos, want %d", tc.org, got, tc.want)
+			}
+		})
 	}
 }

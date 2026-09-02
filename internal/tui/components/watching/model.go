@@ -28,6 +28,7 @@ const (
 
 // Model represents the watch status audit TUI state.
 type Model struct {
+	org         string
 	username    string
 	repos       []github.RepoWatchInfo
 	cursor      int
@@ -44,8 +45,13 @@ type Model struct {
 }
 
 // NewModel creates a new watch status model.
-func NewModel() Model {
+// NewModel builds the watching view. A non-empty org restricts it to that
+// owner's repos; the underlying GraphQL query returns every repo the viewer
+// can see, across every org, so without this the view ignores the scope the
+// rest of the session is working in.
+func NewModel(org string) Model {
 	return Model{
+		org:      org,
 		selected: make(map[int]bool),
 		loading:  true,
 		viewMode: viewModeUnwatched,
@@ -79,22 +85,41 @@ type openResultMsg struct {
 }
 
 // Init initializes the model.
-func (Model) Init() tea.Cmd {
-	return loadData
+func (m Model) Init() tea.Cmd {
+	return loadData(m.org)
 }
 
-func loadData() tea.Msg {
-	client, err := github.NewGQLClient()
-	if err != nil {
-		return dataLoadedMsg{err: fmt.Errorf("failed to create GitHub GraphQL client: %w", err)}
+func loadData(org string) tea.Cmd {
+	return func() tea.Msg {
+		client, err := github.NewGQLClient()
+		if err != nil {
+			return dataLoadedMsg{err: fmt.Errorf("failed to create GitHub GraphQL client: %w", err)}
+		}
+
+		username, repos, err := client.ListViewerRepoWatchInfo(org != "")
+		if err != nil {
+			return dataLoadedMsg{err: fmt.Errorf("failed to list repo watch info: %w", err)}
+		}
+
+		return dataLoadedMsg{username: username, repos: ScopedTo(org, repos), err: nil}
+	}
+}
+
+// ScopedTo restricts repos to org, matching owner case-insensitively. An
+// empty org keeps everything.
+func ScopedTo(org string, repos []github.RepoWatchInfo) []github.RepoWatchInfo {
+	if org == "" {
+		return repos
 	}
 
-	username, repos, err := client.ListViewerRepoWatchInfo()
-	if err != nil {
-		return dataLoadedMsg{err: fmt.Errorf("failed to list repo watch info: %w", err)}
+	scoped := make([]github.RepoWatchInfo, 0, len(repos))
+	for i := range repos {
+		if strings.EqualFold(repos[i].Owner, org) {
+			scoped = append(scoped, repos[i])
+		}
 	}
 
-	return dataLoadedMsg{username: username, repos: repos, err: nil}
+	return scoped
 }
 
 func watchRepo(repo github.RepoWatchInfo) tea.Cmd {

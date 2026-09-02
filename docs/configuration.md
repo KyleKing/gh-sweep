@@ -93,7 +93,29 @@ ruleset:
   pull_request:
     required_approvals: 0
     allowed_merge_methods: [squash]
+
+branches:
+  prune_merged: true
+  prune_closed: true
+  prune_no_pr: true
+  no_pr_grace_days: 21
 ```
+
+### Branch pruning
+
+`branches:` states which leftover branches should not exist, so a prune becomes
+convergence rather than a separate command. `policy --list` reports them beside
+settings and ruleset drift, and the same file drives both.
+
+Deleting them takes `--prune` on top of `--apply`. Every other domain changes
+settings the API can change back, whereas this one removes refs, so it does not
+ride along with a bare `--apply --yes` in CI. A run without `--prune` reports
+the branches and says how many it skipped.
+
+Classification matches the `orphans` view exactly, because both use the same
+detector. Branches from merged or closed PRs have no grace period; a branch
+with no PR waits `no_pr_grace_days` (default 21), and one whose commit date
+cannot be read is never pruned.
 
 ### Protection or ruleset
 
