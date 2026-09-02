@@ -34,6 +34,20 @@ type ScanProgress struct {
 	Orphans     int
 }
 
+func (s *NamespaceScanner) selected(repo github.Repository) bool {
+	if len(s.options.OnlyRepos) == 0 {
+		return true
+	}
+
+	for _, want := range s.options.OnlyRepos {
+		if want == repo.FullName || want == repo.Name {
+			return true
+		}
+	}
+
+	return false
+}
+
 // ScanNamespace scans every repository in namespace and returns the
 // aggregated result.
 func (s *NamespaceScanner) ScanNamespace(
@@ -59,7 +73,7 @@ func (s *NamespaceScanner) ScanNamespaceWithProgress(
 
 	var nonArchivedRepos []github.Repository
 	for _, repo := range repos {
-		if !repo.Archived {
+		if !repo.Archived && s.selected(repo) {
 			nonArchivedRepos = append(nonArchivedRepos, repo)
 		}
 	}
@@ -139,7 +153,7 @@ func (s *NamespaceScanner) ScanRepo(ctx context.Context, repo github.Repository)
 		DefaultBranch: repo.DefaultBranch,
 	}
 
-	branches, err := s.client.ListBranches(repo.Owner, repo.Name)
+	branches, err := s.client.ListBranchesWithDates(repo.Owner, repo.Name)
 	if err != nil {
 		result.Error = err
 		return result

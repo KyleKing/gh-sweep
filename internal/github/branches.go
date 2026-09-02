@@ -60,6 +60,21 @@ func (c *Client) ListBranches(owner, repo string) ([]Branch, error) {
 	return branches, nil
 }
 
+// ListBranchesWithDates lists branches with LastCommitDate populated. The
+// branches endpoint omits commit dates, so this costs one extra request per
+// branch; callers that classify branches by age need it, and a caller that
+// only needs names should use ListBranches.
+func (c *Client) ListBranchesWithDates(owner, repo string) ([]Branch, error) {
+	branches, err := c.ListBranches(owner, repo)
+	if err != nil {
+		return nil, err
+	}
+
+	c.fillCommitDates(owner, repo, branches)
+
+	return branches, nil
+}
+
 const commitDateWorkers = 4
 
 func (c *Client) fillCommitDates(owner, repo string, branches []Branch) {

@@ -117,9 +117,12 @@ type ScanOptions struct {
 	// so it alone still offers a branch merged yesterday for deletion.
 	MinAgeDays        int
 	IncludeRecentNoPR bool
-	ExcludePatterns   []string
-	IncludeProtected  bool
-	Concurrency       int
+	// OnlyRepos restricts a namespace scan to these repositories, named either
+	// "owner/repo" or bare. Empty scans the whole namespace.
+	OnlyRepos        []string
+	ExcludePatterns  []string
+	IncludeProtected bool
+	Concurrency      int
 }
 
 const (

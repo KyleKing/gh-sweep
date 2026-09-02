@@ -427,11 +427,14 @@ func TestDetector_ClassifyBranch_MinAgeDays(t *testing.T) {
 		name       string
 		ageDays    int
 		minAgeDays int
+		undated    bool
 		wantOrphan bool
 	}{
 		{name: "merged yesterday, guard at 30 days", ageDays: 1, minAgeDays: 30},
 		{name: "merged 45 days ago, guard at 30 days", ageDays: 45, minAgeDays: 30, wantOrphan: true},
 		{name: "merged yesterday, no guard", ageDays: 1, wantOrphan: true},
+		{name: "undated branch is spared by the guard", undated: true, minAgeDays: 30},
+		{name: "undated branch with no guard", undated: true, wantOrphan: true},
 	}
 
 	for _, tc := range tests {
@@ -442,10 +445,9 @@ func TestDetector_ClassifyBranch_MinAgeDays(t *testing.T) {
 			opts.MinAgeDays = tc.minAgeDays
 			detector := orphans.NewDetector(opts)
 
-			branch := github.Branch{
-				Name:           "feature-branch",
-				SHA:            "abc123",
-				LastCommitDate: time.Now().AddDate(0, 0, -tc.ageDays),
+			branch := github.Branch{Name: "feature-branch", SHA: "abc123"}
+			if !tc.undated {
+				branch.LastCommitDate = time.Now().AddDate(0, 0, -tc.ageDays)
 			}
 
 			orphan := detector.ClassifyBranch(repo, branch, prs)

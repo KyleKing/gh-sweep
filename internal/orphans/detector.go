@@ -57,7 +57,7 @@ func (d *Detector) ClassifyBranch(
 		return nil
 	}
 
-	if daysSince < d.options.MinAgeDays {
+	if d.tooRecent(branch, daysSince) {
 		return nil
 	}
 
@@ -95,6 +95,17 @@ func (d *Detector) ClassifyBranch(
 	}
 
 	return nil
+}
+
+// tooRecent reports whether MinAgeDays spares this branch. An unknown commit
+// date reads as too recent to touch rather than infinitely old, or the guard
+// spares nothing on the branches it could not date.
+func (d *Detector) tooRecent(branch github.Branch, daysSince int) bool {
+	if d.options.MinAgeDays <= 0 {
+		return false
+	}
+
+	return branch.LastCommitDate.IsZero() || daysSince < d.options.MinAgeDays
 }
 
 func (d *Detector) shouldExclude(branchName string) bool {
