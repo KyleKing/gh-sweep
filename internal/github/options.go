@@ -2,6 +2,7 @@ package github
 
 import (
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/cli/go-gh/v2/pkg/api"
@@ -28,6 +29,10 @@ func WithCache(dir string, ttl time.Duration) Option {
 // applyOptions layers opts onto base and installs the rate-limit transport, so
 // every real client fails fast with a reset time instead of a bare 403.
 func applyOptions(base *api.ClientOptions, opts []Option) *api.ClientOptions {
+	if dir, ttl := installedCache(); ttl > 0 {
+		WithCache(dir, ttl)(base)
+	}
+
 	for _, opt := range opts {
 		opt(base)
 	}
@@ -38,4 +43,27 @@ func applyOptions(base *api.ClientOptions, opts []Option) *api.ClientOptions {
 	base.Transport = newRateLimitTransport(base.Transport)
 
 	return base
+}
+
+//nolint:gochecknoglobals // a process-wide installed default, mirroring aragonite's cache.SetDiskCache
+var (
+	defaultCacheMu  sync.Mutex
+	defaultCacheDir string
+	defaultCacheTTL time.Duration
+)
+
+// SetDefaultCache makes every later NewClient serve repeat reads from dir for
+// ttl. Call it once at startup: threading the setting through each of the
+// TUI's own client constructions would touch every view for one value.
+func SetDefaultCache(dir string, ttl time.Duration) {
+	defaultCacheMu.Lock()
+	defer defaultCacheMu.Unlock()
+	defaultCacheDir, defaultCacheTTL = dir, ttl
+}
+
+func installedCache() (string, time.Duration) {
+	defaultCacheMu.Lock()
+	defer defaultCacheMu.Unlock()
+
+	return defaultCacheDir, defaultCacheTTL
 }

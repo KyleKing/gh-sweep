@@ -162,11 +162,28 @@ func (c *Config) QualifiedRepos() []string {
 	return repos
 }
 
-// Load loads configuration from file, falling back to defaults.
+// Load loads configuration from the first of the searched paths that exists,
+// falling back to defaults.
 func Load() (*Config, error) {
+	return LoadFrom("")
+}
+
+// LoadFrom loads configuration from path. An empty path searches
+// ./.gh-sweep.yaml, ~/.gh-sweep.yaml, then ~/.config/gh-sweep/config.yaml and
+// falls back to defaults; an explicit path that cannot be read is an error, so
+// a typo never silently audits with the wrong settings.
+func LoadFrom(path string) (*Config, error) {
 	cfg := DefaultConfig()
 
-	// Try to load from multiple locations
+	if path != "" {
+		configData, err := os.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("reading config %s: %w", path, err)
+		}
+
+		return parseConfig(cfg, configData, path)
+	}
+
 	configPaths := []string{
 		".gh-sweep.yaml",
 		filepath.Join(os.Getenv("HOME"), ".gh-sweep.yaml"),
@@ -174,28 +191,30 @@ func Load() (*Config, error) {
 	}
 
 	var configData []byte
-	var err error
 	var foundPath string
 
-	for _, path := range configPaths {
-		configData, err = os.ReadFile(path)
+	for _, candidate := range configPaths {
+		data, err := os.ReadFile(candidate)
 		if err == nil {
-			foundPath = path
+			configData = data
+			foundPath = candidate
+
 			break
 		}
 	}
 
-	// If no config file found, return defaults
 	if foundPath == "" {
 		return cfg, nil
 	}
 
-	// Parse YAML
+	return parseConfig(cfg, configData, foundPath)
+}
+
+func parseConfig(cfg *Config, configData []byte, foundPath string) (*Config, error) {
 	if err := yaml.Unmarshal(configData, cfg); err != nil {
 		return nil, fmt.Errorf("failed to parse config from %s: %w", foundPath, err)
 	}
 
-	// Expand cache path if needed
 	if cfg.Cache.Path == "" {
 		homeDir, err := os.UserHomeDir()
 		if err != nil {

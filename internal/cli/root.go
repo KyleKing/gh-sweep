@@ -5,11 +5,13 @@ package cli
 import (
 	"fmt"
 	"os"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/spf13/cobra"
 
 	"github.com/KyleKing/gh-sweep/internal/config"
+	"github.com/KyleKing/gh-sweep/internal/github"
 	"github.com/KyleKing/gh-sweep/internal/tui"
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
@@ -17,6 +19,9 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "gh-sweep",
 	Short: "TUI for sweeping GitHub repositories",
+	// Every subcommand builds its own clients, so the cache is installed here
+	// rather than in loadConfig, which only some of them call.
+	PersistentPreRun: func(_ *cobra.Command, _ []string) { installCache(loadConfig()) },
 	Long: `gh-sweep is a Terminal User Interface (TUI) for managing multiple GitHub repositories.
 
 It provides interactive tools for:
@@ -50,13 +55,33 @@ Use 'gh-sweep <command> --help' for more information about a command.`,
 }
 
 func loadConfig() *config.Config {
-	cfg, err := config.Load()
+	cfg, err := config.LoadFrom(configPath)
 	if err != nil {
+		if configPath != "" {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+
 		fmt.Fprintf(os.Stderr, "Warning: failed to load config, using defaults: %v\n", err)
+
 		return config.DefaultConfig()
 	}
 
 	return cfg
+}
+
+// installCache wires the config's cache settings into every client built
+// afterward. Cached responses cost no rate-limit quota, which is what keeps a
+// cross-repo sweep inside the hourly budget.
+func installCache(cfg *config.Config) {
+	ttl, err := time.ParseDuration(cfg.Cache.TTL)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: ignoring unparseable cache.ttl %q: %v\n", cfg.Cache.TTL, err)
+
+		return
+	}
+
+	github.SetDefaultCache(cfg.Cache.Path, ttl)
 }
 
 func resolveMainOptions(cfg *config.Config, repo, org string, repos []string) tui.MainModelOptions {
@@ -88,7 +113,12 @@ func Execute(version string) {
 	}
 }
 
+//nolint:gochecknoglobals // bound to a persistent flag, read by loadConfig for every subcommand
+var configPath string
+
 func init() {
+	rootCmd.PersistentFlags().StringVar(&configPath, "config", "",
+		"Path to the config file (default: search ./.gh-sweep.yaml, ~/.gh-sweep.yaml, ~/.config/gh-sweep/)")
 	rootCmd.Flags().String("repo", "", "Repository (owner/repo)")
 	rootCmd.PersistentFlags().
 		String("org", "", "GitHub organization (overrides config default_org)")
