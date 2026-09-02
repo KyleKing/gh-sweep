@@ -88,6 +88,11 @@ orphans:
   # Days of inactivity before a branch without a PR is considered stale
   stale_days_threshold: 30
 
+  # Spare any branch touched within this many days, whatever its orphan type.
+  # stale_days_threshold only classifies branches with no PR at all, so it
+  # alone still offers a branch merged yesterday for deletion.
+  min_age_days: 0
+
   # Branch patterns never treated as orphans
   exclude_patterns:
     - main

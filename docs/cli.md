@@ -3,8 +3,10 @@
 `gh sweep` with no subcommand opens the home menu. Each subcommand opens its own
 view, and `--list` prints a table and exits instead.
 
-`--org` and `--repos` are persistent flags that work on every command and
-override the [config file](./configuration.md).
+`--org`, `--repos`, and `--config` are persistent flags that work on every
+command. The first two override the [config file](./configuration.md), and
+`--config` chooses which file that is, so one machine can keep a separate
+profile per org or per repo group.
 
 ## branches
 
@@ -96,14 +98,20 @@ activity, across a namespace.
 gh sweep orphans --org my-org
 gh sweep orphans --repos owner/repo1,owner/repo2 --stale-days 14 --list
 gh sweep orphans --org my-org --cleanup --dry-run
+gh sweep orphans --org my-org --min-age-days 30 --cleanup --dry-run
 ```
+
+`--stale-days` bounds only the `stale` type, which is branches with no PR at
+all. A branch whose PR merged yesterday is a `merged_pr` orphan at every
+threshold, so `--min-age-days` is what keeps a cleanup off recent work.
 
 | Flag | Effect |
 |------|--------|
 | `--org` | Organization to scan |
 | `--namespace` | Namespace, org or user, to scan |
 | `--repos` | Specific repos to scan |
-| `--stale-days` | Days of inactivity before a branch counts as stale, default 30 |
+| `--stale-days` | Days of inactivity before a branch with no PR counts as stale, default 30 |
+| `--min-age-days` | Spare any branch touched within this many days, whatever its orphan type |
 | `--exclude` | Branch patterns to skip |
 | `--include-recent` | Include recent branches that have no PR |
 | `--cleanup` | Delete the orphaned branches |

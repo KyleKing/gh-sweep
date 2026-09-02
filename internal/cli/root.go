@@ -76,7 +76,7 @@ func loadConfig() *config.Config {
 func installCache(cfg *config.Config) {
 	ttl, err := time.ParseDuration(cfg.Cache.TTL)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: ignoring unparseable cache.ttl %q: %v\n", cfg.Cache.TTL, err)
+		fmt.Fprintf(os.Stderr, "Warning: ignoring unparsable cache.ttl %q: %v\n", cfg.Cache.TTL, err)
 
 		return
 	}

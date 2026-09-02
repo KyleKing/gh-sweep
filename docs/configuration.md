@@ -25,6 +25,7 @@ branches:
 
 orphans:
   stale_days_threshold: 30
+  min_age_days: 0
   exclude_patterns: [main, master, develop, release/*, hotfix/*]
 
 gha_perf:
@@ -39,6 +40,20 @@ The persistent `--org` and `--repos` flags override `default_org` and
 
 `protected_patterns` decides which branches the delete paths refuse to touch, so
 keep it accurate before running any cleanup.
+
+`stale_days_threshold` classifies a branch with no PR, so it does not bound what
+a cleanup deletes: a branch whose PR merged yesterday is a `merged_pr` orphan at
+any threshold. `min_age_days` is the one that spares recent work, and it applies
+to every orphan type. A branch whose commit date cannot be read counts as too
+recent to touch.
+
+`cache.ttl` serves repeat reads from `cache.path` instead of the API. Cached
+responses cost no rate-limit quota, which is what keeps a cross-repo sweep
+inside the hourly budget; a stale read is the price. Set `ttl: 0` to disable.
+
+Pass `--config <path>` to use a file outside the search paths, which is how one
+machine keeps a separate profile per org or per repo group. An explicit path
+that cannot be read is an error rather than a silent fall back to defaults.
 
 ## Policy file
 
