@@ -23,19 +23,17 @@ type Client struct {
 	ctx        context.Context
 }
 
-// NewClient creates a new GitHub API client
-// It will use gh CLI authentication if available, or fall back to GITHUB_TOKEN env var.
-func NewClient(ctx context.Context) (*Client, error) {
-	opts := clientOptions()
+// NewClient creates a new GitHub API client. It resolves gh CLI
+// authentication when available and falls back to the GITHUB_TOKEN env var.
+func NewClient(ctx context.Context, opts ...Option) (*Client, error) {
+	options := applyOptions(clientOptions(), opts)
 
-	// Create REST client (will use gh CLI auth or GITHUB_TOKEN)
-	restClient, err := api.NewRESTClient(*opts)
+	restClient, err := api.NewRESTClient(*options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create GitHub client: %w", err)
 	}
 
-	// Create HTTP client
-	httpClient, err := api.NewHTTPClient(*opts)
+	httpClient, err := api.NewHTTPClient(*options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP client: %w", err)
 	}
