@@ -25,6 +25,7 @@ type PolicyConfig struct {
 	Releases     PolicyReleases   `yaml:"releases"`
 	Protection   PolicyProtection `yaml:"protection"`
 	Ruleset      PolicyRuleset    `yaml:"ruleset"`
+	Branches     PolicyBranches   `yaml:"branches"`
 }
 
 // PolicySettings mirrors github.RepoSettingsPatch: unset (nil) fields are left
@@ -178,4 +179,25 @@ func (p *PolicyConfig) SavePolicy(path string) error {
 	}
 
 	return nil
+}
+
+// PolicyBranches declares which leftover branches should not exist. Branches
+// from merged or closed PRs carry no grace period, because the PR records the
+// work and GitHub restores the branch from it on request; a branch with no PR
+// has no such record, so NoPRGraceDays applies before it is pruned.
+type PolicyBranches struct {
+	PruneMerged     *bool    `yaml:"prune_merged"`
+	PruneClosed     *bool    `yaml:"prune_closed"`
+	PruneNoPR       *bool    `yaml:"prune_no_pr"`
+	NoPRGraceDays   *int     `yaml:"no_pr_grace_days"`
+	ExcludePatterns []string `yaml:"exclude_patterns"`
+}
+
+// Managed reports whether the policy declares any branch pruning at all.
+func (p PolicyBranches) Managed() bool {
+	return enabled(p.PruneMerged) || enabled(p.PruneClosed) || enabled(p.PruneNoPR)
+}
+
+func enabled(flag *bool) bool {
+	return flag != nil && *flag
 }

@@ -15,12 +15,26 @@ type ApplyResult struct {
 	Err        error
 }
 
+// ApplyOptions gates the parts of an apply that are not settings changes.
+type ApplyOptions struct {
+	// PruneBranches permits DomainBranches to delete refs. It is off by
+	// default so a settings-only automation cannot start deleting branches
+	// because someone added a branches block to the policy file.
+	PruneBranches bool
+}
+
 // Apply pushes every managed field in cfg to the repo, for each domain that
 // had a diff in drift. It re-sends the whole managed subset of that domain
 // rather than only the changed fields, so re-applying an already-converged
 // policy is a safe no-op instead of silently skipping fields nobody diffed
-// this run.
-func Apply(client *github.Client, cfg *config.PolicyConfig, drift RepoDrift) ApplyResult {
+// this run. DomainBranches deletes refs and additionally requires
+// opts.PruneBranches.
+func Apply(
+	client *github.Client,
+	cfg *config.PolicyConfig,
+	drift RepoDrift,
+	opts ApplyOptions,
+) ApplyResult {
 	result := ApplyResult{Repository: drift.Repository}
 
 	owner, repo, ok := splitRepo(drift.Repository)
@@ -71,7 +85,25 @@ func Apply(client *github.Client, cfg *config.PolicyConfig, drift RepoDrift) App
 		result.Applied = append(result.Applied, DomainRulesets)
 	}
 
+	if domains[DomainBranches] && opts.PruneBranches {
+		if err := pruneBranches(client, drift.Prunable); err != nil {
+			result.Err = fmt.Errorf("pruning branches: %w", err)
+			return result
+		}
+		result.Applied = append(result.Applied, DomainBranches)
+	}
+
 	return result
+}
+
+func pruneBranches(client *github.Client, prunable []PrunableBranch) error {
+	for _, branch := range prunable {
+		if err := client.DeleteBranch(branch.Owner, branch.Repo, branch.Name); err != nil {
+			return fmt.Errorf("deleting %s/%s %s: %w", branch.Owner, branch.Repo, branch.Name, err)
+		}
+	}
+
+	return nil
 }
 
 // applyRuleset merges declared rules onto the repo's live ruleset of the same

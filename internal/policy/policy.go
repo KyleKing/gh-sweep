@@ -28,6 +28,7 @@ const (
 	DomainReleases   Domain = "releases"
 	DomainProtection Domain = "protection"
 	DomainRulesets   Domain = "rulesets"
+	DomainBranches   Domain = "branches"
 )
 
 // Diff is one field where a repo's live value doesn't match the policy.
@@ -44,7 +45,11 @@ type Diff struct {
 type RepoDrift struct {
 	Repository string `json:"repository"`
 	Diffs      []Diff `json:"diffs"`
-	Err        error  `json:"error,omitempty"`
+	// Prunable carries the branches behind the DomainBranches diffs so Apply
+	// deletes exactly what Evaluate reported, without re-classifying against
+	// a repo that may have moved in between.
+	Prunable []PrunableBranch `json:"-"`
+	Err      error            `json:"error,omitempty"`
 }
 
 // Report is the result of evaluating a policy against a set of repos.
@@ -143,6 +148,28 @@ func evaluateRepo(client *github.Client, cfg *config.PolicyConfig, fullName stri
 		}
 		drift.Diffs = append(drift.Diffs, DiffRuleset(&cfg.Ruleset, live)...)
 	}
+
+	return withBranches(client, cfg, owner, repo, drift)
+}
+
+func withBranches(
+	client *github.Client,
+	cfg *config.PolicyConfig,
+	owner, repo string,
+	drift RepoDrift,
+) RepoDrift {
+	if !cfg.Branches.Managed() {
+		return drift
+	}
+
+	diffs, prunables, err := evaluateBranches(client, &cfg.Branches, owner, repo)
+	if err != nil {
+		drift.Err = err
+		return drift
+	}
+
+	drift.Diffs = append(drift.Diffs, diffs...)
+	drift.Prunable = prunables
 
 	return drift
 }

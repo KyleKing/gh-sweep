@@ -88,7 +88,7 @@ func TestApplyPushesOnlyDriftedDomains(t *testing.T) {
 		},
 	}
 
-	result := policy.Apply(client, cfg, drift)
+	result := policy.Apply(client, cfg, drift, policy.ApplyOptions{})
 	if result.Err != nil {
 		t.Fatalf("Apply() error = %v", result.Err)
 	}
@@ -117,7 +117,7 @@ func TestApplySkipsUndriftedDomains(t *testing.T) {
 	}
 
 	cfg := &config.PolicyConfig{Security: config.PolicySecurity{SecretScanning: "enabled"}}
-	result := policy.Apply(client, cfg, policy.RepoDrift{Repository: "acme/widgets"})
+	result := policy.Apply(client, cfg, policy.RepoDrift{Repository: "acme/widgets"}, policy.ApplyOptions{})
 
 	if result.Err != nil {
 		t.Fatalf("Apply() error = %v", result.Err)
@@ -165,7 +165,7 @@ func TestApplyProtectionBootstrapsWhenUnprotected(t *testing.T) {
 		Diffs:      []policy.Diff{{Domain: policy.DomainProtection, Field: "enforce_admins"}},
 	}
 
-	result := policy.Apply(client, cfg, drift)
+	result := policy.Apply(client, cfg, drift, policy.ApplyOptions{})
 	if result.Err != nil {
 		t.Fatalf("Apply() error = %v", result.Err)
 	}
@@ -220,7 +220,8 @@ func TestApplyInvalidRepo(t *testing.T) {
 		t.Fatalf("NewClientWithTransport() error = %v", err)
 	}
 
-	result := policy.Apply(client, &config.PolicyConfig{}, policy.RepoDrift{Repository: "not-a-repo"})
+	drift := policy.RepoDrift{Repository: "not-a-repo"}
+	result := policy.Apply(client, &config.PolicyConfig{}, drift, policy.ApplyOptions{})
 	if result.Err == nil {
 		t.Error("Apply() error = nil, want error for malformed repo name")
 	}

@@ -92,7 +92,7 @@ func TestPolicyAgainstRecordedSettingsAndSecurity(t *testing.T) {
 		t.Helper()
 
 		drift := policy.RepoDrift{Repository: repo, Diffs: []policy.Diff{{Domain: domain, Field: field}}}
-		if result := policy.Apply(client, cfg, drift); result.Err != nil {
+		if result := policy.Apply(client, cfg, drift, policy.ApplyOptions{}); result.Err != nil {
 			t.Fatalf("Apply() error = %v", result.Err)
 		}
 	}

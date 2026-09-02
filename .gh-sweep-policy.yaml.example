@@ -71,3 +71,19 @@ ruleset:
     # require_last_push_approval: false
     # dismiss_stale_reviews_on_push: false
     # required_review_thread_resolution: false
+
+# Branch hygiene as desired state. `gh sweep policy --list` reports these like
+# any other drift; deleting them additionally requires `--prune`, so a
+# settings-only automation cannot start removing refs because this block
+# appeared in the file.
+branches:
+  # Branches from merged or closed PRs carry no grace period: the PR records
+  # the work and GitHub restores the branch from it on request.
+  prune_merged: true
+  prune_closed: true
+
+  # A branch with no PR has no such record, so it waits out the grace period.
+  prune_no_pr: true
+  no_pr_grace_days: 21
+
+  exclude_patterns: [gh-pages]
