@@ -45,6 +45,65 @@ out to bite in practice.
   is now in my_go_template v0.12.1, so a `copier update` reconciles the
   hand-applied copy with the template's
 
+## Pending, waiting on a decision
+
+Built and verified, not yet run against coverbasedev. Neither has been applied.
+
+- **Branch prune.** 56 branches across 6 repos (30 docs, 18 irm, 3 watch-doggo,
+  5 irm stale), previewed with `policy --list`. Run with
+  `policy --policy <file> --apply --prune`. Eight of the 56 are 0-5 days old,
+  including three merged the same day, which is the declared rule working
+- **Ruleset apply.** Four repos in the coverbase `rules.yaml`. Do watch-doggo
+  first: it is the only one whose live ruleset carries bypass actors
+  (OrganizationAdmin, RepositoryRole 5), so it is the one apply that exercises
+  the `Unmanaged`/`BypassActors` round-trip against real data. Verify both
+  actors survived before doing the other three
+
+Two defaults chosen without an explicit answer, both toward the safer side and
+both a one-line change to reverse:
+
+- `--apply` reports branch drift and deletes nothing; deletion needs `--prune`.
+  Every other domain changes settings the API can change back, whereas this one
+  removes refs, so it must not ride along with a bare `--apply --yes` in a
+  scheduled job
+- Closed-PR branches now delete by default (`--exclude-closed-pr` opts out),
+  reversing the previous opt-in. Justified by GitHub restoring a branch from
+  its PR on request, but it is a behavior change for anyone else on gh-sweep
+
+## Backport to aragonite
+
+Rate limiting belongs in the shared library, not here. gh-sweep is the second
+consumer of the transport seam, and the third would rebuild the same thing.
+
+aragonite v0.11.0 already has half of it: `forge/github.Budgets` reads what is
+left of each pool proactively, and the read is free because GitHub does not
+charge a rate-limit request against the rate limit. It models core, graphql,
+and search as separate allowances, which is the right shape.
+
+What gh-sweep has that aragonite does not, and should move up:
+
+- The reactive half. `internal/github/ratelimit.go` wraps the transport, turns
+  an exhausted-quota response into a typed `RateLimitError` naming the local
+  reset time, and refuses later requests to that pool until the window opens so
+  a retry loop cannot spend a request per attempt relearning the same thing. It
+  honors `Retry-After` for secondary limits, and passes a permissions 403
+  through unchanged because that response carries no remaining-count header
+- Per-pool blocking, keyed off the request path (`/graphql`, `/search/`, else
+  core) rather than one global window. This matches the separation `Budget`
+  already documents: a tool out of core can still make GraphQL calls
+- Token resolution. Both repos call `api.NewRESTClient`/`NewGraphQLClient` with
+  empty options to pick up gh CLI auth with a `GITHUB_TOKEN` fallback. That
+  resolution, and the decision to prefer it over a hand-rolled token flag,
+  should be stated once in aragonite rather than rediscovered per repo
+
+Once it lands there, delete `internal/github/ratelimit.go` and pin the release.
+Combining the two halves is the actual win: `Budgets` before a burst to decide
+whether to start, the transport to fail usefully when a burst runs out anyway.
+
+The pairing matters for this repo specifically, because `DomainBranches` and the
+orphans scan both cost one request per branch and exhausted the 5000-request
+core pool twice in one session.
+
 ## Deferred
 
 Low priority; pick up when convenient.
@@ -64,7 +123,9 @@ Low priority; pick up when convenient.
 - Policy extras: a richer change-preview format than the current table/JSON/markdown diff output; git-backed shareable policy templates across users; org rulesets and custom-property coverage reporting alongside the per-repo diff
 - `--domains` to scope a policy apply to named domains (`--apply --domains rulesets`), useful for rolling one domain out a repo at a time. `--prune` already gates the only destructive domain, so this is convenience rather than safety
 - Read-only org dump (`gh sweep dump --org <org> --format json`, one blob per repo covering settings, protection, rulesets, security toggles, and default branch) so an agent or a script can read a whole org's configuration in one call instead of looping five `gh api` endpoints. Preferred over an MCP server: no long-running process, and the output is diffable
-- Cheaper branch dating: `DomainBranches` and the orphans scan both cost one request per branch, because GitHub's branches endpoint omits commit dates. A GraphQL query returning refs with target commit dates would collapse that to one request per repo
+- Cheaper branch dating: `DomainBranches` and the orphans scan both cost one request per branch, because GitHub's branches endpoint omits commit dates. A GraphQL query returning refs with target commit dates would collapse that to one request per repo, and would move the cost onto the separate GraphQL pool
+- Pre-flight budget check: with aragonite's `Budgets`, warn before a scan whose branch count exceeds what the core pool has left, rather than failing partway through having spent it
+- Watch status beyond repos the viewer owns: the GraphQL query widens to `ORGANIZATION_MEMBER` only when an org is named, so a bare `gh sweep watching` still reports personal repos only. Querying the org directly would cover repos the viewer is not a member of but can see
 - Analytics extras: AI-vs-human review ratios, contributor and bus-factor metrics, merge-behavior stats, review-delay percentiles, activity heatmap, CSV/JSON/markdown export
 - Release extras: version grouping across repos, semver compliance flags, aggregated release-notes export
 - Command grouping: `cobra.Group` is unused, so `--help` lists every subcommand in one flat alphabetical block while the home menu already groups the same views into Namespace Audit, Single Repo, Cross-Repo, and Policy. Mirroring the menu in `--help` is where a CLI conventionally signals which commands converge declared state (`policy`) and which answer a one-off question (`gha-perf`, `analytics`, `comments`)
