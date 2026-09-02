@@ -106,6 +106,44 @@ func TestDiffProtection(t *testing.T) {
 	}
 }
 
+func TestDiffRuleset(t *testing.T) {
+	t.Parallel()
+
+	want := &config.PolicyRuleset{
+		Name:          "main",
+		Enforcement:   "active",
+		BlockDeletion: boolPtr(true),
+		PullRequest:   &config.PolicyPullRequest{RequiredApprovals: intPtr(0)},
+	}
+
+	diffs := policy.DiffRuleset(want, nil)
+	if len(diffs) != 1 || diffs[0].Current != "absent" {
+		t.Fatalf("a missing ruleset should diff once as absent, got %+v", diffs)
+	}
+
+	have := &github.Ruleset{
+		Name: "main", Enforcement: "active", BlockDeletion: true,
+		PullRequest: &github.PullRequestRule{RequiredApprovals: 1},
+	}
+
+	diffs = policy.DiffRuleset(want, have)
+	if len(diffs) != 1 || diffs[0].Field != "required_approvals" || diffs[0].Desired != "0" {
+		t.Fatalf("diffs = %+v, want only required_approvals 1 -> 0", diffs)
+	}
+
+	have.PullRequest.RequiredApprovals = 0
+	if diffs = policy.DiffRuleset(want, have); len(diffs) != 0 {
+		t.Errorf("converged ruleset diffed: %+v", diffs)
+	}
+
+	// An undeclared pull_request block leaves a live one alone rather than
+	// reporting it for removal.
+	bare := &config.PolicyRuleset{Name: "main", BlockDeletion: boolPtr(true)}
+	if diffs = policy.DiffRuleset(bare, have); len(diffs) != 0 {
+		t.Errorf("undeclared rules diffed: %+v", diffs)
+	}
+}
+
 func TestReportHasDrift(t *testing.T) {
 	t.Parallel()
 

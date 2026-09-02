@@ -24,6 +24,7 @@ type PolicyConfig struct {
 	Security     PolicySecurity   `yaml:"security"`
 	Releases     PolicyReleases   `yaml:"releases"`
 	Protection   PolicyProtection `yaml:"protection"`
+	Ruleset      PolicyRuleset    `yaml:"ruleset"`
 }
 
 // PolicySettings mirrors github.RepoSettingsPatch: unset (nil) fields are left
@@ -76,6 +77,40 @@ func (p PolicyProtection) Managed() bool {
 		p.RequireStatusChecks != nil || p.EnforceAdmins != nil ||
 		p.RequireLinearHistory != nil || p.AllowForcePushes != nil ||
 		p.AllowDeletions != nil
+}
+
+// PolicyRuleset declares a desired repository ruleset, managed by name. A
+// ruleset expresses rules classic branch protection cannot, notably requiring
+// a pull request with zero required approvals. An empty Name leaves rulesets
+// unmanaged; rules the policy does not declare keep their live value.
+type PolicyRuleset struct {
+	Name                 string             `yaml:"name"`
+	Enforcement          string             `yaml:"enforcement"`
+	IncludeRefs          []string           `yaml:"include_refs"`
+	ExcludeRefs          []string           `yaml:"exclude_refs"`
+	BlockDeletion        *bool              `yaml:"block_deletion"`
+	BlockForcePush       *bool              `yaml:"block_force_push"`
+	RequireLinearHistory *bool              `yaml:"require_linear_history"`
+	RequireStatusChecks  []string           `yaml:"require_status_checks"`
+	PullRequest          *PolicyPullRequest `yaml:"pull_request"`
+}
+
+// PolicyPullRequest declares a ruleset's pull_request rule. Declaring the
+// block at all requires a PR; RequiredApprovals of 0 requires no approval on
+// it. Omitting the block leaves the live rule alone rather than removing it.
+type PolicyPullRequest struct {
+	RequiredApprovals              *int     `yaml:"required_approvals"`
+	RequireCodeOwnerReview         *bool    `yaml:"require_code_owner_review"`
+	RequireLastPushApproval        *bool    `yaml:"require_last_push_approval"`
+	DismissStaleReviewsOnPush      *bool    `yaml:"dismiss_stale_reviews_on_push"`
+	RequiredReviewThreadResolution *bool    `yaml:"required_review_thread_resolution"`
+	AllowedMergeMethods            []string `yaml:"allowed_merge_methods"`
+}
+
+// Managed reports whether a ruleset is declared. Name is the identity gh-sweep
+// matches on, so a policy without one manages no ruleset.
+func (p PolicyRuleset) Managed() bool {
+	return p.Name != ""
 }
 
 // QualifiedRepos returns Repositories with bare names prefixed by DefaultOrg.

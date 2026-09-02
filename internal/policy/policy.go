@@ -27,6 +27,7 @@ const (
 	DomainSecurity   Domain = "security"
 	DomainReleases   Domain = "releases"
 	DomainProtection Domain = "protection"
+	DomainRulesets   Domain = "rulesets"
 )
 
 // Diff is one field where a repo's live value doesn't match the policy.
@@ -118,7 +119,115 @@ func evaluateRepo(client *github.Client, cfg *config.PolicyConfig, fullName stri
 		drift.Diffs = append(drift.Diffs, DiffProtection(&cfg.Protection, rule)...)
 	}
 
+	if cfg.Ruleset.Managed() {
+		live, err := client.FindRulesetByName(owner, repo, cfg.Ruleset.Name)
+		if err != nil {
+			if !errors.Is(err, github.ErrRulesetNotFound) {
+				drift.Err = fmt.Errorf("fetching rulesets: %w", err)
+				return drift
+			}
+			live = nil
+		}
+		drift.Diffs = append(drift.Diffs, DiffRuleset(&cfg.Ruleset, live)...)
+	}
+
 	return drift
+}
+
+// DiffRuleset compares a policy's declared ruleset against the repo's live one.
+// A nil have means no ruleset by that name exists, which is reported as a single
+// "absent" diff rather than one per field, since applying creates the whole thing.
+func DiffRuleset(want *config.PolicyRuleset, have *github.Ruleset) []Diff {
+	if have == nil {
+		return []Diff{{
+			Domain: DomainRulesets, Field: "ruleset", Desired: want.Name, Current: "absent",
+		}}
+	}
+
+	diffs := []Diff{}
+
+	addBool := func(field string, wantVal *bool, haveVal bool) {
+		if wantVal != nil && *wantVal != haveVal {
+			diffs = append(diffs, Diff{
+				Domain: DomainRulesets, Field: field,
+				Desired: strconv.FormatBool(*wantVal), Current: strconv.FormatBool(haveVal),
+			})
+		}
+	}
+
+	if want.Enforcement != "" && want.Enforcement != have.Enforcement {
+		diffs = append(diffs, Diff{
+			Domain: DomainRulesets, Field: "enforcement",
+			Desired: want.Enforcement, Current: have.Enforcement,
+		})
+	}
+
+	if want.IncludeRefs != nil && !equalStringSets(want.IncludeRefs, have.IncludeRefs) {
+		diffs = append(diffs, Diff{
+			Domain: DomainRulesets, Field: "include_refs",
+			Desired: strings.Join(want.IncludeRefs, ","), Current: strings.Join(have.IncludeRefs, ","),
+		})
+	}
+
+	addBool("block_deletion", want.BlockDeletion, have.BlockDeletion)
+	addBool("block_force_push", want.BlockForcePush, have.BlockForcePush)
+	addBool("require_linear_history", want.RequireLinearHistory, have.RequireLinearHistory)
+
+	if want.RequireStatusChecks != nil && !equalStringSets(want.RequireStatusChecks, have.RequiredStatusChecks) {
+		diffs = append(diffs, Diff{
+			Domain: DomainRulesets, Field: "require_status_checks",
+			Desired: strings.Join(want.RequireStatusChecks, ","),
+			Current: strings.Join(have.RequiredStatusChecks, ","),
+		})
+	}
+
+	return append(diffs, diffPullRequest(want.PullRequest, have.PullRequest)...)
+}
+
+func diffPullRequest(want *config.PolicyPullRequest, have *github.PullRequestRule) []Diff {
+	if want == nil {
+		return nil
+	}
+
+	if have == nil {
+		return []Diff{{
+			Domain: DomainRulesets, Field: "pull_request", Desired: "required", Current: "absent",
+		}}
+	}
+
+	diffs := []Diff{}
+
+	addBool := func(field string, wantVal *bool, haveVal bool) {
+		if wantVal != nil && *wantVal != haveVal {
+			diffs = append(diffs, Diff{
+				Domain: DomainRulesets, Field: field,
+				Desired: strconv.FormatBool(*wantVal), Current: strconv.FormatBool(haveVal),
+			})
+		}
+	}
+
+	if want.RequiredApprovals != nil && *want.RequiredApprovals != have.RequiredApprovals {
+		diffs = append(diffs, Diff{
+			Domain: DomainRulesets, Field: "required_approvals",
+			Desired: strconv.Itoa(*want.RequiredApprovals), Current: strconv.Itoa(have.RequiredApprovals),
+		})
+	}
+
+	addBool("require_code_owner_review", want.RequireCodeOwnerReview, have.RequireCodeOwnerReview)
+	addBool("require_last_push_approval", want.RequireLastPushApproval, have.RequireLastPushApproval)
+	addBool("dismiss_stale_reviews_on_push", want.DismissStaleReviewsOnPush, have.DismissStaleReviewsOnPush)
+	addBool("required_review_thread_resolution",
+		want.RequiredReviewThreadResolution, have.RequiredReviewThreadResolution)
+
+	if want.AllowedMergeMethods != nil && !equalStringSets(want.AllowedMergeMethods, have.AllowedMergeMethods) {
+		diffs = append(diffs, Diff{
+			Domain: DomainRulesets, Field: "allowed_merge_methods",
+			Desired: strings.Join(want.AllowedMergeMethods, ","),
+			Current: strings.Join(have.AllowedMergeMethods, ","),
+		})
+	}
+
+	return diffs
 }
 
 // DiffSettings compares a policy's declared repo settings against live values.

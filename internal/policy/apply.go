@@ -63,7 +63,103 @@ func Apply(client *github.Client, cfg *config.PolicyConfig, drift RepoDrift) App
 		result.Applied = append(result.Applied, DomainProtection)
 	}
 
+	if domains[DomainRulesets] {
+		if err := applyRuleset(client, owner, repo, &cfg.Ruleset); err != nil {
+			result.Err = fmt.Errorf("applying ruleset: %w", err)
+			return result
+		}
+		result.Applied = append(result.Applied, DomainRulesets)
+	}
+
 	return result
+}
+
+// applyRuleset merges declared rules onto the repo's live ruleset of the same
+// name, creating it when absent. GitHub replaces the whole ruleset on PUT, so
+// undeclared rules, bypass actors, and rule types gh-sweep does not model are
+// carried across from the live copy rather than dropped.
+func applyRuleset(client *github.Client, owner, repo string, want *config.PolicyRuleset) error {
+	desired := github.Ruleset{Name: want.Name, Enforcement: "active"}
+	id := 0
+
+	live, err := client.FindRulesetByName(owner, repo, want.Name)
+	if err != nil && !errors.Is(err, github.ErrRulesetNotFound) {
+		return fmt.Errorf("fetching current ruleset: %w", err)
+	}
+	if live != nil {
+		desired = *live
+		id = live.ID
+	}
+
+	if want.Enforcement != "" {
+		desired.Enforcement = want.Enforcement
+	}
+	if want.IncludeRefs != nil {
+		desired.IncludeRefs = want.IncludeRefs
+	}
+	if want.ExcludeRefs != nil {
+		desired.ExcludeRefs = want.ExcludeRefs
+	}
+	if want.BlockDeletion != nil {
+		desired.BlockDeletion = *want.BlockDeletion
+	}
+	if want.BlockForcePush != nil {
+		desired.BlockForcePush = *want.BlockForcePush
+	}
+	if want.RequireLinearHistory != nil {
+		desired.RequireLinearHistory = *want.RequireLinearHistory
+	}
+	if want.RequireStatusChecks != nil {
+		desired.RequiredStatusChecks = want.RequireStatusChecks
+	}
+
+	desired.PullRequest = mergePullRequest(want.PullRequest, desired.PullRequest)
+
+	if id == 0 {
+		if err := client.CreateRuleset(owner, repo, desired); err != nil {
+			return fmt.Errorf("creating ruleset: %w", err)
+		}
+
+		return nil
+	}
+
+	if err := client.UpdateRuleset(owner, repo, id, desired); err != nil {
+		return fmt.Errorf("updating ruleset: %w", err)
+	}
+
+	return nil
+}
+
+func mergePullRequest(want *config.PolicyPullRequest, have *github.PullRequestRule) *github.PullRequestRule {
+	if want == nil {
+		return have
+	}
+
+	desired := github.PullRequestRule{}
+	if have != nil {
+		desired = *have
+	}
+
+	if want.RequiredApprovals != nil {
+		desired.RequiredApprovals = *want.RequiredApprovals
+	}
+	if want.RequireCodeOwnerReview != nil {
+		desired.RequireCodeOwnerReview = *want.RequireCodeOwnerReview
+	}
+	if want.RequireLastPushApproval != nil {
+		desired.RequireLastPushApproval = *want.RequireLastPushApproval
+	}
+	if want.DismissStaleReviewsOnPush != nil {
+		desired.DismissStaleReviewsOnPush = *want.DismissStaleReviewsOnPush
+	}
+	if want.RequiredReviewThreadResolution != nil {
+		desired.RequiredReviewThreadResolution = *want.RequiredReviewThreadResolution
+	}
+	if want.AllowedMergeMethods != nil {
+		desired.AllowedMergeMethods = want.AllowedMergeMethods
+	}
+
+	return &desired
 }
 
 func domainsWithDrift(diffs []Diff) map[Domain]bool {
