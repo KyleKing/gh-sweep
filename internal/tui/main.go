@@ -4,6 +4,7 @@ package tui
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/KyleKing/gh-sweep/internal/config"
 	"github.com/KyleKing/gh-sweep/internal/orphans"
+	"github.com/KyleKing/gh-sweep/internal/policy"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/analytics"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/branches"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/collaborators"
@@ -104,6 +106,7 @@ type MainModel struct {
 	baseline            string
 	org                 string
 	policyPath          string
+	applyOpts           policy.ApplyOptions
 	scanOptions         orphans.ScanOptions
 	regressionThreshold float64
 }
@@ -116,6 +119,7 @@ type MainModelOptions struct {
 	// PolicyPath is the policy file the policy view diffs against. Empty
 	// searches the default locations.
 	PolicyPath          string
+	ApplyOpts           policy.ApplyOptions
 	Repos               []string
 	ScanOptions         orphans.ScanOptions
 	RegressionThreshold float64
@@ -131,6 +135,7 @@ func NewMainModel(opts MainModelOptions) MainModel {
 		baseline:            opts.Baseline,
 		org:                 opts.Org,
 		policyPath:          opts.PolicyPath,
+		applyOpts:           opts.ApplyOpts,
 		scanOptions:         opts.ScanOptions,
 		regressionThreshold: opts.RegressionThreshold,
 	}
@@ -219,6 +224,38 @@ func (MainModel) buildNamespaceAuditItems() []menuItem {
 			enabled: true,
 		},
 	}
+}
+
+// activeScope names what the resolved flags and config point this session at,
+// so a view opened from the menu is never a surprise about which repos it
+// touches or which policy file it would apply.
+func (m MainModel) activeScope() string {
+	parts := []string{}
+
+	if m.org != "" {
+		parts = append(parts, "org "+m.org)
+	}
+
+	switch {
+	case len(m.repos) == 1:
+		parts = append(parts, "repo "+m.repos[0])
+	case len(m.repos) > 1:
+		parts = append(parts, fmt.Sprintf("%d repos", len(m.repos)))
+	}
+
+	if m.policyPath != "" {
+		parts = append(parts, "policy "+filepath.Base(m.policyPath))
+	}
+
+	if m.applyOpts.PruneBranches {
+		parts = append(parts, "prune on")
+	}
+
+	if len(parts) == 0 {
+		return "no org or repos configured; pass --org, --repos, or --config"
+	}
+
+	return strings.Join(parts, " | ")
 }
 
 func (m MainModel) buildSingleRepoItems() []menuItem {
@@ -523,7 +560,7 @@ func (m MainModel) activateItem(item menuItem) (tea.Model, tea.Cmd) {
 }
 
 func (m MainModel) activateWatching() (tea.Model, tea.Cmd) {
-	m.watchingModel = watching.NewModel()
+	m.watchingModel = watching.NewModel(m.org)
 	return m, m.watchingModel.Init()
 }
 
@@ -642,7 +679,7 @@ func (m MainModel) activatePolicy() (tea.Model, tea.Cmd) {
 	if err != nil {
 		m.policyModel = policytui.NewModelWithConfigError(err)
 	} else {
-		m.policyModel = policytui.NewModel(policyCfg)
+		m.policyModel = policytui.NewModel(policyCfg, m.applyOpts)
 	}
 
 	return m, m.policyModel.Init()
@@ -768,7 +805,8 @@ func (m MainModel) renderHome() string {
 
 	var header strings.Builder
 	header.WriteString(titleStyle.Render("gh-sweep") + "\n")
-	header.WriteString(titleStyle.Render("GitHub Repository Management TUI") + "\n\n")
+	header.WriteString(titleStyle.Render("GitHub Repository Management TUI") + "\n")
+	header.WriteString(helpStyle.MaxWidth(m.width).Render(m.activeScope()) + "\n\n")
 
 	if m.menuFiltering || m.menuFilter != "" {
 		header.WriteString(filterStyle.Render("/ "+m.menuFilter) + "\n\n")

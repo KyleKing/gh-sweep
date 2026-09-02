@@ -4,6 +4,7 @@
                                 
 [1;38;2;198;160;246mGitHub Repository Management TUI[m
                                 
+[38;2;147;154;183morg acme | 2 repos[m
 
 
 [1;38;2;238;212;159mNamespace Audit (scans your whole account or org, ignores --repo)[m
@@ -21,7 +22,6 @@
 [38;2;202;211;245m  [s]ettings comparison[m[38;2;147;154;183m - Cross-repo settings diff[m
 [38;2;202;211;245m  web[h]ooks           [m[38;2;147;154;183m - Webhook health monitoring[m
 [38;2;202;211;245m  co[l]laborators      [m[38;2;147;154;183m - Manage repository access[m
-[38;2;202;211;245m  s[e]crets audit      [m[38;2;147;154;183m - Review secrets usage (read-only)[m
-[38;2;147;154;183m↓ 4 more below[m
+[38;2;147;154;183m↓ 5 more below[m
 
 [38;2;147;154;183mj/k or ↑/↓: move | enter: select | /: filter | letter in [brackets]: jump | ?: help | q: quit[m

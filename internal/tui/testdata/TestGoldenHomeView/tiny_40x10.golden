@@ -4,11 +4,11 @@
                                 
 [1;38;2;198;160;246mGitHub Repository Management TUI[m
                                 
+[38;2;147;154;183morg acme | 2 repos[m
 
 [38;2;147;154;183m↑ 1 more above[m
 [1;38;2;238;212;159mNamespace Audit (scans your whole account or org, ignores --repo)[m
 [1;38;2;238;212;159m> [w]atch status       [m[38;2;147;154;183m - Audit and manage repo watching[m
-[38;2;202;211;245m  [o]rphan branches    [m[38;2;147;154;183m - Detect and clean up orphaned branches[m
-[38;2;147;154;183m↓ 17 more below[m
+[38;2;147;154;183m↓ 18 more below[m
 
 [38;2;147;154;183mj/k or ↑/↓: move | enter: select | /: filter | letter in [brackets]: jump | ?: help | q: quit[m
