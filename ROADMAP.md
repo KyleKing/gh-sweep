@@ -45,6 +45,38 @@ out to bite in practice.
   is now in my_go_template v0.12.1, so a `copier update` reconciles the
   hand-applied copy with the template's
 
+## Do the single-repo views belong here?
+
+The README's pitch is that "every view works across an org or an explicit list
+of repos, so you never open one repo at a time." Four views contradict it
+outright, sitting under a menu section literally labelled `Single Repo (needs
+--repo)`: `branches`, `comments`, `analytics`, and `gha-perf`. So the sentence
+is also just wrong as written, whichever way this goes.
+
+`[b]ranch management` is the clearest case to question. Interactive
+single-repo branch operations are what `gh`, `gh poi`, lazygit, and jj already
+do, and gh-sweep's own answer to branches is `orphans`, which sweeps a whole
+namespace. It is unclear what the view adds that a reader would come here for.
+
+Worth deciding per view rather than as a batch, because they are not equally
+weak. `comments` reads unresolved review threads through GraphQL, which is
+genuinely awkward elsewhere, and `gha-perf` holds the run-timing cache no other
+tool has. `branches` and `analytics` are the ones with no obvious claim.
+
+The options, roughly:
+
+- Remove the view, and the menu section with it if all four go. Smallest
+  surface, and the pitch becomes true
+- Widen it to cross-repo, which is what `--repos` already implies and what the
+  rest of the tool does
+- Keep it and fix the README to say some views are single-repo, which is the
+  cheapest and the least satisfying
+
+Removal is not free: each view has tests and golden fixtures, and `gha-perf`
+owns `internal/cache`. Check [docs/alternatives.md](docs/alternatives.md)
+before removing anything, since it is where the "what this does not do"
+boundary is already argued.
+
 ## Pending, waiting on a decision
 
 Built and verified, not yet run against coverbasedev. Neither has been applied.
@@ -72,37 +104,29 @@ both a one-line change to reverse:
 
 ## Backport to aragonite
 
-Rate limiting belongs in the shared library, not here. gh-sweep is the second
-consumer of the transport seam, and the third would rebuild the same thing.
+**Landed upstream** as aragonite's `ratelimit` package
+([c0d3998](https://github.com/KyleKing/aragonite/commit/c0d3998)): the reactive
+transport, the typed error naming when the allowance returns, and per-pool
+blocking so being out of core leaves GraphQL usable. It pairs with
+`forge/github.Budgets`, which already read each pool proactively and for free.
 
-aragonite v0.11.0 already has half of it: `forge/github.Budgets` reads what is
-left of each pool proactively, and the read is free because GitHub does not
-charge a rate-limit request against the rate limit. It models core, graphql,
-and search as separate allowances, which is the right shape.
+Auth deliberately did not move. go-gh resolves the gh CLI token with a
+`GITHUB_TOKEN` fallback when given empty `ClientOptions`, so there is no logic
+to share, and wrapping it would have added a go-gh dependency to a library that
+otherwise shells out to `gh`.
 
-What gh-sweep has that aragonite does not, and should move up:
+Remaining here:
 
-- The reactive half. `internal/github/ratelimit.go` wraps the transport, turns
-  an exhausted-quota response into a typed `RateLimitError` naming the local
-  reset time, and refuses later requests to that pool until the window opens so
-  a retry loop cannot spend a request per attempt relearning the same thing. It
-  honors `Retry-After` for secondary limits, and passes a permissions 403
-  through unchanged because that response carries no remaining-count header
-- Per-pool blocking, keyed off the request path (`/graphql`, `/search/`, else
-  core) rather than one global window. This matches the separation `Budget`
-  already documents: a tool out of core can still make GraphQL calls
-- Token resolution. Both repos call `api.NewRESTClient`/`NewGraphQLClient` with
-  empty options to pick up gh CLI auth with a `GITHUB_TOKEN` fallback. That
-  resolution, and the decision to prefer it over a hand-rolled token flag,
-  should be stated once in aragonite rather than rediscovered per repo
-
-Once it lands there, delete `internal/github/ratelimit.go` and pin the release.
-Combining the two halves is the actual win: `Budgets` before a burst to decide
-whether to start, the transport to fail usefully when a burst runs out anyway.
-
-The pairing matters for this repo specifically, because `DomainBranches` and the
-orphans scan both cost one request per branch and exhausted the 5000-request
-core pool twice in one session.
+1. Cut an aragonite release. The package is on `main` and unreleased, and this
+   repo pins released versions so `mise run verify-released` can prove the pin
+   builds with `GOWORK=off`
+1. Bump the pin and delete `internal/github/ratelimit.go`, replacing
+   `newRateLimitTransport` in `applyOptions` with `ratelimit.Transport`. The
+   local copy and the upstream one are the same design, so this is a swap, not
+   a merge
+1. Consider `Budgets` as a pre-flight check, since `DomainBranches` and the
+   orphans scan both cost one request per branch and exhausted the core pool
+   twice in one session
 
 ## Deferred
 
