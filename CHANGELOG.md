@@ -1,3 +1,25 @@
+## v0.10.0 (2026-09-02)
+
+### Feat
+
+- **tui**: show the active org, repos, and policy on the home menu
+- **cli**: gate policy branch deletion behind --prune
+- **policy**: manage branch pruning as a declared domain
+- **orphans**: give no-PR branches a 21-day grace and delete PR branches at once
+- **orphans**: add a minimum-age guard that spares recent branches
+- **cli**: add --config and serve repeat reads from a response cache
+- **github**: fail fast on an exhausted rate limit with its reset time
+- **policy**: diff and apply repository rulesets
+- **github**: add a repository ruleset client
+
+### Fix
+
+- **watching**: scope the watch audit to the requested org
+- **tui**: build home-menu views from the resolved config
+- **orphans**: honor --repos so a scan can be scoped to named repos
+- **orphans**: populate commit dates so age thresholds mean something
+- **policy**: exit non-zero when a repo fails to evaluate
+
 ## v0.9.2 (2026-08-31)
 
 ### Fix
