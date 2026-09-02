@@ -112,10 +112,14 @@ func (r *NamespaceScanResult) OrphansByType(t OrphanType) []OrphanedBranch {
 // scans branches.
 type ScanOptions struct {
 	StaleDaysThreshold int
-	IncludeRecentNoPR  bool
-	ExcludePatterns    []string
-	IncludeProtected   bool
-	Concurrency        int
+	// MinAgeDays spares any branch touched more recently than this, whatever
+	// its orphan type. StaleDaysThreshold only classifies branches with no PR,
+	// so it alone still offers a branch merged yesterday for deletion.
+	MinAgeDays        int
+	IncludeRecentNoPR bool
+	ExcludePatterns   []string
+	IncludeProtected  bool
+	Concurrency       int
 }
 
 const (

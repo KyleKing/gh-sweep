@@ -60,6 +60,8 @@ func init() {
 		Bool("include-closed-pr", false, "Include closed-PR branches in --cleanup (excluded by default)")
 	orphansCmd.Flags().
 		Int("stale-days", defaultStaleDays, "Days of inactivity before a branch is considered stale")
+	orphansCmd.Flags().
+		Int("min-age-days", 0, "Spare any branch touched within this many days, whatever its orphan type")
 	orphansCmd.Flags().Bool("include-recent", false, "Include recent branches without PRs")
 	orphansCmd.Flags().StringSlice("exclude", nil, "Branch patterns to exclude")
 	orphansCmd.Flags().StringP("output", "o", "", "Output file path")
@@ -88,6 +90,16 @@ func (p orphansProgram) View() tea.View {
 	return v
 }
 
+// intFallback prefers the config value when the flag was left at its default,
+// so a config setting is not silently overridden by a flag nobody passed.
+func intFallback(cmd *cobra.Command, name string, flagValue, configValue int) int {
+	if !cmd.Flags().Changed(name) && configValue > 0 {
+		return configValue
+	}
+
+	return flagValue
+}
+
 func runOrphans(cmd *cobra.Command, _ []string) {
 	ctx := context.Background()
 
@@ -103,6 +115,7 @@ func runOrphans(cmd *cobra.Command, _ []string) {
 	yes := boolFlag(cmd, confirmYes)
 	includeClosedPR := boolFlag(cmd, "include-closed-pr")
 	staleDays := intFlag(cmd, "stale-days")
+	minAgeDays := intFlag(cmd, "min-age-days")
 	includeRecent := boolFlag(cmd, "include-recent")
 	excludePatterns := stringSliceFlag(cmd, "exclude")
 	outputPath := stringFlag(cmd, "output")
@@ -116,12 +129,12 @@ func runOrphans(cmd *cobra.Command, _ []string) {
 		os.Exit(1)
 	}
 
-	if !cmd.Flags().Changed("stale-days") && cfg.Orphans.StaleDaysThreshold > 0 {
-		staleDays = cfg.Orphans.StaleDaysThreshold
-	}
+	staleDays = intFallback(cmd, "stale-days", staleDays, cfg.Orphans.StaleDaysThreshold)
+	minAgeDays = intFallback(cmd, "min-age-days", minAgeDays, cfg.Orphans.MinAgeDays)
 
 	options := orphans.DefaultScanOptions()
 	options.StaleDaysThreshold = staleDays
+	options.MinAgeDays = minAgeDays
 	options.IncludeRecentNoPR = includeRecent
 	if len(excludePatterns) > 0 {
 		options.ExcludePatterns = append(options.ExcludePatterns, excludePatterns...)

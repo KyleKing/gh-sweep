@@ -57,6 +57,10 @@ func (d *Detector) ClassifyBranch(
 		return nil
 	}
 
+	if daysSince < d.options.MinAgeDays {
+		return nil
+	}
+
 	orphan := OrphanedBranch{
 		Repository:        repo.FullName,
 		BranchName:        branch.Name,

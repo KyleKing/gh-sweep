@@ -401,3 +401,57 @@ func TestDefaultScanOptions(t *testing.T) {
 		)
 	}
 }
+
+// MinAgeDays must spare a recently merged branch, which StaleDaysThreshold
+// does not: that threshold only classifies branches with no PR at all.
+func TestDetector_ClassifyBranch_MinAgeDays(t *testing.T) {
+	t.Parallel()
+
+	mergedAt := time.Now().Add(-12 * time.Hour)
+	prs := []github.PullRequest{{
+		Number:   1,
+		Title:    "Feature PR",
+		State:    "closed",
+		Head:     github.PRRef{Ref: "feature-branch"},
+		MergedAt: &mergedAt,
+	}}
+
+	repo := github.Repository{
+		Name:          "test-repo",
+		FullName:      "owner/test-repo",
+		Owner:         "owner",
+		DefaultBranch: "main",
+	}
+
+	tests := []struct {
+		name       string
+		ageDays    int
+		minAgeDays int
+		wantOrphan bool
+	}{
+		{name: "merged yesterday, guard at 30 days", ageDays: 1, minAgeDays: 30},
+		{name: "merged 45 days ago, guard at 30 days", ageDays: 45, minAgeDays: 30, wantOrphan: true},
+		{name: "merged yesterday, no guard", ageDays: 1, wantOrphan: true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			opts := orphans.DefaultScanOptions()
+			opts.MinAgeDays = tc.minAgeDays
+			detector := orphans.NewDetector(opts)
+
+			branch := github.Branch{
+				Name:           "feature-branch",
+				SHA:            "abc123",
+				LastCommitDate: time.Now().AddDate(0, 0, -tc.ageDays),
+			}
+
+			orphan := detector.ClassifyBranch(repo, branch, prs)
+			if got := orphan != nil; got != tc.wantOrphan {
+				t.Fatalf("ClassifyBranch() orphan = %v, want %v", got, tc.wantOrphan)
+			}
+		})
+	}
+}
