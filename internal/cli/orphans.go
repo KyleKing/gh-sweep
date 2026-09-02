@@ -10,6 +10,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/spf13/cobra"
 
+	"github.com/KyleKing/gh-sweep/internal/config"
 	"github.com/KyleKing/gh-sweep/internal/github"
 	"github.com/KyleKing/gh-sweep/internal/orphans"
 	orphanstui "github.com/KyleKing/gh-sweep/internal/tui/components/orphans"
@@ -100,6 +101,36 @@ func intFallback(cmd *cobra.Command, name string, flagValue, configValue int) in
 	return flagValue
 }
 
+// resolveScanRepos narrows a namespace scan. The flag wins over the config so
+// a one-off run can widen or narrow what the config declares.
+func resolveScanRepos(cmd *cobra.Command, cfg *config.Config) []string {
+	if repos := stringSliceFlag(cmd, "repos"); len(repos) > 0 {
+		return repos
+	}
+
+	return cfg.QualifiedRepos()
+}
+
+func scanOptions(
+	cmd *cobra.Command,
+	cfg *config.Config,
+	staleDays, minAgeDays int,
+	includeRecent bool,
+	excludePatterns []string,
+) orphans.ScanOptions {
+	options := orphans.DefaultScanOptions()
+	options.StaleDaysThreshold = staleDays
+	options.MinAgeDays = minAgeDays
+	options.OnlyRepos = resolveScanRepos(cmd, cfg)
+	options.IncludeRecentNoPR = includeRecent
+
+	if len(excludePatterns) > 0 {
+		options.ExcludePatterns = append(options.ExcludePatterns, excludePatterns...)
+	}
+
+	return options
+}
+
 func runOrphans(cmd *cobra.Command, _ []string) {
 	ctx := context.Background()
 
@@ -132,13 +163,7 @@ func runOrphans(cmd *cobra.Command, _ []string) {
 	staleDays = intFallback(cmd, "stale-days", staleDays, cfg.Orphans.StaleDaysThreshold)
 	minAgeDays = intFallback(cmd, "min-age-days", minAgeDays, cfg.Orphans.MinAgeDays)
 
-	options := orphans.DefaultScanOptions()
-	options.StaleDaysThreshold = staleDays
-	options.MinAgeDays = minAgeDays
-	options.IncludeRecentNoPR = includeRecent
-	if len(excludePatterns) > 0 {
-		options.ExcludePatterns = append(options.ExcludePatterns, excludePatterns...)
-	}
+	options := scanOptions(cmd, cfg, staleDays, minAgeDays, includeRecent, excludePatterns)
 
 	if !listMode && !cleanup && outputPath == "" {
 		theme.Init(theme.Detect())
