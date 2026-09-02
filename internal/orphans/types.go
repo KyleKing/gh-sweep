@@ -111,12 +111,11 @@ func (r *NamespaceScanResult) OrphansByType(t OrphanType) []OrphanedBranch {
 // ScanOptions configures how a Detector or NamespaceScanner classifies and
 // scans branches.
 type ScanOptions struct {
+	// StaleDaysThreshold is the grace period for a branch with no PR at all.
+	// Branches from merged or closed PRs carry no grace period: the PR is the
+	// record of the work, and GitHub can restore the branch from it.
 	StaleDaysThreshold int
-	// MinAgeDays spares any branch touched more recently than this, whatever
-	// its orphan type. StaleDaysThreshold only classifies branches with no PR,
-	// so it alone still offers a branch merged yesterday for deletion.
-	MinAgeDays        int
-	IncludeRecentNoPR bool
+	IncludeRecentNoPR  bool
 	// OnlyRepos restricts a namespace scan to these repositories, named either
 	// "owner/repo" or bare. Empty scans the whole namespace.
 	OnlyRepos        []string
@@ -126,7 +125,7 @@ type ScanOptions struct {
 }
 
 const (
-	defaultStaleDaysThreshold = 30
+	defaultStaleDaysThreshold = 21
 	defaultConcurrency        = 5
 )
 

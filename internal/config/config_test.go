@@ -176,8 +176,8 @@ func TestExampleFileMatchesStruct(t *testing.T) {
 		)
 	}
 
-	if cfg.Orphans.StaleDaysThreshold != 30 {
-		t.Errorf("Expected orphans.stale_days_threshold 30, got %d", cfg.Orphans.StaleDaysThreshold)
+	if cfg.Orphans.StaleDaysThreshold != 21 {
+		t.Errorf("Expected orphans.stale_days_threshold 21, got %d", cfg.Orphans.StaleDaysThreshold)
 	}
 }
 

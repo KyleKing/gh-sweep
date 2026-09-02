@@ -57,10 +57,6 @@ func (d *Detector) ClassifyBranch(
 		return nil
 	}
 
-	if d.tooRecent(branch, daysSince) {
-		return nil
-	}
-
 	orphan := OrphanedBranch{
 		Repository:        repo.FullName,
 		BranchName:        branch.Name,
@@ -85,7 +81,7 @@ func (d *Detector) ClassifyBranch(
 
 		return &orphan
 
-	case daysSince >= d.options.StaleDaysThreshold:
+	case !branch.LastCommitDate.IsZero() && daysSince >= d.options.StaleDaysThreshold:
 		orphan.Type = OrphanTypeStale
 		return &orphan
 
@@ -95,17 +91,6 @@ func (d *Detector) ClassifyBranch(
 	}
 
 	return nil
-}
-
-// tooRecent reports whether MinAgeDays spares this branch. An unknown commit
-// date reads as too recent to touch rather than infinitely old, or the guard
-// spares nothing on the branches it could not date.
-func (d *Detector) tooRecent(branch github.Branch, daysSince int) bool {
-	if d.options.MinAgeDays <= 0 {
-		return false
-	}
-
-	return branch.LastCommitDate.IsZero() || daysSince < d.options.MinAgeDays
 }
 
 func (d *Detector) shouldExclude(branchName string) bool {

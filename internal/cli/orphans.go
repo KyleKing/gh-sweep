@@ -45,7 +45,7 @@ Examples:
 	Run: runOrphans,
 }
 
-const defaultStaleDays = 30
+const defaultStaleDays = 21
 
 func init() {
 	rootCmd.AddCommand(orphansCmd)
@@ -58,11 +58,9 @@ func init() {
 	orphansCmd.Flags().Bool("dry-run", false, "Preview deletions without executing")
 	orphansCmd.Flags().Bool(confirmYes, false, "Skip the cleanup confirmation prompt")
 	orphansCmd.Flags().
-		Bool("include-closed-pr", false, "Include closed-PR branches in --cleanup (excluded by default)")
+		Bool("exclude-closed-pr", false, "Keep closed-PR branches out of --cleanup (deleted by default)")
 	orphansCmd.Flags().
-		Int("stale-days", defaultStaleDays, "Days of inactivity before a branch is considered stale")
-	orphansCmd.Flags().
-		Int("min-age-days", 0, "Spare any branch touched within this many days, whatever its orphan type")
+		Int("stale-days", defaultStaleDays, "Grace period in days for a branch with no PR at all")
 	orphansCmd.Flags().Bool("include-recent", false, "Include recent branches without PRs")
 	orphansCmd.Flags().StringSlice("exclude", nil, "Branch patterns to exclude")
 	orphansCmd.Flags().StringP("output", "o", "", "Output file path")
@@ -114,13 +112,12 @@ func resolveScanRepos(cmd *cobra.Command, cfg *config.Config) []string {
 func scanOptions(
 	cmd *cobra.Command,
 	cfg *config.Config,
-	staleDays, minAgeDays int,
+	staleDays int,
 	includeRecent bool,
 	excludePatterns []string,
 ) orphans.ScanOptions {
 	options := orphans.DefaultScanOptions()
 	options.StaleDaysThreshold = staleDays
-	options.MinAgeDays = minAgeDays
 	options.OnlyRepos = resolveScanRepos(cmd, cfg)
 	options.IncludeRecentNoPR = includeRecent
 
@@ -144,9 +141,8 @@ func runOrphans(cmd *cobra.Command, _ []string) {
 	cleanup := boolFlag(cmd, "cleanup")
 	dryRun := boolFlag(cmd, "dry-run")
 	yes := boolFlag(cmd, confirmYes)
-	includeClosedPR := boolFlag(cmd, "include-closed-pr")
+	includeClosedPR := !boolFlag(cmd, "exclude-closed-pr")
 	staleDays := intFlag(cmd, "stale-days")
-	minAgeDays := intFlag(cmd, "min-age-days")
 	includeRecent := boolFlag(cmd, "include-recent")
 	excludePatterns := stringSliceFlag(cmd, "exclude")
 	outputPath := stringFlag(cmd, "output")
@@ -161,9 +157,8 @@ func runOrphans(cmd *cobra.Command, _ []string) {
 	}
 
 	staleDays = intFallback(cmd, "stale-days", staleDays, cfg.Orphans.StaleDaysThreshold)
-	minAgeDays = intFallback(cmd, "min-age-days", minAgeDays, cfg.Orphans.MinAgeDays)
 
-	options := scanOptions(cmd, cfg, staleDays, minAgeDays, includeRecent, excludePatterns)
+	options := scanOptions(cmd, cfg, staleDays, includeRecent, excludePatterns)
 
 	if !listMode && !cleanup && outputPath == "" {
 		theme.Init(theme.Detect())
@@ -233,7 +228,7 @@ func runCleanup(
 		fmt.Println("No orphaned branches to clean up.")
 		if skippedClosedPR > 0 {
 			fmt.Printf(
-				"Skipped %d closed-PR branch(es); pass --include-closed-pr to delete them too.\n",
+				"Skipped %d closed-PR branch(es) per --exclude-closed-pr.\n",
 				skippedClosedPR,
 			)
 		}
@@ -256,7 +251,7 @@ func runCleanup(
 
 	if skippedClosedPR > 0 {
 		fmt.Printf(
-			"Skipping %d closed-PR branch(es); pass --include-closed-pr to delete them too.\n\n",
+			"Skipping %d closed-PR branch(es) per --exclude-closed-pr.\n\n",
 			skippedClosedPR,
 		)
 	}

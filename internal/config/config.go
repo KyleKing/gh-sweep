@@ -71,7 +71,6 @@ type GHAPerfConfig struct {
 // OrphansConfig represents orphan branch detection settings.
 type OrphansConfig struct {
 	StaleDaysThreshold int      `yaml:"stale_days_threshold"`
-	MinAgeDays         int      `yaml:"min_age_days"`
 	ExcludePatterns    []string `yaml:"exclude_patterns"`
 	DefaultConcurrency int      `yaml:"default_concurrency"`
 }
@@ -132,7 +131,7 @@ func DefaultConfig() *Config {
 			RegressionThreshold: 20.0,
 		},
 		Orphans: OrphansConfig{
-			StaleDaysThreshold: 30,
+			StaleDaysThreshold: 21,
 			ExcludePatterns: []string{
 				defaultBranchName,
 				"master",

@@ -24,8 +24,7 @@ branches:
   protected_patterns: [main, master, develop, release/*]
 
 orphans:
-  stale_days_threshold: 30
-  min_age_days: 0
+  stale_days_threshold: 21
   exclude_patterns: [main, master, develop, release/*, hotfix/*]
 
 gha_perf:
@@ -41,11 +40,11 @@ The persistent `--org` and `--repos` flags override `default_org` and
 `protected_patterns` decides which branches the delete paths refuse to touch, so
 keep it accurate before running any cleanup.
 
-`stale_days_threshold` classifies a branch with no PR, so it does not bound what
-a cleanup deletes: a branch whose PR merged yesterday is a `merged_pr` orphan at
-any threshold. `min_age_days` is the one that spares recent work, and it applies
-to every orphan type. A branch whose commit date cannot be read counts as too
-recent to touch.
+`stale_days_threshold` is the grace period for a branch with no PR at all.
+Branches from merged or closed PRs have none, because the PR records the work
+and GitHub restores the branch from it on request. A branch whose commit date
+cannot be read never counts as stale, so an unreachable commit endpoint cannot
+turn a new branch into an ancient one.
 
 `cache.ttl` serves repeat reads from `cache.path` instead of the API. Cached
 responses cost no rate-limit quota, which is what keeps a cross-repo sweep

@@ -98,26 +98,25 @@ activity, across a namespace.
 gh sweep orphans --org my-org
 gh sweep orphans --repos owner/repo1,owner/repo2 --stale-days 14 --list
 gh sweep orphans --org my-org --cleanup --dry-run
-gh sweep orphans --org my-org --min-age-days 30 --cleanup --dry-run
 ```
 
-`--stale-days` bounds only the `stale` type, which is branches with no PR at
-all. A branch whose PR merged yesterday is a `merged_pr` orphan at every
-threshold, so `--min-age-days` is what keeps a cleanup off recent work.
+A branch from a merged or closed PR has no grace period, because the PR records
+the work and GitHub restores the branch from it on request. `--stale-days` is
+the grace period for a branch with no PR at all, default 21. A branch whose
+commit date cannot be read never counts as stale.
 
 | Flag | Effect |
 |------|--------|
 | `--org` | Organization to scan |
 | `--namespace` | Namespace, org or user, to scan |
 | `--repos` | Specific repos to scan |
-| `--stale-days` | Days of inactivity before a branch with no PR counts as stale, default 30 |
-| `--min-age-days` | Spare any branch touched within this many days, whatever its orphan type |
+| `--stale-days` | Grace period in days for a branch with no PR at all, default 21 |
 | `--exclude` | Branch patterns to skip |
 | `--include-recent` | Include recent branches that have no PR |
 | `--cleanup` | Delete the orphaned branches |
 | `--dry-run` | Preview deletions and delete nothing |
 | `--yes` | Skip the cleanup confirmation prompt |
-| `--include-closed-pr` | Include closed-PR branches in `--cleanup` (excluded by default) |
+| `--exclude-closed-pr` | Keep closed-PR branches out of `--cleanup` (deleted by default) |
 | `-o`, `--output` | Output file path |
 | `--format` | `table`, `json`, or `markdown`, default `table` |
 | `--list` | Print a table instead of the TUI |

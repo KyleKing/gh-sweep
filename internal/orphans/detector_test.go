@@ -376,8 +376,8 @@ func TestDefaultScanOptions(t *testing.T) {
 
 	opts := orphans.DefaultScanOptions()
 
-	if opts.StaleDaysThreshold != 30 {
-		t.Errorf("StaleDaysThreshold = %d, want 30", opts.StaleDaysThreshold)
+	if opts.StaleDaysThreshold != 21 {
+		t.Errorf("StaleDaysThreshold = %d, want 21", opts.StaleDaysThreshold)
 	}
 
 	if opts.IncludeRecentNoPR {
@@ -402,19 +402,13 @@ func TestDefaultScanOptions(t *testing.T) {
 	}
 }
 
-// MinAgeDays must spare a recently merged branch, which StaleDaysThreshold
-// does not: that threshold only classifies branches with no PR at all.
-func TestDetector_ClassifyBranch_MinAgeDays(t *testing.T) {
+// A branch whose commit date could not be read must not classify as stale:
+// a zero date reads as ancient, which would delete work of unknown age.
+func TestDetector_ClassifyBranch_UndatedNoPRBranch(t *testing.T) {
 	t.Parallel()
 
-	mergedAt := time.Now().Add(-12 * time.Hour)
-	prs := []github.PullRequest{{
-		Number:   1,
-		Title:    "Feature PR",
-		State:    "closed",
-		Head:     github.PRRef{Ref: "feature-branch"},
-		MergedAt: &mergedAt,
-	}}
+	opts := orphans.DefaultScanOptions()
+	detector := orphans.NewDetector(opts)
 
 	repo := github.Repository{
 		Name:          "test-repo",
@@ -423,37 +417,9 @@ func TestDetector_ClassifyBranch_MinAgeDays(t *testing.T) {
 		DefaultBranch: "main",
 	}
 
-	tests := []struct {
-		name       string
-		ageDays    int
-		minAgeDays int
-		undated    bool
-		wantOrphan bool
-	}{
-		{name: "merged yesterday, guard at 30 days", ageDays: 1, minAgeDays: 30},
-		{name: "merged 45 days ago, guard at 30 days", ageDays: 45, minAgeDays: 30, wantOrphan: true},
-		{name: "merged yesterday, no guard", ageDays: 1, wantOrphan: true},
-		{name: "undated branch is spared by the guard", undated: true, minAgeDays: 30},
-		{name: "undated branch with no guard", undated: true, wantOrphan: true},
-	}
+	branch := github.Branch{Name: "feature-branch", SHA: "abc123"}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			opts := orphans.DefaultScanOptions()
-			opts.MinAgeDays = tc.minAgeDays
-			detector := orphans.NewDetector(opts)
-
-			branch := github.Branch{Name: "feature-branch", SHA: "abc123"}
-			if !tc.undated {
-				branch.LastCommitDate = time.Now().AddDate(0, 0, -tc.ageDays)
-			}
-
-			orphan := detector.ClassifyBranch(repo, branch, prs)
-			if got := orphan != nil; got != tc.wantOrphan {
-				t.Fatalf("ClassifyBranch() orphan = %v, want %v", got, tc.wantOrphan)
-			}
-		})
+	if orphan := detector.ClassifyBranch(repo, branch, nil); orphan != nil {
+		t.Errorf("ClassifyBranch() = %+v, want nil for an undated branch with no PR", orphan)
 	}
 }

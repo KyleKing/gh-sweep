@@ -85,13 +85,9 @@ gha_perf:
 
 # Orphan branch detection settings
 orphans:
-  # Days of inactivity before a branch without a PR is considered stale
-  stale_days_threshold: 30
-
-  # Spare any branch touched within this many days, whatever its orphan type.
-  # stale_days_threshold only classifies branches with no PR at all, so it
-  # alone still offers a branch merged yesterday for deletion.
-  min_age_days: 0
+  # Grace period for a branch with no PR at all. Branches from merged or
+  # closed PRs have none: the PR records the work and GitHub can restore them.
+  stale_days_threshold: 21
 
   # Branch patterns never treated as orphans
   exclude_patterns:
