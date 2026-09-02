@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/KyleKing/gh-sweep/internal/github"
+	watchingtui "github.com/KyleKing/gh-sweep/internal/tui/components/watching"
 )
 
 var watchingCmd = &cobra.Command{
@@ -41,11 +42,18 @@ Examples:
 			return
 		}
 
-		username, repos, err := gqlClient.ListViewerRepoWatchInfo()
+		org := stringFlag(cmd, "org")
+		if org == "" {
+			org = loadConfig().DefaultOrg
+		}
+
+		username, repos, err := gqlClient.ListViewerRepoWatchInfo(org != "")
 		if err != nil {
 			fmt.Printf("Error: failed to list repo watch info: %v\n", err)
 			return
 		}
+
+		repos = watchingtui.ScopedTo(org, repos)
 
 		var unwatchedRepos []github.RepoWatchInfo
 		var ignoredCount, watchedCount int

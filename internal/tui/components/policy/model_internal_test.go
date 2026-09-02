@@ -15,7 +15,7 @@ import (
 var errNoPolicyFile = errors.New("no policy file found")
 
 func loadedPolicyModel() Model {
-	m := NewModel(&config.PolicyConfig{Repositories: []string{"acme/widgets", "acme/gadgets"}})
+	m := NewModel(&config.PolicyConfig{Repositories: []string{"acme/widgets", "acme/gadgets"}}, policy.ApplyOptions{})
 	m, _ = m.Update(reportLoadedMsg{report: &policy.Report{Repos: []policy.RepoDrift{
 		{Repository: "acme/widgets"},
 		{Repository: "acme/gadgets", Diffs: []policy.Diff{
@@ -128,7 +128,7 @@ func manyReposFixture(count int) *policy.Report {
 func TestListScrollsWhenTallerThanViewport(t *testing.T) {
 	t.Parallel()
 
-	m := NewModel(&config.PolicyConfig{})
+	m := NewModel(&config.PolicyConfig{}, policy.ApplyOptions{})
 	m, _ = m.Update(tea.WindowSizeMsg{Width: 120, Height: 15})
 	m, _ = m.Update(reportLoadedMsg{report: manyReposFixture(50)})
 

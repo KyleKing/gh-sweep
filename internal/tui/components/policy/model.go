@@ -22,6 +22,7 @@ const helpKeyWidth = 16
 // Model represents the policy diff/apply TUI state.
 type Model struct {
 	cfg          *config.PolicyConfig
+	applyOpts    policy.ApplyOptions
 	report       *policy.Report
 	cursor       int
 	width        int
@@ -35,8 +36,8 @@ type Model struct {
 }
 
 // NewModel creates a new policy model for cfg.
-func NewModel(cfg *config.PolicyConfig) Model {
-	return Model{cfg: cfg, loading: true}
+func NewModel(cfg *config.PolicyConfig, applyOpts policy.ApplyOptions) Model {
+	return Model{cfg: cfg, applyOpts: applyOpts, loading: true}
 }
 
 // NewModelWithConfigError creates a model that immediately surfaces a policy
@@ -198,6 +199,7 @@ func (m Model) executeApply() (Model, tea.Cmd) {
 	}
 
 	cfg := m.cfg
+	applyOpts := m.applyOpts
 	target := *drift
 	m.confirmApply = false
 
@@ -208,7 +210,7 @@ func (m Model) executeApply() (Model, tea.Cmd) {
 			return applyResultMsg{result: policy.ApplyResult{Repository: target.Repository, Err: err}}
 		}
 
-		return applyResultMsg{result: policy.Apply(client, cfg, target)}
+		return applyResultMsg{result: policy.Apply(client, cfg, target, applyOpts)}
 	}
 }
 

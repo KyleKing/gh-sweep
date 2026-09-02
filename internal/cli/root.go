@@ -12,6 +12,7 @@ import (
 
 	"github.com/KyleKing/gh-sweep/internal/config"
 	"github.com/KyleKing/gh-sweep/internal/github"
+	"github.com/KyleKing/gh-sweep/internal/policy"
 	"github.com/KyleKing/gh-sweep/internal/tui"
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
@@ -42,6 +43,7 @@ Use 'gh-sweep <command> --help' for more information about a command.`,
 			stringSliceFlag(cmd, "repos"),
 		)
 		opts.PolicyPath = stringFlag(cmd, "policy")
+		opts.ApplyOpts = policy.ApplyOptions{PruneBranches: boolFlag(cmd, "prune")}
 
 		theme.Init(theme.Detect())
 
@@ -123,6 +125,8 @@ func init() {
 		"Path to the config file (default: search ./.gh-sweep.yaml, ~/.gh-sweep.yaml, ~/.config/gh-sweep/)")
 	rootCmd.PersistentFlags().
 		String("policy", "", "Path to the policy file (default: .gh-sweep-policy.yaml)")
+	rootCmd.PersistentFlags().
+		Bool("prune", false, "Let a policy apply delete the branches its branches block reports")
 	rootCmd.Flags().String("repo", "", "Repository (owner/repo)")
 	rootCmd.PersistentFlags().
 		String("org", "", "GitHub organization (overrides config default_org)")

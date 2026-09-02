@@ -60,6 +60,7 @@ func runPolicy(cmd *cobra.Command, _ []string) {
 	listMode := boolFlag(cmd, "list")
 	apply := boolFlag(cmd, "apply")
 	yes := boolFlag(cmd, confirmYes)
+	applyOpts := policy.ApplyOptions{PruneBranches: boolFlag(cmd, "prune")}
 	format := stringFlag(cmd, "format")
 
 	cfg, err := config.LoadPolicy(policyPath)
@@ -71,7 +72,7 @@ func runPolicy(cmd *cobra.Command, _ []string) {
 	if !listMode && !apply {
 		theme.Init(theme.Detect())
 
-		m := policyProgram{model: policytui.NewModel(cfg)}
+		m := policyProgram{model: policytui.NewModel(cfg, applyOpts)}
 		p := tea.NewProgram(m)
 
 		if _, err := p.Run(); err != nil {
@@ -92,7 +93,7 @@ func runPolicy(cmd *cobra.Command, _ []string) {
 	report := policy.Evaluate(client, cfg)
 
 	if apply {
-		runApply(client, cfg, report, yes)
+		runApply(client, cfg, report, yes, applyOpts)
 		return
 	}
 
@@ -125,7 +126,13 @@ func (p policyProgram) View() tea.View {
 	return v
 }
 
-func runApply(client *github.Client, cfg *config.PolicyConfig, report *policy.Report, yes bool) {
+func runApply(
+	client *github.Client,
+	cfg *config.PolicyConfig,
+	report *policy.Report,
+	yes bool,
+	opts policy.ApplyOptions,
+) {
 	if !report.HasDrift() {
 		fmt.Println("No drift found; nothing to apply.")
 		return
@@ -140,6 +147,9 @@ func runApply(client *github.Client, cfg *config.PolicyConfig, report *policy.Re
 		}
 
 		fmt.Printf("%s: %d field(s) drifted\n", drift.Repository, len(drift.Diffs))
+		if len(drift.Prunable) > 0 && !opts.PruneBranches {
+			fmt.Printf("  %d branch(es) reported; pass --prune to delete them\n", len(drift.Prunable))
+		}
 		for _, d := range drift.Diffs {
 			fmt.Printf("  [%s] %s: %s -> %s\n", d.Domain, d.Field, d.Current, d.Desired)
 		}
@@ -151,7 +161,7 @@ func runApply(client *github.Client, cfg *config.PolicyConfig, report *policy.Re
 			continue
 		}
 
-		result := policy.Apply(client, cfg, drift)
+		result := policy.Apply(client, cfg, drift, opts)
 		if result.Err != nil {
 			fmt.Printf("  [FAILED] %v\n", result.Err)
 			failed++
