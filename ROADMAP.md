@@ -45,24 +45,15 @@ out to bite in practice.
   is now in my_go_template v0.12.1, so a `copier update` reconciles the
   hand-applied copy with the template's
 
-## Reorienting around policy
+## Remaining single-repo views
 
 The README's pitch is that "every view works across an org or an explicit
-list of repos, so you never open one repo at a time." Four views under the
-`Single Repo (needs --repo)` menu section contradicted it: `branches`,
-`comments`, `analytics`, and `gha-perf`. Decided per view, 2026-09-02:
+list of repos, so you never open one repo at a time." Three views under the
+`Single Repo (needs --repo)` menu section still contradict it: `comments`,
+`analytics`, and `gha-perf` (`branches` was removed in favor of `policy`'s
+branch domain and gh-repo-dashboard; see
+[docs/alternatives.md](docs/alternatives.md)). Decided per view, 2026-09-02:
 
-- **`branches`: remove.** `internal/policy`'s branch domain
-  (`config.PolicyBranches`) already declares this the way the rest of the
-  tool works: `prune_closed` deletes closed-PR branches on sight (GitHub
-  restores from the PR on request, so there is nothing to wait on) and
-  `no_pr_grace_days` holds branches with no PR record for a grace period
-  before pruning. That is cross-repo, already shipped, and strictly more than
-  the single-repo view did. Single-repo interactive branch management belongs
-  to [gh-repo-dashboard](https://github.com/KyleKing/gh-repo-dashboard),
-  which already does it against a real checkout (switch, push, squash-merge,
-  stash) rather than duplicating a thinner version here. See
-  [docs/alternatives.md](docs/alternatives.md).
 - **`comments`: stays, for now.** Unresolved review threads via GraphQL is
   work no sibling tool does cross-repo today.
   [second-look](https://github.com/KyleKing/second-look) already renders a
@@ -85,28 +76,6 @@ list of repos, so you never open one repo at a time." Four views under the
   gh-lazydispatch getting renamed for a scope it doesn't yet carry. Not
   scheduled; noted so gha-perf work doesn't restart from scratch on the wrong
   side of the move.
-
-### The bigger shape: policy as the app's center
-
-Beyond the single-repo cleanup, gh-sweep is reorienting around `policy` as
-the primary way to act, not just settings/protection: rules applied across a
-repo list, evaluated live against GitHub with no state file to drift, with
-per-repo overrides for the repos that are the exception. Two concrete gaps
-this implies, not yet built:
-
-- `PolicyConfig` has no per-repo override today; every declared rule applies
-  uniformly to every repo in `Repositories`. Needed for "this org-wide rule,
-  except repo X keeps its own required-reviews count."
-- `internal/tui/components/policy` diffs and applies a policy file written
-  externally; it does not edit one. Reorienting the TUI around policy means
-  editing rules and previewing the resulting diff in the same view, not
-  round-tripping through a YAML file and a separate `policy --list` run.
-
-Branch pruning is the proof this is a different category from Terraform or
-Pulumi, not a smaller version of the same thing: it decides what to delete
-from live history (merge/close state, branch age), which a declarative state
-file cannot express even in principle. See
-[docs/alternatives.md](docs/alternatives.md#repository-settings-as-code).
 
 ## Pending, waiting on a decision
 
