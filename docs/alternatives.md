@@ -17,8 +17,12 @@ regressions, and flaky heuristics.
 
 [gh-poi](https://github.com/seachicken/gh-poi) safely deletes local branches
 whose PRs have merged, from a single checkout. Use it for local single-repo
-hygiene. gh-sweep's `branches` and `orphans` commands work on remote branches
-across many repos without a checkout.
+hygiene. gh-sweep's `orphans` command and `policy`'s branch-pruning domain
+work on remote branches across many repos without a checkout. Single-repo
+interactive branch management belongs to
+[gh-repo-dashboard](https://github.com/KyleKing/gh-repo-dashboard), which has
+the checkout to switch, push, and stash against; gh-sweep does not duplicate
+it.
 
 ## Automation gh-sweep stays out of
 
@@ -50,6 +54,14 @@ change history independent of git blame on a YAML file, or org-wide policy
 enforcement with approval workflows. Reach for `policy` when you want a repo
 to look the way you declared it, fast, without adopting an IaC pipeline to
 get there.
+
+Branch pruning is not the same kind of overlap. `policy`'s branch domain
+decides what to delete from live history (a PR's merge/close state, how long
+a branch has sat with no PR) rather than from declared resource state, so
+there is no Terraform or Pulumi resource this could be expressed as even in
+principle: a state file has nothing to diff a ref's age against. That keeps
+this domain gh-sweep's regardless of where the settings/protection/rulesets
+domains land relative to IaC.
 
 ### Stale issue and PR cleanup
 

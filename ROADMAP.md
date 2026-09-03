@@ -45,37 +45,68 @@ out to bite in practice.
   is now in my_go_template v0.12.1, so a `copier update` reconciles the
   hand-applied copy with the template's
 
-## Do the single-repo views belong here?
+## Reorienting around policy
 
-The README's pitch is that "every view works across an org or an explicit list
-of repos, so you never open one repo at a time." Four views contradict it
-outright, sitting under a menu section literally labelled `Single Repo (needs
---repo)`: `branches`, `comments`, `analytics`, and `gha-perf`. So the sentence
-is also just wrong as written, whichever way this goes.
+The README's pitch is that "every view works across an org or an explicit
+list of repos, so you never open one repo at a time." Four views under the
+`Single Repo (needs --repo)` menu section contradicted it: `branches`,
+`comments`, `analytics`, and `gha-perf`. Decided per view, 2026-09-02:
 
-`[b]ranch management` is the clearest case to question. Interactive
-single-repo branch operations are what `gh`, `gh poi`, lazygit, and jj already
-do, and gh-sweep's own answer to branches is `orphans`, which sweeps a whole
-namespace. It is unclear what the view adds that a reader would come here for.
+- **`branches`: remove.** `internal/policy`'s branch domain
+  (`config.PolicyBranches`) already declares this the way the rest of the
+  tool works: `prune_closed` deletes closed-PR branches on sight (GitHub
+  restores from the PR on request, so there is nothing to wait on) and
+  `no_pr_grace_days` holds branches with no PR record for a grace period
+  before pruning. That is cross-repo, already shipped, and strictly more than
+  the single-repo view did. Single-repo interactive branch management belongs
+  to [gh-repo-dashboard](https://github.com/KyleKing/gh-repo-dashboard),
+  which already does it against a real checkout (switch, push, squash-merge,
+  stash) rather than duplicating a thinner version here. See
+  [docs/alternatives.md](docs/alternatives.md).
+- **`comments`: stays, for now.** Unresolved review threads via GraphQL is
+  work no sibling tool does cross-repo today.
+  [second-look](https://github.com/KyleKing/second-look) already renders a
+  single-PR unresolved-thread queue and is the more likely long-term home;
+  `NEXT_STEPS.md` there carries the TODO. Not moving until second-look
+  actually wants a cross-repo queue, which it does not build toward yet.
+- **`analytics`: undecided.** No obvious cross-repo claim of its own.
+  Candidate homes are [tlr](https://github.com/KyleKing/tlr) (if
+  contributor/review metrics feed capacity forecasting) or
+  gh-repo-dashboard (if it stays GitHub-native, current-state detail rather
+  than trend analysis). Needs a concrete want before either move happens.
+- **`gha-perf`: move to gh-lazydispatch.** It owns `internal/cache` and the
+  only historical CI-timing analysis (duration trends, regressions, flaky
+  heuristics) in this toolset, and none of that needs the org/repo-list scope
+  the rest of gh-sweep is built around; it is real GHA depth that belongs
+  next to gh-lazydispatch's other run-level tooling (`export diagnose`,
+  timeline, `watch`). gh-lazydispatch's own `ROADMAP.md` already flags
+  outgrowing "dispatch/chains" as its name (Phase 11's "listeners over
+  chains"), so this move and the rename should land together rather than
+  gh-lazydispatch getting renamed for a scope it doesn't yet carry. Not
+  scheduled; noted so gha-perf work doesn't restart from scratch on the wrong
+  side of the move.
 
-Worth deciding per view rather than as a batch, because they are not equally
-weak. `comments` reads unresolved review threads through GraphQL, which is
-genuinely awkward elsewhere, and `gha-perf` holds the run-timing cache no other
-tool has. `branches` and `analytics` are the ones with no obvious claim.
+### The bigger shape: policy as the app's center
 
-The options, roughly:
+Beyond the single-repo cleanup, gh-sweep is reorienting around `policy` as
+the primary way to act, not just settings/protection: rules applied across a
+repo list, evaluated live against GitHub with no state file to drift, with
+per-repo overrides for the repos that are the exception. Two concrete gaps
+this implies, not yet built:
 
-- Remove the view, and the menu section with it if all four go. Smallest
-  surface, and the pitch becomes true
-- Widen it to cross-repo, which is what `--repos` already implies and what the
-  rest of the tool does
-- Keep it and fix the README to say some views are single-repo, which is the
-  cheapest and the least satisfying
+- `PolicyConfig` has no per-repo override today; every declared rule applies
+  uniformly to every repo in `Repositories`. Needed for "this org-wide rule,
+  except repo X keeps its own required-reviews count."
+- `internal/tui/components/policy` diffs and applies a policy file written
+  externally; it does not edit one. Reorienting the TUI around policy means
+  editing rules and previewing the resulting diff in the same view, not
+  round-tripping through a YAML file and a separate `policy --list` run.
 
-Removal is not free: each view has tests and golden fixtures, and `gha-perf`
-owns `internal/cache`. Check [docs/alternatives.md](docs/alternatives.md)
-before removing anything, since it is where the "what this does not do"
-boundary is already argued.
+Branch pruning is the proof this is a different category from Terraform or
+Pulumi, not a smaller version of the same thing: it decides what to delete
+from live history (merge/close state, branch age), which a declarative state
+file cannot express even in principle. See
+[docs/alternatives.md](docs/alternatives.md#repository-settings-as-code).
 
 ## Pending, waiting on a decision
 
