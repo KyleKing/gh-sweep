@@ -23,7 +23,6 @@ type Config struct {
 	Cache        CacheConfig   `yaml:"cache"`
 	GitHub       GitHubConfig  `yaml:"github"`
 	Filters      FilterConfig  `yaml:"filters"`
-	Branches     BranchConfig  `yaml:"branches"`
 	Comments     CommentConfig `yaml:"comments"`
 	GHAPerf      GHAPerfConfig `yaml:"gha_perf"`
 	Orphans      OrphansConfig `yaml:"orphans"`
@@ -47,12 +46,6 @@ type GitHubConfig struct {
 type FilterConfig struct {
 	ExcludeUsers []string `yaml:"exclude_users"`
 	ExcludeRepos []string `yaml:"exclude_repos"`
-}
-
-// BranchConfig represents branch management settings.
-type BranchConfig struct {
-	DefaultBranch     string   `yaml:"default_branch"`
-	ProtectedPatterns []string `yaml:"protected_patterns"`
 }
 
 // CommentConfig represents comment review settings.
@@ -111,14 +104,6 @@ func DefaultConfig() *Config {
 				"dependabot[bot]",
 				"renovate[bot]",
 				"github-actions[bot]",
-			},
-		},
-		Branches: BranchConfig{
-			DefaultBranch: defaultBranchName,
-			ProtectedPatterns: []string{
-				defaultBranchName,
-				"master",
-				"develop",
 			},
 		},
 		Comments: CommentConfig{

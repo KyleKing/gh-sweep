@@ -19,10 +19,6 @@ repositories:
 # Baseline repository for protection/settings comparisons
 baseline: owner/repo1
 
-branches:
-  default_branch: main
-  protected_patterns: [main, master, develop, release/*]
-
 orphans:
   stale_days_threshold: 21
   exclude_patterns: [main, master, develop, release/*, hotfix/*]
@@ -36,9 +32,6 @@ gha_perf:
 The persistent `--org` and `--repos` flags override `default_org` and
 `repositories`. Per-command flags such as `--stale-days`, `--days`, and
 `--base-branch` fall back to the config only when you do not pass them.
-
-`protected_patterns` decides which branches the delete paths refuse to touch, so
-keep it accurate before running any cleanup.
 
 `stale_days_threshold` is the grace period for a branch with no PR at all.
 Branches from merged or closed PRs have none, because the PR records the work

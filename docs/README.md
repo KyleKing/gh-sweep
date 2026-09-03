@@ -25,10 +25,10 @@ Setup, tasks, and the release flow live in
 
 ## What it gives you
 
-- Branch management with ahead/behind counts and a guarded batch delete that
-  never touches a protected pattern
 - Orphan detection across an org or user: branches whose PR merged, whose PR
-  closed, or with no PR and no recent activity
+  closed, or with no PR and no recent activity, with a guarded batch delete
+- `policy`'s branch domain applies the same detection across a repo list
+  declaratively, with pruning gated behind `--prune`
 - Unresolved review threads through the GraphQL `reviewThreads` API, filterable
   by PR, author, date, and text
 - Branch-protection drift against a baseline repo

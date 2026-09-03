@@ -46,18 +46,6 @@ filters:
   exclude_repos:
     - owner/archived-repo
 
-# Branch management settings
-branches:
-  # Default branch (usually main or master)
-  default_branch: main
-
-  # Protected branch patterns (won't be deleted)
-  protected_patterns:
-    - main
-    - master
-    - develop
-    - release/*
-
 # Comment review settings
 comments:
   # Default lookback period for comments

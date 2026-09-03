@@ -14,7 +14,6 @@ import (
 	"github.com/KyleKing/gh-sweep/internal/orphans"
 	"github.com/KyleKing/gh-sweep/internal/policy"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/analytics"
-	"github.com/KyleKing/gh-sweep/internal/tui/components/branches"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/collaborators"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/comments"
 	"github.com/KyleKing/gh-sweep/internal/tui/components/ghaperf"
@@ -36,7 +35,6 @@ type ViewMode int
 // View modes for MainModel, one per home-menu entry plus the home menu itself.
 const (
 	ViewHome ViewMode = iota
-	ViewBranches
 	ViewProtection
 	ViewComments
 	ViewAnalytics
@@ -87,7 +85,6 @@ type MainModel struct {
 
 	// Sub-models for each view
 	analyticsModel     analytics.Model
-	branchesModel      branches.Model
 	collaboratorsModel collaborators.Model
 	commentsModel      comments.Model
 	ghaPerfModel       ghaperf.Model
@@ -155,7 +152,6 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.ready = true
 
 		// Forward to sub-models
-		m.branchesModel, _ = m.branchesModel.Update(msg)
 		m.protectionModel, _ = m.protectionModel.Update(msg)
 		m.commentsModel, _ = m.commentsModel.Update(msg)
 		m.analyticsModel, _ = m.analyticsModel.Update(msg)
@@ -262,14 +258,6 @@ func (m MainModel) buildSingleRepoItems() []menuItem {
 	hasRepo := m.repo != ""
 
 	return []menuItem{
-		{
-			key:     "b",
-			label:   "[b]ranch management",
-			desc:    "Interactive branch operations",
-			section: sectionSingleRepo,
-			view:    ViewBranches,
-			enabled: hasRepo,
-		},
 		{
 			key:     "c",
 			label:   "pr [c]omments",
@@ -530,8 +518,6 @@ func (m MainModel) activateItem(item menuItem) (tea.Model, tea.Cmd) {
 	switch item.view {
 	case ViewWatching:
 		return m.activateWatching()
-	case ViewBranches:
-		return m.activateBranches()
 	case ViewProtection:
 		return m.activateProtection()
 	case ViewComments:
@@ -562,16 +548,6 @@ func (m MainModel) activateItem(item menuItem) (tea.Model, tea.Cmd) {
 func (m MainModel) activateWatching() (tea.Model, tea.Cmd) {
 	m.watchingModel = watching.NewModel(m.org)
 	return m, m.watchingModel.Init()
-}
-
-func (m MainModel) activateBranches() (tea.Model, tea.Cmd) {
-	if m.repo == "" {
-		return m, nil
-	}
-
-	m.branchesModel = branches.NewModel(m.repo, "")
-
-	return m, m.branchesModel.Init()
 }
 
 func (m MainModel) activateProtection() (tea.Model, tea.Cmd) {
@@ -689,9 +665,6 @@ func (m MainModel) updateActive(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch m.mode {
-	case ViewBranches:
-		m.branchesModel, cmd = m.branchesModel.Update(msg)
-
 	case ViewProtection:
 		m.protectionModel, cmd = m.protectionModel.Update(msg)
 
@@ -746,7 +719,6 @@ func (m MainModel) View() tea.View {
 // sub-model, so renderContent can dispatch with a lookup instead of a
 // 13-case switch.
 var viewRenderers = map[ViewMode]func(MainModel) string{
-	ViewBranches:      func(m MainModel) string { return m.branchesModel.View() },
 	ViewProtection:    func(m MainModel) string { return m.protectionModel.View() },
 	ViewComments:      func(m MainModel) string { return m.commentsModel.View() },
 	ViewAnalytics:     func(m MainModel) string { return m.analyticsModel.View() },

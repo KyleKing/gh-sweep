@@ -14,8 +14,7 @@ Running `gh-sweep` with no subcommand opens a full-screen home menu. Each entry 
 |   [o]rphan branches      - Detect and clean up orphaned...   |
 |                                                              |
 | Single Repo (needs --repo)                                   |
-| > [b]ranch management    - Interactive branch operations     |
-|   pr [c]omments          - Review unresolved comments        |
+| > pr [c]omments          - Review unresolved comments        |
 |   [a]nalytics            - CI/CD and repository statistics   |
 |   [g]ha performance      - Workflow timing analysis          |
 |                                                              |
@@ -34,49 +33,42 @@ Running `gh-sweep` with no subcommand opens a full-screen home menu. Each entry 
 +--------------------------------------------------------------+
 ```
 
-With no repo or repos configured, the menu shows a hint to pass `--repo` or add repositories to `.gh-sweep.yaml`. Branches, comments, analytics, and GHA performance use the single target repo; protection, settings, webhooks, collaborators, and releases use the repo list; secrets needs an org plus the repo list.
+With no repo or repos configured, the menu shows a hint to pass `--repo` or add repositories to `.gh-sweep.yaml`. Comments, analytics, and GHA performance use the single target repo; protection, settings, webhooks, collaborators, and releases use the repo list; secrets needs an org plus the repo list.
 
-## Representative view: branches
+## Representative view: orphans
 
 ```
 +--------------------------------------------------------------+
-| Branch Management: owner/repo                                |
-|                                                              |
-|   [x] feature/old-experiment   merged    3 ahead / 40 behind |
-| > [ ] fix/flaky-test           stale     1 ahead / 12 behind |
-|   [ ] release/1.2              protected                     |
-|                                                              |
-| Delete 2 branches? feature/old-experiment, fix/flaky-test    |
-| Press 'y' to confirm, 'n' or 'esc' to cancel                 |
-|                                                              |
-| j/k: navigate | space: select | a/n: all/none | d: delete    |
-| | r: refresh | q: quit                                       |
+| Orphaned Branches                                             |
+|                                                                |
+|   [x] owner/repo1 feature/old-experiment   merged             |
+| > [ ] owner/repo2 fix/flaky-test           stale              |
+|                                                                |
+| Delete 2 branches? feature/old-experiment, fix/flaky-test     |
+| Press 'y' to confirm, 'n' or 'esc' to cancel                  |
+|                                                                |
+| j/k: navigate | space: select | a/n: all/none | d: delete     |
+| 1-4: filter | v: group | r: refresh | q: quit                 |
 +--------------------------------------------------------------+
 ```
 
-`d` with no selection targets the branch under the cursor. Protected branches are excluded from deletion and reported in the status line.
+`d` with no selection targets the branch under the cursor. Protected branches and branches with an open PR are excluded from deletion.
 
 ## Keybindings
 
 Global: `q` or `ctrl+c` quits from any view, `esc` returns to the home menu.
 
-### Branches (delete confirm: `y` confirm, `n`/`esc` cancel)
+### Orphans (delete confirm: `y` confirm, `n`/`esc` cancel)
 
-| Key                  | Action                         |
-| -------------------- | ------------------------------ |
-| `j`/`k`, `down`/`up` | Move cursor                    |
-| `space`              | Toggle selection               |
-| `a` / `n`            | Select all / none              |
-| `d`                  | Delete selected (with confirm) |
-| `r`                  | Refresh                        |
-
-### Orphans (same confirm flow as branches)
-
-| Key                         | Action                                   |
-| --------------------------- | ---------------------------------------- |
-| `space`, `a`, `n`, `d`, `r` | As in branches                           |
-| `1`-`4`                     | Filter: All / Merged / Closed / Stale    |
-| `v`                         | Cycle grouping: by repo / by type / flat |
+| Key                   | Action                                    |
+| --------------------- | ------------------------------------------ |
+| `j`/`k`, `down`/`up`  | Move cursor                               |
+| `space`               | Toggle selection                          |
+| `a` / `n`             | Select all / none                         |
+| `d`                   | Delete selected (with confirm)            |
+| `r`                   | Refresh                                   |
+| `1`-`4`               | Filter: All / Merged / Closed / Stale     |
+| `v`                   | Cycle grouping: by repo / by type / flat  |
 
 ### Watching
 
@@ -123,6 +115,6 @@ Protection and webhooks have only `j`/`k` navigation.
 
 ## Status and theme
 
-- Only three views mutate GitHub state: branches and orphans (branch deletion, behind a `y`/`n` confirm) and watching (subscription changes, no confirm)
+- Only two views mutate GitHub state: orphans (branch deletion, behind a `y`/`n` confirm) and watching (subscription changes, no confirm)
 - Colors come from `internal/tui/theme`: Catppuccin Latte (light) or Macchiato (dark), auto-detected from the terminal background, overridable with `CATPPUCCIN_THEME=latte|macchiato` (aliases `light`/`dark`)
 - Roles: Primary (titles), Muted (help text), Success/Warning/Error (state coloring, e.g. release age over 90 days renders Error)

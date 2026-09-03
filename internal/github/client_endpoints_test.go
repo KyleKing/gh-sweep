@@ -193,33 +193,6 @@ func TestGetPullRequestsForBranch(t *testing.T) {
 	}
 }
 
-func TestListBranchStatuses(t *testing.T) {
-	t.Parallel()
-
-	statuses, err := newEndpointClient(t).ListBranchStatuses("acme", "widgets", "")
-	if err != nil {
-		t.Fatalf("ListBranchStatuses() error = %v", err)
-	}
-
-	if len(statuses) != 2 {
-		t.Fatalf("statuses = %d, want 2", len(statuses))
-	}
-
-	main := statuses[0]
-	if !main.IsDefault || !main.Protected || main.ComparedTo != "main" {
-		t.Errorf("main status = %+v", main)
-	}
-
-	feature := statuses[1]
-	if feature.Ahead != 3 || feature.Behind != 1 {
-		t.Errorf("feature ahead/behind = %d/%d, want 3/1", feature.Ahead, feature.Behind)
-	}
-
-	if feature.PR == nil || feature.PR.Number != 7 || feature.PR.State != "open" {
-		t.Errorf("feature PR = %+v, want open #7", feature.PR)
-	}
-}
-
 func TestCreatePullRequest(t *testing.T) {
 	t.Parallel()
 

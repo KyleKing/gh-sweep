@@ -27,8 +27,7 @@ shipped:
 | --- | --- | ------------------- |
 | Namespace audit (whole account or org, ignores `--repo`) | `w` | Watch status |
 | | `o` | Orphan branches |
-| Single repo (needs `--repo`) | `b` | Branch management |
-| | `c` | PR comments |
+| Single repo (needs `--repo`) | `c` | PR comments |
 | | `a` | Analytics |
 | | `g` | GHA performance |
 | Cross-repo (needs `--repos` or `--org`) | `t` | Branch protection |
@@ -44,10 +43,10 @@ the list, and `enter` opens whatever the cursor sits on.
 
 ## Selecting and deleting
 
-The branches and orphans views select rows with `space`, select all or none with
+The orphans view selects rows with `space`, select all or none with
 `a` and `n`, invert the current selection with `I`, and delete with `d`. A delete
-asks for confirmation: `y` goes ahead, `n` or `esc` backs out. Protected patterns
-from the config file never appear as deletable.
+asks for confirmation: `y` goes ahead, `n` or `esc` backs out. The default branch,
+protected branches, and branches with an open PR never appear as deletable.
 
 Orphans adds `1` through `4` to filter by all, merged, closed, or stale, and `v`
 to cycle grouping by repo, by type, or flat.

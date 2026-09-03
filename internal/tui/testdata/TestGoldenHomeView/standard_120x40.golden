@@ -12,7 +12,6 @@
 [38;2;202;211;245m  [o]rphan branches    [m[38;2;147;154;183m - Detect and clean up orphaned branches[m
 
 [1;38;2;238;212;159mSingle Repo (needs --repo)[m
-[38;2;202;211;245m  [b]ranch management  [m[38;2;147;154;183m - Interactive branch operations[m
 [38;2;202;211;245m  pr [c]omments        [m[38;2;147;154;183m - Review unresolved comments[m
 [38;2;202;211;245m  [a]nalytics          [m[38;2;147;154;183m - CI/CD and repository statistics[m
 [38;2;202;211;245m  [g]ha performance    [m[38;2;147;154;183m - Workflow timing analysis[m

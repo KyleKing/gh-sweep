@@ -139,11 +139,6 @@ func TestTUINavigateViewsAndBack(t *testing.T) {
 	tm.Send(tea.KeyPressMsg{Code: tea.KeyEscape})
 	waitForOutput(t, tm, "Namespace Audit")
 
-	pressKey(tm, 'b')
-	waitForOutput(t, tm, "Branches for acme/widgets")
-	tm.Send(tea.KeyPressMsg{Code: tea.KeyEscape})
-	waitForOutput(t, tm, "Namespace Audit")
-
 	pressKey(tm, 't')
 	waitForOutput(t, tm, "Branch Protection Rules")
 	tm.Send(tea.KeyPressMsg{Code: tea.KeyEscape})

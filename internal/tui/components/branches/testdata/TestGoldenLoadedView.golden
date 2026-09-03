@@ -1,7 +1,0 @@
-[1;38;2;198;160;246mBranches for acme/widgets[m
-
-[1;38;2;238;212;159m> [ ] main ↑0 ↓0[m[38;2;147;154;183m [default] [protected] 2d[m
-  [ ] feature/login ↑3 ↓1[38;2;147;154;183m PR #42 (open) 3d[m
-  [ ] chore/cleanup ↑0 ↓5[38;2;147;154;183m 10d[m
-
-[38;2;147;154;183mj/k: navigate | space: select | a/n/I: all/none/invert | d: delete | r: refresh | ?: help | q: quit[m

@@ -9,21 +9,6 @@ every command and on the home menu. The first two override the
 `--policy` chooses the policy file, so one machine can keep a separate profile
 per org or per repo group.
 
-## branches
-
-Interactive branch management for one repo.
-
-```bash
-gh sweep branches --repo owner/repo
-gh sweep branches --repo owner/repo --base develop --list
-```
-
-| Flag | Effect |
-|------|--------|
-| `--repo` | Repository, as `owner/repo` |
-| `--base` | Base branch for ahead/behind, defaults to the repository default |
-| `--list` | Print a table instead of the TUI |
-
 ## comments
 
 Unresolved PR review threads, read through the GraphQL `reviewThreads` API

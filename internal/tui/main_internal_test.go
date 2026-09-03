@@ -46,7 +46,6 @@ func TestHomeNavigation(t *testing.T) {
 		wantCmd  bool
 	}{
 		{"w", ViewWatching, true},
-		{"b", ViewBranches, true},
 		{"t", ViewProtection, true},
 		{"c", ViewComments, true},
 		{"a", ViewAnalytics, true},
@@ -83,7 +82,6 @@ func TestHomeNavigationUnconfigured(t *testing.T) {
 		key      string
 		wantMode ViewMode
 	}{
-		{"b", ViewBranches},
 		{"t", ViewProtection},
 		{"c", ViewComments},
 		{"a", ViewAnalytics},
@@ -116,7 +114,7 @@ func TestEscReturnsHome(t *testing.T) {
 	t.Parallel()
 
 	views := []ViewMode{
-		ViewBranches, ViewProtection, ViewComments, ViewAnalytics, ViewGHAPerf,
+		ViewProtection, ViewComments, ViewAnalytics, ViewGHAPerf,
 		ViewSettings, ViewWebhooks, ViewCollaborators, ViewSecrets, ViewReleases,
 		ViewWatching, ViewOrphans,
 	}
@@ -189,7 +187,7 @@ func TestHomeViewListsAllMenuEntries(t *testing.T) {
 
 	content := m.renderContent()
 	for _, want := range []string{
-		"[w]atch status", "[o]rphan branches", "[b]ranch management", "branch pro[t]ection",
+		"[w]atch status", "[o]rphan branches", "branch pro[t]ection",
 		"pr [c]omments", "[a]nalytics", "[g]ha performance", "[s]ettings comparison",
 		"web[h]ooks", "co[l]laborators", "s[e]crets audit", "[r]eleases",
 	} {

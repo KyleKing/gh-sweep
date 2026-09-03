@@ -20,10 +20,6 @@ func TestDefaultConfig(t *testing.T) {
 		t.Errorf("Expected TTL to be '1h', got '%s'", cfg.Cache.TTL)
 	}
 
-	if cfg.Branches.DefaultBranch != "main" {
-		t.Errorf("Expected default branch to be 'main', got '%s'", cfg.Branches.DefaultBranch)
-	}
-
 	if len(cfg.Filters.ExcludeUsers) == 0 {
 		t.Error("Expected default exclude users to be populated")
 	}
