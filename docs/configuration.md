@@ -92,7 +92,24 @@ branches:
   prune_closed: true
   prune_no_pr: true
   no_pr_grace_days: 21
+
+overrides:
+  repo2:
+    protection:
+      required_reviews: 0
 ```
+
+### Per-repo overrides
+
+`overrides:` declares deviations from the base policy for one repo, keyed by
+the same form as `repositories:` (bare name or `owner/repo`). Within a domain,
+an unset field keeps the base policy's value for that repo; a set field
+replaces it, so `overrides.repo2.protection.required_reviews` above changes
+only that one field for `repo2`, leaving the rest of its protection rule at
+the base declaration. `ruleset:` is the exception: because a ruleset is
+matched by `name` as one unit, declaring a name under an override's `ruleset:`
+replaces the base ruleset wholesale for that repo rather than merging field by
+field.
 
 ### Branch pruning
 

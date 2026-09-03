@@ -118,3 +118,72 @@ func TestPolicyProtectionUnmanaged(t *testing.T) {
 		t.Error("Managed() = true for zero-value PolicyProtection, want false")
 	}
 }
+
+func TestForRepo(t *testing.T) {
+	t.Parallel()
+
+	baseReviews := 2
+	overrideReviews := 0
+	baseEnforce := true
+
+	base := &config.PolicyConfig{
+		DefaultOrg: "acme",
+		Protection: config.PolicyProtection{
+			RequiredReviews: &baseReviews,
+			EnforceAdmins:   &baseEnforce,
+		},
+		Security: config.PolicySecurity{SecretScanning: "enabled"},
+		Ruleset:  config.PolicyRuleset{Name: "main", Enforcement: "active"},
+		Overrides: map[string]config.PolicyOverride{
+			"acme/widgets": {
+				Protection: config.PolicyProtection{RequiredReviews: &overrideReviews},
+				Ruleset:    config.PolicyRuleset{Name: "main", Enforcement: "evaluate"},
+			},
+			"gadgets": {
+				Security: config.PolicySecurity{SecretScanning: "disabled"},
+			},
+		},
+	}
+
+	t.Run("qualified override merges field by field", func(t *testing.T) {
+		t.Parallel()
+
+		resolved := base.ForRepo("acme/widgets")
+
+		if resolved.Protection.RequiredReviews == nil || *resolved.Protection.RequiredReviews != 0 {
+			t.Errorf("RequiredReviews = %v, want 0 (from override)", resolved.Protection.RequiredReviews)
+		}
+		if resolved.Protection.EnforceAdmins != &baseEnforce {
+			t.Errorf(
+				"EnforceAdmins = %v, want base's pointer (untouched by override)",
+				resolved.Protection.EnforceAdmins,
+			)
+		}
+		if resolved.Ruleset.Enforcement != "evaluate" {
+			t.Errorf(
+				"Ruleset.Enforcement = %q, want evaluate (ruleset replaces wholesale)",
+				resolved.Ruleset.Enforcement,
+			)
+		}
+	})
+
+	t.Run("bare-name override resolves against DefaultOrg", func(t *testing.T) {
+		t.Parallel()
+
+		resolved := base.ForRepo("acme/gadgets")
+
+		if resolved.Security.SecretScanning != "disabled" {
+			t.Errorf("SecretScanning = %q, want disabled (from bare-keyed override)", resolved.Security.SecretScanning)
+		}
+	})
+
+	t.Run("repo with no override returns base unchanged", func(t *testing.T) {
+		t.Parallel()
+
+		resolved := base.ForRepo("acme/untouched")
+
+		if resolved.Protection.RequiredReviews != &baseReviews {
+			t.Errorf("RequiredReviews = %v, want base's pointer", resolved.Protection.RequiredReviews)
+		}
+	})
+}

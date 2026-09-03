@@ -87,3 +87,12 @@ branches:
   no_pr_grace_days: 21
 
   exclude_patterns: [gh-pages]
+
+# Per-repo deviations from everything declared above. An unset field within a
+# domain keeps the base policy's value for that repo; a set field replaces it.
+# Ruleset is the exception: declaring a name here replaces the whole base
+# ruleset for this repo, since a ruleset is matched by name as one unit.
+overrides:
+  repo3:
+    protection:
+      required_reviews: 0 # this repo has one maintainer

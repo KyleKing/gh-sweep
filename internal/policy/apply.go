@@ -31,7 +31,7 @@ type ApplyOptions struct {
 // opts.PruneBranches.
 func Apply(
 	client *github.Client,
-	cfg *config.PolicyConfig,
+	base *config.PolicyConfig,
 	drift RepoDrift,
 	opts ApplyOptions,
 ) ApplyResult {
@@ -42,6 +42,9 @@ func Apply(
 		result.Err = fmt.Errorf("%w: %q", ErrInvalidRepo, drift.Repository)
 		return result
 	}
+
+	resolved := base.ForRepo(drift.Repository)
+	cfg := &resolved
 
 	domains := domainsWithDrift(drift.Diffs)
 

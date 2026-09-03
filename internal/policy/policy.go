@@ -94,11 +94,14 @@ func Evaluate(client *github.Client, cfg *config.PolicyConfig) *Report {
 	return report
 }
 
-func evaluateRepo(client *github.Client, cfg *config.PolicyConfig, fullName string) RepoDrift {
+func evaluateRepo(client *github.Client, base *config.PolicyConfig, fullName string) RepoDrift {
 	owner, repo, ok := splitRepo(fullName)
 	if !ok {
 		return RepoDrift{Repository: fullName, Err: fmt.Errorf("%w: %q", ErrInvalidRepo, fullName)}
 	}
+
+	resolved := base.ForRepo(fullName)
+	cfg := &resolved
 
 	drift := RepoDrift{Repository: fullName}
 

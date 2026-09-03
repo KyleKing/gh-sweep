@@ -209,6 +209,93 @@ func TestEvaluateDoesNotErrorOnUnprotectedRepo(t *testing.T) {
 	}
 }
 
+func TestEvaluateUsesRepoOverride(t *testing.T) {
+	t.Parallel()
+
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		switch {
+		case req.Method == http.MethodGet && req.URL.Path == "/repos/acme/widgets":
+			return okBody(req, `{"default_branch":"main"}`), nil
+		case req.Method == http.MethodGet && req.URL.Path == "/repos/acme/widgets/branches/main/protection":
+			return okBody(req, protectionFixture), nil
+		default:
+			return okBody(req, `{}`), nil
+		}
+	})
+
+	client, err := github.NewClientWithTransport(context.Background(), transport)
+	if err != nil {
+		t.Fatalf("NewClientWithTransport() error = %v", err)
+	}
+
+	cfg := &config.PolicyConfig{
+		Repositories: []string{"acme/widgets"},
+		Protection:   config.PolicyProtection{EnforceAdmins: boolPtr(false)},
+		Overrides: map[string]config.PolicyOverride{
+			"acme/widgets": {Protection: config.PolicyProtection{EnforceAdmins: boolPtr(true)}},
+		},
+	}
+
+	report := policy.Evaluate(client, cfg)
+	if len(report.Repos) != 1 || report.Repos[0].Err != nil {
+		t.Fatalf("Evaluate() = %+v, want no fetch error", report.Repos)
+	}
+
+	if len(report.Repos[0].Diffs) != 1 || report.Repos[0].Diffs[0].Field != "enforce_admins" {
+		t.Errorf("diffs = %+v, want one enforce_admins drift from the override", report.Repos[0].Diffs)
+	}
+}
+
+func TestApplyUsesRepoOverride(t *testing.T) {
+	t.Parallel()
+
+	var putBody string
+
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		switch {
+		case req.Method == http.MethodGet && req.URL.Path == "/repos/acme/widgets":
+			return okBody(req, `{"default_branch":"main"}`), nil
+		case req.Method == http.MethodGet && req.URL.Path == "/repos/acme/widgets/branches/main/protection":
+			return okBody(req, protectionFixture), nil
+		case req.Method == http.MethodPut && req.URL.Path == "/repos/acme/widgets/branches/main/protection":
+			b, readErr := io.ReadAll(req.Body)
+			if readErr != nil {
+				t.Fatalf("read PUT body: %v", readErr)
+			}
+			putBody = string(b)
+
+			return okBody(req, `{}`), nil
+		default:
+			return okBody(req, `{}`), nil
+		}
+	})
+
+	client, err := github.NewClientWithTransport(context.Background(), transport)
+	if err != nil {
+		t.Fatalf("NewClientWithTransport() error = %v", err)
+	}
+
+	cfg := &config.PolicyConfig{
+		Protection: config.PolicyProtection{RequiredReviews: intPtr(1)},
+		Overrides: map[string]config.PolicyOverride{
+			"acme/widgets": {Protection: config.PolicyProtection{RequiredReviews: intPtr(3)}},
+		},
+	}
+	drift := policy.RepoDrift{
+		Repository: "acme/widgets",
+		Diffs:      []policy.Diff{{Domain: policy.DomainProtection, Field: "required_reviews"}},
+	}
+
+	result := policy.Apply(client, cfg, drift, policy.ApplyOptions{})
+	if result.Err != nil {
+		t.Fatalf("Apply() error = %v", result.Err)
+	}
+
+	if !strings.Contains(putBody, `"required_approving_review_count":3`) {
+		t.Errorf("PUT body = %s, want required_approving_review_count:3 from the override", putBody)
+	}
+}
+
 func TestApplyInvalidRepo(t *testing.T) {
 	t.Parallel()
 

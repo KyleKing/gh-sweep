@@ -18,14 +18,140 @@ var ErrPolicyFileNotFound = errors.New("no policy file found")
 // every field is a pointer or has an explicit "unset means don't manage
 // this" meaning, so a narrow policy only touches what it declares.
 type PolicyConfig struct {
-	DefaultOrg   string           `yaml:"default_org"`
-	Repositories []string         `yaml:"repositories"`
-	Settings     PolicySettings   `yaml:"settings"`
-	Security     PolicySecurity   `yaml:"security"`
-	Releases     PolicyReleases   `yaml:"releases"`
-	Protection   PolicyProtection `yaml:"protection"`
-	Ruleset      PolicyRuleset    `yaml:"ruleset"`
-	Branches     PolicyBranches   `yaml:"branches"`
+	DefaultOrg   string                    `yaml:"default_org"`
+	Repositories []string                  `yaml:"repositories"`
+	Settings     PolicySettings            `yaml:"settings"`
+	Security     PolicySecurity            `yaml:"security"`
+	Releases     PolicyReleases            `yaml:"releases"`
+	Protection   PolicyProtection          `yaml:"protection"`
+	Ruleset      PolicyRuleset             `yaml:"ruleset"`
+	Branches     PolicyBranches            `yaml:"branches"`
+	Overrides    map[string]PolicyOverride `yaml:"overrides"`
+}
+
+// PolicyOverride declares one repo's deviation from the base policy. It is
+// keyed in PolicyConfig.Overrides by the same repo form as Repositories
+// (bare name qualified by DefaultOrg, or "owner/repo"). Within each domain,
+// an unset field (nil pointer, "" string) keeps the base policy's value for
+// this repo; a set field replaces it. Ruleset is the exception: because a
+// ruleset is matched by Name as one unit, declaring any Name in an override
+// replaces the base Ruleset entirely for this repo rather than merging
+// field by field.
+type PolicyOverride struct {
+	Settings   PolicySettings   `yaml:"settings"`
+	Security   PolicySecurity   `yaml:"security"`
+	Releases   PolicyReleases   `yaml:"releases"`
+	Protection PolicyProtection `yaml:"protection"`
+	Ruleset    PolicyRuleset    `yaml:"ruleset"`
+	Branches   PolicyBranches   `yaml:"branches"`
+}
+
+// ForRepo resolves the policy that applies to fullName, merging any declared
+// override onto the base policy's fields. Callers that already have a
+// qualified name (from QualifiedRepos) get an exact map hit; a bare name is
+// also tried qualified by DefaultOrg so overrides can be written either way.
+func (p *PolicyConfig) ForRepo(fullName string) PolicyConfig {
+	override, ok := p.Overrides[fullName]
+	if !ok {
+		bare := strings.TrimPrefix(fullName, p.DefaultOrg+"/")
+		override, ok = p.Overrides[bare]
+	}
+	if !ok {
+		return *p
+	}
+
+	resolved := *p
+	resolved.Settings = mergeSettings(p.Settings, override.Settings)
+	resolved.Security = mergeSecurity(p.Security, override.Security)
+	resolved.Releases = mergeReleases(p.Releases, override.Releases)
+	resolved.Protection = mergeProtection(p.Protection, override.Protection)
+	resolved.Branches = mergeBranches(p.Branches, override.Branches)
+
+	if override.Ruleset.Managed() {
+		resolved.Ruleset = override.Ruleset
+	}
+
+	return resolved
+}
+
+func mergeSettings(base, override PolicySettings) PolicySettings {
+	return PolicySettings{
+		AllowMergeCommit:    firstNonNil(override.AllowMergeCommit, base.AllowMergeCommit),
+		AllowSquashMerge:    firstNonNil(override.AllowSquashMerge, base.AllowSquashMerge),
+		AllowRebaseMerge:    firstNonNil(override.AllowRebaseMerge, base.AllowRebaseMerge),
+		AllowAutoMerge:      firstNonNil(override.AllowAutoMerge, base.AllowAutoMerge),
+		AllowUpdateBranch:   firstNonNil(override.AllowUpdateBranch, base.AllowUpdateBranch),
+		DeleteBranchOnMerge: firstNonNil(override.DeleteBranchOnMerge, base.DeleteBranchOnMerge),
+		UseSquashPRTitle:    firstNonNil(override.UseSquashPRTitle, base.UseSquashPRTitle),
+		HasIssues:           firstNonNil(override.HasIssues, base.HasIssues),
+		HasProjects:         firstNonNil(override.HasProjects, base.HasProjects),
+		HasWiki:             firstNonNil(override.HasWiki, base.HasWiki),
+		HasDiscussions:      firstNonNil(override.HasDiscussions, base.HasDiscussions),
+		AllowForking:        firstNonNil(override.AllowForking, base.AllowForking),
+		WebCommitSignoff:    firstNonNil(override.WebCommitSignoff, base.WebCommitSignoff),
+	}
+}
+
+func mergeSecurity(base, override PolicySecurity) PolicySecurity {
+	return PolicySecurity{
+		SecretScanning: firstNonEmpty(override.SecretScanning, base.SecretScanning),
+		SecretScanningPushProtection: firstNonEmpty(
+			override.SecretScanningPushProtection, base.SecretScanningPushProtection,
+		),
+		DependabotSecurityUpdates: firstNonEmpty(override.DependabotSecurityUpdates, base.DependabotSecurityUpdates),
+	}
+}
+
+func mergeReleases(base, override PolicyReleases) PolicyReleases {
+	return PolicyReleases{
+		Immutable: firstNonNil(override.Immutable, base.Immutable),
+	}
+}
+
+func mergeProtection(base, override PolicyProtection) PolicyProtection {
+	return PolicyProtection{
+		RequiredReviews:         firstNonNil(override.RequiredReviews, base.RequiredReviews),
+		RequireCodeOwnerReviews: firstNonNil(override.RequireCodeOwnerReviews, base.RequireCodeOwnerReviews),
+		RequireStatusChecks:     firstNonEmptySlice(override.RequireStatusChecks, base.RequireStatusChecks),
+		EnforceAdmins:           firstNonNil(override.EnforceAdmins, base.EnforceAdmins),
+		RequireLinearHistory:    firstNonNil(override.RequireLinearHistory, base.RequireLinearHistory),
+		AllowForcePushes:        firstNonNil(override.AllowForcePushes, base.AllowForcePushes),
+		AllowDeletions:          firstNonNil(override.AllowDeletions, base.AllowDeletions),
+	}
+}
+
+func mergeBranches(base, override PolicyBranches) PolicyBranches {
+	return PolicyBranches{
+		PruneMerged:     firstNonNil(override.PruneMerged, base.PruneMerged),
+		PruneClosed:     firstNonNil(override.PruneClosed, base.PruneClosed),
+		PruneNoPR:       firstNonNil(override.PruneNoPR, base.PruneNoPR),
+		NoPRGraceDays:   firstNonNil(override.NoPRGraceDays, base.NoPRGraceDays),
+		ExcludePatterns: firstNonEmptySlice(override.ExcludePatterns, base.ExcludePatterns),
+	}
+}
+
+func firstNonNil[T any](override, base *T) *T {
+	if override != nil {
+		return override
+	}
+
+	return base
+}
+
+func firstNonEmpty(override, base string) string {
+	if override != "" {
+		return override
+	}
+
+	return base
+}
+
+func firstNonEmptySlice(override, base []string) []string {
+	if len(override) > 0 {
+		return override
+	}
+
+	return base
 }
 
 // PolicySettings mirrors github.RepoSettingsPatch: unset (nil) fields are left
