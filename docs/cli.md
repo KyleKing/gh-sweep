@@ -141,6 +141,13 @@ protection, and repository rulesets against a declared
 [policy file](./configuration.md#policy-file).
 A field left out of the policy is never reported or changed.
 
+The TUI (no `--list` or `--apply`) edits the policy in place: enter or `l` on
+a drifted repo drills into its individual fields, `e` edits the one under the
+cursor (a boolean toggles immediately, anything else opens a prompt seeded
+with its declared value), and the view re-evaluates against GitHub so the
+resulting diff shows without leaving it. `s` writes the edited policy back to
+its file; edits are in memory only until then.
+
 ```bash
 gh sweep policy
 gh sweep policy --list

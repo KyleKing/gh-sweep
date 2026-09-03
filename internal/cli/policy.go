@@ -72,7 +72,7 @@ func runPolicy(cmd *cobra.Command, _ []string) {
 	if !listMode && !apply {
 		theme.Init(theme.Detect())
 
-		m := policyProgram{model: policytui.NewModel(cfg, applyOpts)}
+		m := policyProgram{model: policytui.NewModel(cfg, config.PolicyPathOrDefault(policyPath), applyOpts)}
 		p := tea.NewProgram(m)
 
 		if _, err := p.Run(); err != nil {

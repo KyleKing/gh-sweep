@@ -55,6 +55,15 @@ The watching view also selects rows with `space` and inverts with `I`, then acts
 on the selection (or the row under the cursor if nothing is selected) with `w`,
 `u`, or `i`.
 
+## Editing the policy
+
+`enter` or `l` on a repo with drift drills into its individual fields; `e`
+edits the one under the cursor, toggling a boolean immediately or opening a
+prompt (`enter` confirms, `esc` cancels) seeded with its declared value for
+anything else. The view re-evaluates against GitHub right after, so the
+resulting diff shows without a separate `policy --list` run. `s` writes the
+edited policy to its file; `esc` or `h` backs out to the repo list.
+
 ## Tabbed views
 
 Number keys switch tabs, and `j`/`k` move within the current tab.

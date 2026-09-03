@@ -24,7 +24,7 @@
 [38;2;147;154;183m  s[e]crets audit      [m[38;2;147;154;183m - Review secrets usage (read-only)[m[38;2;147;154;183m (unavailable)[m
 [38;2;147;154;183m  [r]eleases           [m[38;2;147;154;183m - Release version overview[m[38;2;147;154;183m (unavailable)[m
 
-[1;38;2;238;212;159mPolicy (diffs and applies against a declared policy file)[m
+[1;38;2;238;212;159mPolicy (edits, diffs, and applies a declared policy file)[m
 [38;2;202;211;245m  polic[y]             [m[38;2;147;154;183m - Diff and sync settings against a policy file[m
 
 [38;2;147;154;183mConfigure with --repo flag or .gh-sweep.yaml[m

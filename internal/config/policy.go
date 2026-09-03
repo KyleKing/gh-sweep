@@ -260,6 +260,23 @@ var policyPaths = []string{
 	os.Getenv("HOME") + "/.gh-sweep-policy.yaml",
 }
 
+// PolicyPathOrDefault resolves which path LoadPolicy would read for path: path
+// itself if non-empty, otherwise the first default location that exists, or
+// the first default location if none do (so a first save has somewhere to go).
+func PolicyPathOrDefault(path string) string {
+	if path != "" {
+		return path
+	}
+
+	for _, candidate := range policyPaths {
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate
+		}
+	}
+
+	return policyPaths[0]
+}
+
 // LoadPolicy reads a PolicyConfig from path, or the first of the default
 // policy-file locations if path is empty. Returns an error if none is found;
 // unlike Load, there is no sensible zero-value default for desired state.

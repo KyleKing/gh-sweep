@@ -24,7 +24,7 @@
 [38;2;202;211;245m  s[e]crets audit      [m[38;2;147;154;183m - Review secrets usage (read-only)[m
 [38;2;202;211;245m  [r]eleases           [m[38;2;147;154;183m - Release version overview[m
 
-[1;38;2;238;212;159mPolicy (diffs and applies against a declared policy file)[m
+[1;38;2;238;212;159mPolicy (edits, diffs, and applies a declared policy file)[m
 [38;2;202;211;245m  polic[y]             [m[38;2;147;154;183m - Diff and sync settings against a policy file[m
 
 [38;2;147;154;183mj/k or ↑/↓: move | enter: select | /: filter | letter in [brackets]: jump | ?: help | q: quit[m

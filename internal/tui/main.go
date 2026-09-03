@@ -56,7 +56,7 @@ const (
 	sectionNamespace  = "Namespace Audit (scans your whole account or org, ignores --repo)"
 	sectionSingleRepo = "Single Repo (needs --repo)"
 	sectionCrossRepo  = "Cross-Repo (needs --repos or --org)"
-	sectionPolicy     = "Policy (diffs and applies against a declared policy file)"
+	sectionPolicy     = "Policy (edits, diffs, and applies a declared policy file)"
 )
 
 // menuItem describes one selectable entry in the home menu list, where
@@ -655,7 +655,7 @@ func (m MainModel) activatePolicy() (tea.Model, tea.Cmd) {
 	if err != nil {
 		m.policyModel = policytui.NewModelWithConfigError(err)
 	} else {
-		m.policyModel = policytui.NewModel(policyCfg, m.applyOpts)
+		m.policyModel = policytui.NewModel(policyCfg, config.PolicyPathOrDefault(m.policyPath), m.applyOpts)
 	}
 
 	return m, m.policyModel.Init()

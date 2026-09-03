@@ -15,7 +15,11 @@ import (
 var errNoPolicyFile = errors.New("no policy file found")
 
 func loadedPolicyModel() Model {
-	m := NewModel(&config.PolicyConfig{Repositories: []string{"acme/widgets", "acme/gadgets"}}, policy.ApplyOptions{})
+	m := NewModel(
+		&config.PolicyConfig{Repositories: []string{"acme/widgets", "acme/gadgets"}},
+		"/tmp/.gh-sweep-policy.yaml",
+		policy.ApplyOptions{},
+	)
 	m, _ = m.Update(reportLoadedMsg{report: &policy.Report{Repos: []policy.RepoDrift{
 		{Repository: "acme/widgets"},
 		{Repository: "acme/gadgets", Diffs: []policy.Diff{
@@ -30,7 +34,7 @@ func TestPolicyViewShowsDriftAndSync(t *testing.T) {
 	t.Parallel()
 
 	view := loadedPolicyModel().View()
-	for _, want := range []string{"Policy Drift", "acme/widgets: in sync", "acme/gadgets: 1 field(s) drifted"} {
+	for _, want := range []string{"Policy:", "acme/widgets: in sync", "acme/gadgets: 1 field(s) drifted"} {
 		if !strings.Contains(view, want) {
 			t.Errorf("view missing %q:\n%s", want, view)
 		}
@@ -128,7 +132,7 @@ func manyReposFixture(count int) *policy.Report {
 func TestListScrollsWhenTallerThanViewport(t *testing.T) {
 	t.Parallel()
 
-	m := NewModel(&config.PolicyConfig{}, policy.ApplyOptions{})
+	m := NewModel(&config.PolicyConfig{}, "/tmp/.gh-sweep-policy.yaml", policy.ApplyOptions{})
 	m, _ = m.Update(tea.WindowSizeMsg{Width: 120, Height: 15})
 	m, _ = m.Update(reportLoadedMsg{report: manyReposFixture(50)})
 
@@ -153,6 +157,129 @@ func TestListScrollsWhenTallerThanViewport(t *testing.T) {
 	}
 	if !strings.Contains(bottom, "more above") {
 		t.Errorf("scrolled view missing an above-fold hint, got %q", bottom)
+	}
+}
+
+func TestDiffFocusTogglesBoolFieldImmediately(t *testing.T) {
+	t.Parallel()
+
+	m := loadedPolicyModel()
+	m.cursor = 1 // acme/gadgets: has_wiki desired=false
+
+	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	if !m.diffFocus {
+		t.Fatal("expected diffFocus true after enter on a drifted repo")
+	}
+
+	m, cmd := m.Update(tea.KeyPressMsg{Code: 'e', Text: "e"})
+	if m.editing {
+		t.Error("bool field should toggle immediately, not open a text prompt")
+	}
+	if m.cfg.Settings.HasWiki == nil || !*m.cfg.Settings.HasWiki {
+		t.Fatalf("HasWiki = %v, want true after toggling desired=false", m.cfg.Settings.HasWiki)
+	}
+	if cmd == nil {
+		t.Error("expected a reload command after committing an edit")
+	}
+}
+
+func TestDiffFocusEsc(t *testing.T) {
+	t.Parallel()
+
+	m := loadedPolicyModel()
+	m.cursor = 1
+
+	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	if !m.diffFocus {
+		t.Fatal("expected diffFocus true")
+	}
+
+	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
+	if m.diffFocus {
+		t.Error("expected diffFocus false after esc")
+	}
+}
+
+func TestEditTextFieldPromptAndCommit(t *testing.T) {
+	t.Parallel()
+
+	m := NewModel(
+		&config.PolicyConfig{Protection: config.PolicyProtection{RequiredReviews: intPtr(1)}},
+		"/tmp/.gh-sweep-policy.yaml",
+		policy.ApplyOptions{},
+	)
+	m, _ = m.Update(reportLoadedMsg{report: &policy.Report{Repos: []policy.RepoDrift{
+		{Repository: "acme/widgets", Diffs: []policy.Diff{
+			{Domain: policy.DomainProtection, Field: "required_reviews", Desired: "1", Current: "0"},
+		}},
+	}}})
+
+	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m, _ = m.Update(tea.KeyPressMsg{Code: 'e', Text: "e"})
+	if !m.editing || m.editBuffer != "1" {
+		t.Fatalf("editing = %v, editBuffer = %q, want editing seeded with the declared value", m.editing, m.editBuffer)
+	}
+
+	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyBackspace})
+	m, _ = m.Update(tea.KeyPressMsg{Code: '3', Text: "3"})
+	m, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+
+	if m.editing {
+		t.Error("expected editing false after confirming")
+	}
+	if m.cfg.Protection.RequiredReviews == nil || *m.cfg.Protection.RequiredReviews != 3 {
+		t.Errorf("RequiredReviews = %v, want 3", m.cfg.Protection.RequiredReviews)
+	}
+	if cmd == nil {
+		t.Error("expected a reload command after committing an edit")
+	}
+}
+
+func TestEditTextFieldCancel(t *testing.T) {
+	t.Parallel()
+
+	m := NewModel(
+		&config.PolicyConfig{Protection: config.PolicyProtection{RequiredReviews: intPtr(1)}},
+		"/tmp/.gh-sweep-policy.yaml",
+		policy.ApplyOptions{},
+	)
+	m, _ = m.Update(reportLoadedMsg{report: &policy.Report{Repos: []policy.RepoDrift{
+		{Repository: "acme/widgets", Diffs: []policy.Diff{
+			{Domain: policy.DomainProtection, Field: "required_reviews", Desired: "1", Current: "0"},
+		}},
+	}}})
+
+	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m, _ = m.Update(tea.KeyPressMsg{Code: 'e', Text: "e"})
+	m, _ = m.Update(tea.KeyPressMsg{Code: '9', Text: "9"})
+	m, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
+
+	if m.editing {
+		t.Error("expected editing false after esc")
+	}
+	if *m.cfg.Protection.RequiredReviews != 1 {
+		t.Errorf("RequiredReviews = %d, want unchanged 1 after cancel", *m.cfg.Protection.RequiredReviews)
+	}
+}
+
+func TestSaveWritesPolicyFile(t *testing.T) {
+	t.Parallel()
+
+	path := t.TempDir() + "/.gh-sweep-policy.yaml"
+	m := NewModel(&config.PolicyConfig{DefaultOrg: "acme"}, path, policy.ApplyOptions{})
+
+	m, cmd := m.Update(tea.KeyPressMsg{Code: 's', Text: "s"})
+	if cmd == nil {
+		t.Fatal("expected a save command")
+	}
+
+	m, _ = m.Update(cmd())
+	if !strings.Contains(m.statusMsg, "Saved") {
+		t.Errorf("statusMsg = %q, want a Saved confirmation", m.statusMsg)
+	}
+
+	if _, err := config.LoadPolicy(path); err != nil {
+		t.Errorf("LoadPolicy() after save error = %v", err)
 	}
 }
 
