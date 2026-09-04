@@ -1,3 +1,15 @@
+## v1.0.0 (2026-09-04)
+
+### Feat
+
+- **policy**: make the TUI an editor, not just diff/apply
+- **policy**: add per-repo overrides to PolicyConfig
+- **cli**: remove the single-repo branches view
+
+### Fix
+
+- **ci**: force bash for test:coverage-min to support pipefail on dash runners
+
 ## v0.10.1 (2026-09-02)
 
 ### Fix
