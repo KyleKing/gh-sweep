@@ -61,6 +61,7 @@ raw_args = true
 [tasks."test:coverage-min"]
 description = "Verify minimum coverage threshold (70%), subprocess tests included"
 run = '''
+#!/usr/bin/env bash
 set -euo pipefail
 dir=$(mktemp -d)
 trap 'rm -rf "$dir"' EXIT
