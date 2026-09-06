@@ -78,3 +78,24 @@ Use [semantic-release](https://github.com/semantic-release/semantic-release) for
 ### Audit logging
 
 Use the native [GitHub Audit Log](https://docs.github.com/en/organizations/keeping-your-organization-secure/managing-security-settings-for-your-organization/reviewing-the-audit-log-for-your-organization) for retention and compliance. gh-sweep suits quick interactive queries within GitHub's retention window.
+
+## More of the org hygiene landscape
+
+Other projects that audit or enforce settings and hygiene across many repos, in
+their own words. Terraform and Pulumi are covered above rather than repeated here.
+
+| Name | Notes |
+| --- | --- |
+| [allstar](https://github.com/ossf/allstar) | "GitHub App to set and enforce security policies" (the OpenSSF-hosted instance is retired, so you self-host it now) |
+| [gh-actions-usage](https://github.com/codiform/gh-actions-usage) | "GitHub CLI Extension to display Github Actions Usage. Go version of gh-actuse." |
+| [git-removed-branches](https://github.com/nemisj/git-removed-branches) | "Git: List or remove local tracked branches, which are deleted from the remote." |
+| [git-sweep](https://github.com/arc90/git-sweep) | "Clean up branches from your Git remotes" |
+| [octoherd](https://github.com/octoherd/cli) | "CLI to run a octoherd scripts on one or multiple repositories" |
+| [OpenSSF Scorecard](https://github.com/ossf/scorecard) | "Security health metrics for Open Source" |
+| [peribolos](https://github.com/uwu-tools/peribolos) | "Peribolos allows the org settings, teams and memberships to be declared in a yaml file. GitHub is then updated to match the declared configuration." |
+| [policy-bot](https://github.com/palantir/policy-bot) | "A GitHub App that enforces approval policies on pull requests" |
+| [Probot](https://github.com/probot/probot) | "A framework for building GitHub Apps to automate and improve your workflow" |
+| [Probot Settings](https://github.com/probot/settings) | "Pull Requests for GitHub repository settings" |
+| [repolinter](https://github.com/todogroup/repolinter) | "Lint open source repositories for common issues" (archived, no longer maintained) |
+| [safe-settings](https://github.com/github/safe-settings) | "Centrally manage and enforce repository settings, branch protections, teams, and more across your entire GitHub organization." |
+| [Sourcegraph Batch Changes](https://sourcegraph.com/docs/batch_changes) | Makes large-scale code and config changes across many repositories at once (Closed source) |
