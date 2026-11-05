@@ -35,7 +35,12 @@ const branchesPerPage = 100
 // ListBranches lists all branches for a repository.
 func (c *Client) ListBranches(owner, repo string) ([]Branch, error) {
 	branches, err := fetchPages(c, branchesPerPage, func(page int) string {
-		return fmt.Sprintf("repos/%s/%s/branches?per_page=%d&page=%d", owner, repo, branchesPerPage, page)
+		path := fmt.Sprintf("repos/%s/%s/branches?per_page=%d&page=%d", owner, repo, branchesPerPage, page)
+		if generation := c.branchGeneration(owner, repo); generation != "" {
+			path += "&generation=" + generation
+		}
+
+		return path
 	}, func(br branchListResponse) Branch {
 		return Branch{
 			Name:           br.Name,
@@ -109,6 +114,10 @@ func (c *Client) DeleteBranch(owner, repo, branch string) error {
 
 	if err := c.Delete(path, nil); err != nil {
 		return fmt.Errorf("failed to delete branch: %w", err)
+	}
+
+	if err := c.pruneBranchList(owner, repo); err != nil {
+		return fmt.Errorf("deleted %s but could not prune the cached branch list: %w", branch, err)
 	}
 
 	return nil

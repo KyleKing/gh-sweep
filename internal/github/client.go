@@ -21,6 +21,7 @@ type Client struct {
 	httpClient *http.Client
 	apiClient  *api.RESTClient
 	ctx        context.Context
+	cacheDir   string
 }
 
 // NewClient creates a new GitHub API client. It resolves gh CLI
@@ -38,11 +39,16 @@ func NewClient(ctx context.Context, opts ...Option) (*Client, error) {
 		return nil, fmt.Errorf("failed to create HTTP client: %w", err)
 	}
 
-	return &Client{
+	client := &Client{
 		httpClient: httpClient,
 		apiClient:  restClient,
 		ctx:        ctx,
-	}, nil
+	}
+	if options.EnableCache {
+		client.cacheDir = options.CacheDir
+	}
+
+	return client, nil
 }
 
 // NewClientWithTransport creates a client whose requests are served by rt,
