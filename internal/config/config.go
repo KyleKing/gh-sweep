@@ -65,9 +65,10 @@ type GHAPerfConfig struct {
 
 // OrphansConfig represents orphan branch detection settings.
 type OrphansConfig struct {
-	StaleDaysThreshold int      `yaml:"stale_days_threshold"`
-	ExcludePatterns    []string `yaml:"exclude_patterns"`
-	DefaultConcurrency int      `yaml:"default_concurrency"`
+	ActiveDaysThreshold int      `yaml:"active_days_threshold"`
+	StaleDaysThreshold  int      `yaml:"stale_days_threshold"`
+	ExcludePatterns     []string `yaml:"exclude_patterns"`
+	DefaultConcurrency  int      `yaml:"default_concurrency"`
 }
 
 // PagesConfig represents GitHub Pages domain audit settings.
@@ -157,6 +158,10 @@ func (c *Config) ScanOptions() orphans.ScanOptions {
 
 	if c.Orphans.StaleDaysThreshold > 0 {
 		options.StaleDaysThreshold = c.Orphans.StaleDaysThreshold
+	}
+
+	if c.Orphans.ActiveDaysThreshold > 0 {
+		options.ActiveDaysThreshold = c.Orphans.ActiveDaysThreshold
 	}
 
 	if len(c.Orphans.ExcludePatterns) > 0 {

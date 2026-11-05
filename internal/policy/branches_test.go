@@ -1,9 +1,11 @@
 package policy_test
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/KyleKing/gh-sweep/internal/config"
 	"github.com/KyleKing/gh-sweep/internal/github"
@@ -23,13 +25,20 @@ func branchFake(deleted *[]string) roundTripFunc {
 
 		switch {
 		case strings.HasSuffix(req.URL.Path, "/branches"):
-			return okBody(req, `[
+			recent := time.Now().Add(-24 * time.Hour).UTC().Format(time.RFC3339)
+
+			return okBody(req, fmt.Sprintf(`[
 				{"name":"merged","commit":{"sha":"a","commit":{"author":{"date":"2026-08-01T00:00:00Z"}}}},
 				{"name":"closed","commit":{"sha":"b","commit":{"author":{"date":"2026-08-01T00:00:00Z"}}}},
 				{"name":"nopr-old","commit":{"sha":"c","commit":{"author":{"date":"2026-01-01T00:00:00Z"}}}},
-				{"name":"nopr-new","commit":{"sha":"d","commit":{"author":{"date":"2026-08-30T00:00:00Z"}}}},
+				{"name":"nopr-new","commit":{"sha":"d","commit":{"author":{"date":"%s"}}}},
+				{"name":"nopr-work","commit":{"sha":"w","commit":{"author":{"date":"2026-01-01T00:00:00Z"}}}},
 				{"name":"open","commit":{"sha":"e","commit":{"author":{"date":"2026-08-01T00:00:00Z"}}}}
-			]`), nil
+			]`, recent)), nil
+		case strings.HasSuffix(req.URL.Path, "/compare/main...w"):
+			return okBody(req, `{"ahead_by":1,"commits":[],"files":[]}`), nil
+		case strings.Contains(req.URL.Path, "/compare/"):
+			return okBody(req, `{"ahead_by":0}`), nil
 		case strings.Contains(req.URL.Path, "/pulls"):
 			return okBody(req, `[
 				{"number":1,"title":"m","state":"closed","merged_at":"2026-08-02T00:00:00Z","head":{"ref":"merged"}},
@@ -80,7 +89,7 @@ func TestBranchPolicy(t *testing.T) {
 	}
 
 	got := strings.Join(names, ",")
-	// "open" has a live PR and "nopr-new" is inside the grace period.
+	// "open" has a live PR, "nopr-new" is inside the grace period, and "nopr-work" holds unmerged commits.
 	if got != "merged,closed,nopr-old" {
 		t.Errorf("prunable = %s, want merged,closed,nopr-old", got)
 	}

@@ -25,7 +25,7 @@ func TestDetector_ClassifyBranch_MergedPR(t *testing.T) {
 		Name:           "feature-branch",
 		SHA:            "abc123",
 		Protected:      false,
-		LastCommitDate: time.Now().Add(-24 * time.Hour),
+		LastCommitDate: time.Now().Add(-30 * 24 * time.Hour),
 	}
 
 	mergedAt := time.Now().Add(-12 * time.Hour)
@@ -71,7 +71,7 @@ func TestDetector_ClassifyBranch_ClosedPR(t *testing.T) {
 		Name:           "feature-branch",
 		SHA:            "abc123",
 		Protected:      false,
-		LastCommitDate: time.Now().Add(-24 * time.Hour),
+		LastCommitDate: time.Now().Add(-30 * 24 * time.Hour),
 	}
 
 	closedAt := time.Now().Add(-12 * time.Hour)
@@ -421,5 +421,44 @@ func TestDetector_ClassifyBranch_UndatedNoPRBranch(t *testing.T) {
 
 	if orphan := detector.ClassifyBranch(repo, branch, nil); orphan != nil {
 		t.Errorf("ClassifyBranch() = %+v, want nil for an undated branch with no PR", orphan)
+	}
+}
+
+func TestDetector_ClassifyBranch_ActiveAndPushedAfterClose(t *testing.T) {
+	t.Parallel()
+
+	detector := orphans.NewDetector(orphans.DefaultScanOptions())
+	repo := github.Repository{FullName: "owner/test-repo", Owner: "owner"}
+	closedAt := time.Now().Add(-48 * time.Hour)
+	prs := []github.PullRequest{{
+		Number: 3, State: "closed", ClosedAt: &closedAt,
+		Head: github.PRRef{Ref: "feature", SHA: "pr-head"},
+	}}
+
+	tests := []struct {
+		name string
+		age  time.Duration
+		sha  string
+		want orphans.OrphanType
+	}{
+		{"active closed-PR branch is kept", 24 * time.Hour, "pr-head", ""},
+		{"old closed-PR branch is orphaned", 30 * 24 * time.Hour, "pr-head", orphans.OrphanTypeClosedPR},
+		{"tip past the PR head is unmerged work", 30 * 24 * time.Hour, "later", orphans.OrphanTypeUnmergedWork},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			branch := github.Branch{Name: "feature", SHA: tt.sha, LastCommitDate: time.Now().Add(-tt.age)}
+			got := detector.ClassifyBranch(repo, branch, prs)
+
+			switch {
+			case tt.want == "" && got != nil:
+				t.Errorf("got %s, want nil", got.Type)
+			case tt.want != "" && (got == nil || got.Type != tt.want):
+				t.Errorf("got %+v, want type %s", got, tt.want)
+			}
+		})
 	}
 }

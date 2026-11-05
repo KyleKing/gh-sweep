@@ -32,6 +32,11 @@ func evaluateBranches(
 		return nil, nil, fmt.Errorf("listing branches: %w", err)
 	}
 
+	base, err := client.GetDefaultBranch(owner, repo)
+	if err != nil {
+		return nil, nil, fmt.Errorf("resolving default branch: %w", err)
+	}
+
 	prs, err := client.ListPullRequests(owner, repo, "all")
 	if err != nil {
 		return nil, nil, fmt.Errorf("listing pull requests: %w", err)
@@ -58,6 +63,10 @@ func evaluateBranches(
 
 	for i := range branches {
 		orphan := detector.ClassifyBranch(repoRef, branches[i], prs)
+		if orphan != nil {
+			orphans.Triage(client, owner, repo, base, orphan)
+		}
+
 		if orphan == nil || !pruned(declared, orphan.Type) {
 			continue
 		}
@@ -95,7 +104,7 @@ func pruned(declared *config.PolicyBranches, orphanType orphans.OrphanType) bool
 		return enabled(declared.PruneClosed)
 	case orphans.OrphanTypeStale:
 		return enabled(declared.PruneNoPR)
-	case orphans.OrphanTypeRecentNoPR:
+	case orphans.OrphanTypeRecentNoPR, orphans.OrphanTypeUnmergedWork:
 		return false
 	}
 

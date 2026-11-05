@@ -179,6 +179,7 @@ func (s *NamespaceScanner) ScanRepo(ctx context.Context, repo github.Repository)
 		}
 
 		if orphan := detector.ClassifyBranch(repo, branch, prs); orphan != nil {
+			Triage(s.client, repo.Owner, repo.Name, repo.DefaultBranch, orphan)
 			result.Orphans = append(result.Orphans, *orphan)
 		}
 	}

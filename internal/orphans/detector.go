@@ -1,6 +1,7 @@
 package orphans
 
 import (
+	"math"
 	"path/filepath"
 	"time"
 
@@ -37,23 +38,11 @@ func (d *Detector) ClassifyBranch(
 	}
 
 	daysSince := int(time.Since(branch.LastCommitDate).Hours() / hoursPerDay)
+	dated := !branch.LastCommitDate.IsZero()
+	active := dated && daysSince < d.options.ActiveDaysThreshold
 
-	var mergedPR, closedPR, openPR *github.PullRequest
-	for i := range prs {
-		pr := &prs[i]
-		if pr.Head.Ref == branch.Name {
-			switch {
-			case pr.MergedAt != nil:
-				mergedPR = pr
-			case pr.State == prStateClosed:
-				closedPR = pr
-			case pr.State == "open":
-				openPR = pr
-			}
-		}
-	}
-
-	if openPR != nil {
+	pulls := pullRequestsByState(branch.Name, prs)
+	if pulls.open != nil {
 		return nil
 	}
 
@@ -62,35 +51,85 @@ func (d *Detector) ClassifyBranch(
 		BranchName:        branch.Name,
 		SHA:               branch.SHA,
 		LastCommitDate:    branch.LastCommitDate,
-		DaysSinceActivity: daysSince,
+		DaysSinceActivity: int32(min(daysSince, math.MaxInt32)), //nolint:gosec // clamped above
 		Protected:         branch.Protected,
 	}
 
 	switch {
-	case mergedPR != nil:
-		orphan.Type = OrphanTypeMergedPR
-		orphan.PRNumber = &mergedPR.Number
-		orphan.PRTitle = &mergedPR.Title
+	case active && (pulls.merged != nil || pulls.closed != nil):
+		return nil
 
-		return &orphan
+	case pulls.merged != nil:
+		return closedPRBranch(orphan, OrphanTypeMergedPR, pulls.merged, branch.SHA)
 
-	case closedPR != nil:
-		orphan.Type = OrphanTypeClosedPR
-		orphan.PRNumber = &closedPR.Number
-		orphan.PRTitle = &closedPR.Title
-
-		return &orphan
-
-	case !branch.LastCommitDate.IsZero() && daysSince >= d.options.StaleDaysThreshold:
-		orphan.Type = OrphanTypeStale
-		return &orphan
-
-	case d.options.IncludeRecentNoPR:
-		orphan.Type = OrphanTypeRecentNoPR
-		return &orphan
+	case pulls.closed != nil:
+		return closedPRBranch(orphan, OrphanTypeClosedPR, pulls.closed, branch.SHA)
 	}
 
-	return nil
+	orphan.Type = d.noPRType(!active && dated && daysSince >= d.options.StaleDaysThreshold)
+	if orphan.Type == "" {
+		return nil
+	}
+
+	return &orphan
+}
+
+func (d *Detector) noPRType(stale bool) OrphanType {
+	switch {
+	case stale:
+		return OrphanTypeStale
+	case d.options.IncludeRecentNoPR:
+		return OrphanTypeRecentNoPR
+	default:
+		return ""
+	}
+}
+
+type branchPulls struct {
+	merged, closed, open *github.PullRequest
+}
+
+func pullRequestsByState(branch string, prs []github.PullRequest) branchPulls {
+	var pulls branchPulls
+
+	for i := range prs {
+		pr := &prs[i]
+		if pr.Head.Ref != branch {
+			continue
+		}
+
+		switch {
+		case pr.MergedAt != nil:
+			pulls.merged = pr
+		case pr.State == prStateClosed:
+			pulls.closed = pr
+		case pr.State == "open":
+			pulls.open = pr
+		}
+	}
+
+	return pulls
+}
+
+// closedPRBranch classifies a branch whose PR ended. A tip that differs from
+// the PR's head was pushed after the PR closed, so the PR does not record that
+// work.
+func closedPRBranch(
+	orphan OrphanedBranch,
+	orphanType OrphanType,
+	pr *github.PullRequest,
+	branchSHA string,
+) *OrphanedBranch {
+	orphan.Type = orphanType
+	orphan.PRNumber = &pr.Number
+	orphan.PRTitle = &pr.Title
+
+	if pr.Head.SHA != "" && pr.Head.SHA != branchSHA {
+		orphan.Type = OrphanTypeUnmergedWork
+		orphan.Review = &Review{Note: "pushed after its pull request closed"}
+	}
+
+	return &orphan
 }
 
 func (d *Detector) shouldExclude(branchName string) bool {

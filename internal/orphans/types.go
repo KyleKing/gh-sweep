@@ -30,6 +30,10 @@ const (
 	OrphanTypeClosedPR   OrphanType = "closed_pr"
 	OrphanTypeStale      OrphanType = "stale"
 	OrphanTypeRecentNoPR OrphanType = "recent_no_pr"
+	// OrphanTypeUnmergedWork is a branch whose commits exist nowhere else: it
+	// has no PR (or was pushed to after its PR closed) and carries commits the
+	// default branch lacks. It is reported for review and never deleted.
+	OrphanTypeUnmergedWork OrphanType = "unmerged_work"
 )
 
 // Label returns the human-readable name for t.
@@ -43,6 +47,8 @@ func (t OrphanType) Label() string {
 		return "Stale"
 	case OrphanTypeRecentNoPR:
 		return "Recent (no PR)"
+	case OrphanTypeUnmergedWork:
+		return "Unmerged work"
 	default:
 		return string(t)
 	}
@@ -58,8 +64,24 @@ type OrphanedBranch struct {
 	Type              OrphanType `json:"type"`
 	PRNumber          *int       `json:"pr_number,omitempty"`
 	PRTitle           *string    `json:"pr_title,omitempty"`
-	DaysSinceActivity int        `json:"days_since_activity"`
+	DaysSinceActivity int32      `json:"days_since_activity"`
 	Protected         bool       `json:"protected"`
+	Review            *Review    `json:"review,omitempty"`
+}
+
+// Review is what a reviewer needs to judge an OrphanTypeUnmergedWork branch
+// without opening it.
+type Review struct {
+	UniqueCommits  int      `json:"unique_commits"`
+	CommitSubjects []string `json:"commit_subjects,omitempty"`
+	ChangedFiles   []string `json:"changed_files,omitempty"`
+	Note           string   `json:"note,omitempty"`
+}
+
+// Deletable reports whether a cleanup may delete the branch. Unmerged work is
+// the only type that never is.
+func (o OrphanedBranch) Deletable() bool {
+	return o.Type != OrphanTypeUnmergedWork
 }
 
 // Key uniquely identifies the branch within a scan by repository and name.
@@ -115,7 +137,10 @@ type ScanOptions struct {
 	// Branches from merged or closed PRs carry no grace period: the PR is the
 	// record of the work, and GitHub can restore the branch from it.
 	StaleDaysThreshold int
-	IncludeRecentNoPR  bool
+	// ActiveDaysThreshold shields any branch with a commit newer than this
+	// from every orphan type except RecentNoPR.
+	ActiveDaysThreshold int
+	IncludeRecentNoPR   bool
 	// OnlyRepos restricts a namespace scan to these repositories, named either
 	// "owner/repo" or bare. Empty scans the whole namespace.
 	OnlyRepos        []string
@@ -125,16 +150,18 @@ type ScanOptions struct {
 }
 
 const (
-	defaultStaleDaysThreshold = 21
-	defaultConcurrency        = 5
+	defaultStaleDaysThreshold  = 21
+	defaultActiveDaysThreshold = 7
+	defaultConcurrency         = 5
 )
 
 // DefaultScanOptions returns the ScanOptions gh-sweep uses when the caller
 // hasn't customized any scan settings.
 func DefaultScanOptions() ScanOptions {
 	return ScanOptions{
-		StaleDaysThreshold: defaultStaleDaysThreshold,
-		IncludeRecentNoPR:  false,
+		StaleDaysThreshold:  defaultStaleDaysThreshold,
+		ActiveDaysThreshold: defaultActiveDaysThreshold,
+		IncludeRecentNoPR:   false,
 		ExcludePatterns: []string{
 			defaultExcludedBranch,
 			"master",

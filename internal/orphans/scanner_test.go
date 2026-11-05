@@ -45,8 +45,17 @@ func scannerFake() roundTripFunc {
 				{"name":"merged-feature",
 				 "commit":{"sha":"def","commit":{"author":{"date":"2026-01-05T00:00:00Z"}}}},
 				{"name":"stale-feature",
-				 "commit":{"sha":"ghi","commit":{"author":{"date":"2020-01-05T00:00:00Z"}}}}
+				 "commit":{"sha":"ghi","commit":{"author":{"date":"2020-01-05T00:00:00Z"}}}},
+				{"name":"wip-feature",
+				 "commit":{"sha":"jkl","commit":{"author":{"date":"2020-01-06T00:00:00Z"}}}}
 			]`), nil
+
+		case path == "/repos/acme/widgets/compare/main...ghi":
+			return jsonResponse(req, http.StatusOK, `{"ahead_by":0}`), nil
+
+		case path == "/repos/acme/widgets/compare/main...jkl":
+			return jsonResponse(req, http.StatusOK, `{"ahead_by":2,
+				"commits":[{"commit":{"message":"wip\n\nbody"}}],"files":[{"filename":"a.go"}]}`), nil
 
 		case path == "/repos/acme/widgets/pulls":
 			return jsonResponse(req, http.StatusOK, `[
@@ -92,6 +101,12 @@ func TestScanNamespace(t *testing.T) {
 		t.Errorf("expected 1 stale orphan, got %d", orphansByType[orphans.OrphanTypeStale])
 	}
 
+	work := result.OrphansByType(orphans.OrphanTypeUnmergedWork)
+	if len(work) != 1 || work[0].Deletable() || work[0].Review == nil ||
+		work[0].Review.UniqueCommits != 2 || work[0].Review.CommitSubjects[0] != "wip" {
+		t.Errorf("unmerged work = %+v, want one undeletable branch with 2 commits and subject %q", work, "wip")
+	}
+
 	if len(result.OrphansByType(orphans.OrphanTypeMergedPR)) != 1 {
 		t.Errorf("OrphansByType(MergedPR) mismatch")
 	}
@@ -113,8 +128,8 @@ func TestScanNamespaceWithProgress(t *testing.T) {
 		t.Fatalf("ScanNamespaceWithProgress() error = %v", err)
 	}
 
-	if result.TotalOrphans != 2 {
-		t.Errorf("TotalOrphans = %d, want 2", result.TotalOrphans)
+	if result.TotalOrphans != 3 {
+		t.Errorf("TotalOrphans = %d, want 3", result.TotalOrphans)
 	}
 }
 
