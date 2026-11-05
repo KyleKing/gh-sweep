@@ -385,11 +385,24 @@ func (m Model) handleDelete() (Model, tea.Cmd) {
 		targets = append(targets, filtered[m.cursor])
 	}
 
+	deletable := targets[:0:0]
+	for _, target := range targets {
+		if target.Deletable() {
+			deletable = append(deletable, target)
+		}
+	}
+
 	if len(targets) == 0 {
 		m.statusMsg = "No branches selected"
 		return m, nil
 	}
 
+	if len(deletable) == 0 {
+		m.statusMsg = "Unmerged work is never deleted here; export it with: gh-sweep orphans --format json"
+		return m, nil
+	}
+
+	targets = deletable
 	m.confirmDelete = true
 	m.deleteTargets = targets
 
@@ -751,6 +764,8 @@ func getTypeStyle(t orphans.OrphanType) lipgloss.Style {
 		return lipgloss.NewStyle().Foreground(theme.Current().Warning)
 	case orphans.OrphanTypeRecentNoPR:
 		return lipgloss.NewStyle().Foreground(theme.Current().Muted)
+	case orphans.OrphanTypeUnmergedWork:
+		return lipgloss.NewStyle().Foreground(theme.Current().Error).Bold(true)
 	default:
 		return lipgloss.NewStyle()
 	}

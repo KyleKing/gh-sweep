@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/spf13/cobra"
@@ -25,7 +26,11 @@ var orphansCmd = &cobra.Command{
 Orphan types detected:
   - merged_pr:   Branch from a merged PR that wasn't auto-deleted
   - closed_pr:   Branch from a closed (unmerged) PR
-  - stale:       No associated PR, inactive > threshold (default 7 days)
+  - stale:       No associated PR, inactive > threshold (default 21 days), no commits beyond the default branch
+  - unmerged_work: Commits found nowhere else (no PR, or pushed after its PR closed).
+                 Reported for review in --format json/markdown and never deleted by --cleanup
+
+Branches with a commit newer than --active-days (default 7) are never reported.
 
 Examples:
   # Launch interactive TUI for current user
@@ -45,7 +50,10 @@ Examples:
 	Run: runOrphans,
 }
 
-const defaultStaleDays = 21
+const (
+	defaultStaleDays  = 21
+	defaultActiveDays = 7
+)
 
 func init() {
 	rootCmd.AddCommand(orphansCmd)
@@ -59,6 +67,8 @@ func init() {
 	orphansCmd.Flags().Bool(confirmYes, false, "Skip the cleanup confirmation prompt")
 	orphansCmd.Flags().
 		Bool("exclude-closed-pr", false, "Keep closed-PR branches out of --cleanup (deleted by default)")
+	orphansCmd.Flags().
+		Int("active-days", defaultActiveDays, "Branches with a commit newer than this many days are left alone")
 	orphansCmd.Flags().
 		Int("stale-days", defaultStaleDays, "Grace period in days for a branch with no PR at all")
 	orphansCmd.Flags().Bool("include-recent", false, "Include recent branches without PRs")
@@ -108,6 +118,9 @@ func scanOptions(
 ) orphans.ScanOptions {
 	options := cfg.ScanOptions()
 	options.StaleDaysThreshold = staleDays
+	options.ActiveDaysThreshold = intFallback(
+		cmd, "active-days", intFlag(cmd, "active-days"), cfg.Orphans.ActiveDaysThreshold,
+	)
 	options.IncludeRecentNoPR = includeRecent
 
 	if repos := stringSliceFlag(cmd, "repos"); len(repos) > 0 {
@@ -210,12 +223,29 @@ func filterClosedPROrphans(
 	return filtered, skipped
 }
 
+func splitDeletable(all []orphans.OrphanedBranch) ([]orphans.OrphanedBranch, int) {
+	deletable := make([]orphans.OrphanedBranch, 0, len(all))
+
+	for _, orphan := range all {
+		if orphan.Deletable() {
+			deletable = append(deletable, orphan)
+		}
+	}
+
+	return deletable, len(all) - len(deletable)
+}
+
 func runCleanup(
 	client *github.Client,
 	result *orphans.NamespaceScanResult,
 	dryRun, yes, includeClosedPR bool,
 ) {
-	allOrphans, skippedClosedPR := filterClosedPROrphans(result.AllOrphans(), includeClosedPR)
+	deletable, held := splitDeletable(result.AllOrphans())
+	allOrphans, skippedClosedPR := filterClosedPROrphans(deletable, includeClosedPR)
+
+	if held > 0 {
+		fmt.Printf("Holding %d unmerged-work branch(es) for review; export with --format json.\n\n", held)
+	}
 
 	if len(allOrphans) == 0 {
 		fmt.Println("No orphaned branches to clean up.")
@@ -312,6 +342,7 @@ func formatOrphansMarkdown(result *orphans.NamespaceScanResult) string {
 	fmt.Fprintf(&b, "| Merged PR | %d |\n", len(result.OrphansByType(orphans.OrphanTypeMergedPR)))
 	fmt.Fprintf(&b, "| Closed PR | %d |\n", len(result.OrphansByType(orphans.OrphanTypeClosedPR)))
 	fmt.Fprintf(&b, "| Stale | %d |\n", len(result.OrphansByType(orphans.OrphanTypeStale)))
+	fmt.Fprintf(&b, "| Unmerged work | %d |\n", len(result.OrphansByType(orphans.OrphanTypeUnmergedWork)))
 	fmt.Fprintf(
 		&b,
 		"| Recent (no PR) | %d |\n\n",
@@ -332,7 +363,45 @@ func formatOrphansMarkdown(result *orphans.NamespaceScanResult) string {
 			orphan.DaysSinceActivity, prInfo)
 	}
 
+	writeUnmergedWork(&b, result.OrphansByType(orphans.OrphanTypeUnmergedWork))
+
 	return b.String()
+}
+
+func writeUnmergedWork(b *strings.Builder, work []orphans.OrphanedBranch) {
+	if len(work) == 0 {
+		return
+	}
+
+	b.WriteString("\n## Unmerged Work (review before deleting)\n\n")
+
+	for _, orphan := range work {
+		fmt.Fprintf(b, "### %s `%s`\n\n", orphan.Repository, orphan.BranchName)
+		fmt.Fprintf(b, "- Last commit: %s (%d days ago)\n",
+			orphan.LastCommitDate.Format(time.DateOnly), orphan.DaysSinceActivity)
+
+		if orphan.PRNumber != nil {
+			fmt.Fprintf(b, "- Closed PR: #%d\n", *orphan.PRNumber)
+		}
+
+		if review := orphan.Review; review != nil {
+			fmt.Fprintf(b, "- Commits beyond the default branch: %d\n", review.UniqueCommits)
+
+			if review.Note != "" {
+				fmt.Fprintf(b, "- Note: %s\n", review.Note)
+			}
+
+			for _, subject := range review.CommitSubjects {
+				fmt.Fprintf(b, "- Commit: %s\n", subject)
+			}
+
+			for _, file := range review.ChangedFiles {
+				fmt.Fprintf(b, "- File: `%s`\n", file)
+			}
+		}
+
+		b.WriteString("\n")
+	}
 }
 
 func printTable(result *orphans.NamespaceScanResult) {

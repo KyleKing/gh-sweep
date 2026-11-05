@@ -394,7 +394,7 @@ func manyOrphansFixture(count int) *orphanscore.NamespaceScanResult {
 			Repository:        "acme/widgets",
 			BranchName:        fmt.Sprintf("branch-%02d", i),
 			Type:              orphanscore.OrphanTypeStale,
-			DaysSinceActivity: i,
+			DaysSinceActivity: int32(i),
 			LastCommitDate:    time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC).AddDate(0, 0, -i),
 		}
 	}
