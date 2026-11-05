@@ -2,6 +2,8 @@ package github
 
 import (
 	"fmt"
+	"net/url"
+	"strings"
 	"sync"
 	"time"
 )
@@ -28,23 +30,22 @@ type branchListResponse struct {
 	Protected bool `json:"protected"`
 }
 
+const branchesPerPage = 100
+
 // ListBranches lists all branches for a repository.
 func (c *Client) ListBranches(owner, repo string) ([]Branch, error) {
-	var response []branchListResponse
-	path := fmt.Sprintf("repos/%s/%s/branches", owner, repo)
-
-	if err := c.Get(path, &response); err != nil {
-		return nil, fmt.Errorf("failed to list branches: %w", err)
-	}
-
-	branches := make([]Branch, len(response))
-	for i, br := range response {
-		branches[i] = Branch{
+	branches, err := fetchPages(c, branchesPerPage, func(page int) string {
+		return fmt.Sprintf("repos/%s/%s/branches?per_page=%d&page=%d", owner, repo, branchesPerPage, page)
+	}, func(br branchListResponse) Branch {
+		return Branch{
 			Name:           br.Name,
 			SHA:            br.Commit.SHA,
 			Protected:      br.Protected,
 			LastCommitDate: br.Commit.Commit.Author.Date,
 		}
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list branches: %w", err)
 	}
 
 	return branches, nil
@@ -148,4 +149,60 @@ func (c *Client) GetDefaultBranch(owner, repo string) (string, error) {
 	}
 
 	return response.DefaultBranch, nil
+}
+
+const (
+	maxDivergenceCommits = 10
+	maxDivergenceFiles   = 25
+)
+
+// Divergence describes the commits a branch carries that its base lacks.
+// Commits and Files are truncated to a sample; AheadBy and FileCount are exact
+// (FileCount saturates at GitHub's compare file cap).
+type Divergence struct {
+	AheadBy   int
+	Commits   []string
+	Files     []string
+	FileCount int
+}
+
+// CompareBranch reports what head carries beyond base. The head argument may be a SHA.
+func (c *Client) CompareBranch(owner, repo, base, head string) (Divergence, error) {
+	var response struct {
+		AheadBy int `json:"ahead_by"`
+		Commits []struct {
+			Commit struct {
+				Message string `json:"message"`
+			} `json:"commit"`
+		} `json:"commits"`
+		Files []struct {
+			Filename string `json:"filename"`
+		} `json:"files"`
+	}
+
+	path := fmt.Sprintf("repos/%s/%s/compare/%s...%s", owner, repo, url.PathEscape(base), url.PathEscape(head))
+	if err := c.Get(path, &response); err != nil {
+		return Divergence{}, fmt.Errorf("failed to compare %s with %s: %w", head, base, err)
+	}
+
+	divergence := Divergence{AheadBy: response.AheadBy, FileCount: len(response.Files)}
+
+	for i := range response.Commits {
+		if i == maxDivergenceCommits {
+			break
+		}
+
+		subject, _, _ := strings.Cut(response.Commits[i].Commit.Message, "\n")
+		divergence.Commits = append(divergence.Commits, subject)
+	}
+
+	for i := range response.Files {
+		if i == maxDivergenceFiles {
+			break
+		}
+
+		divergence.Files = append(divergence.Files, response.Files[i].Filename)
+	}
+
+	return divergence, nil
 }
