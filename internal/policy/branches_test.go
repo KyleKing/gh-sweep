@@ -36,9 +36,9 @@ func branchFake(deleted *[]string) roundTripFunc {
 				{"name":"open","commit":{"sha":"e","commit":{"author":{"date":"2026-08-01T00:00:00Z"}}}}
 			]`, recent)), nil
 		case strings.HasSuffix(req.URL.Path, "/compare/main...w"):
-			return okBody(req, `{"ahead_by":1,"commits":[],"files":[]}`), nil
+			return okBody(req, `{"ahead_by":1,"commits":[],"files":[{"filename":"a.go"}]}`), nil
 		case strings.Contains(req.URL.Path, "/compare/"):
-			return okBody(req, `{"ahead_by":0}`), nil
+			return okBody(req, `{"ahead_by":2,"files":[]}`), nil
 		case strings.Contains(req.URL.Path, "/pulls"):
 			return okBody(req, `[
 				{"number":1,"title":"m","state":"closed","merged_at":"2026-08-02T00:00:00Z","head":{"ref":"merged"}},

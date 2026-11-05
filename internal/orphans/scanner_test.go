@@ -51,7 +51,7 @@ func scannerFake() roundTripFunc {
 			]`), nil
 
 		case path == "/repos/acme/widgets/compare/main...ghi":
-			return jsonResponse(req, http.StatusOK, `{"ahead_by":0}`), nil
+			return jsonResponse(req, http.StatusOK, `{"ahead_by":2,"commits":[],"files":[]}`), nil
 
 		case path == "/repos/acme/widgets/compare/main...jkl":
 			return jsonResponse(req, http.StatusOK, `{"ahead_by":2,

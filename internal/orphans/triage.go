@@ -12,8 +12,8 @@ type Comparer interface {
 }
 
 // Triage separates stale no-PR branches that are safe to delete from those
-// holding commits found nowhere else. A stale branch with commits beyond base,
-// or one whose comparison fails, becomes OrphanTypeUnmergedWork: with no PR to
+// holding changes found nowhere else. A stale branch whose tree differs from
+// base (or whose comparison fails) becomes OrphanTypeUnmergedWork: with no PR to
 // restore it from, deleting it loses the work. Other types pass through, and
 // unmerged work gains its commit and file sample.
 func Triage(c Comparer, owner, repo, base string, orphan *OrphanedBranch) {
@@ -27,7 +27,7 @@ func Triage(c Comparer, owner, repo, base string, orphan *OrphanedBranch) {
 	case err != nil:
 		orphan.Type = OrphanTypeUnmergedWork
 		orphan.Review = &Review{Note: fmt.Sprintf("comparison with %s failed: %v", base, err)}
-	case divergence.AheadBy == 0 && orphan.Type == OrphanTypeStale:
+	case divergence.FileCount == 0 && orphan.Type == OrphanTypeStale:
 		return
 	default:
 		orphan.Type = OrphanTypeUnmergedWork

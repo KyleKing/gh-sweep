@@ -166,7 +166,7 @@ const (
 )
 
 // Divergence describes the commits a branch carries that its base lacks.
-// Commits and Files are truncated to a sample; AheadBy and FileCount are exact
+// Commits and Files are truncated to a sample; AheadBy is exact
 // (FileCount saturates at GitHub's compare file cap).
 type Divergence struct {
 	AheadBy   int
