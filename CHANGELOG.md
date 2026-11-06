@@ -1,3 +1,16 @@
+## v1.1.0 (2026-11-06)
+
+### Feat
+
+- **orphans**: treat a branch with no changed files as deletable
+- **cli**: report unmerged work and skip it in cleanup
+- **orphans**: hold unmerged work for review and shield active branches
+
+### Fix
+
+- **github**: prune the cached branch list when a branch is deleted
+- **github**: paginate ListBranches and add CompareBranch
+
 ## v1.0.0 (2026-09-04)
 
 ### Feat
