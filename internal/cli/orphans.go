@@ -188,6 +188,14 @@ func runOrphans(cmd *cobra.Command, _ []string) {
 		os.Exit(1)
 	}
 
+	if failures := scanFailures(result); len(failures) > 0 {
+		for _, failure := range failures {
+			fmt.Fprintln(os.Stderr, failure)
+		}
+
+		os.Exit(1)
+	}
+
 	if cleanup {
 		runCleanup(client, result, dryRun, yes, includeClosedPR)
 		return
@@ -199,6 +207,20 @@ func runOrphans(cmd *cobra.Command, _ []string) {
 	}
 
 	printTable(result)
+}
+
+func scanFailures(result *orphans.NamespaceScanResult) []string {
+	var failures []string
+
+	for i := range result.Results {
+		if err := result.Results[i].Error; err != nil {
+			failures = append(failures, fmt.Sprintf(
+				"Error: scanning %s failed: %v", result.Results[i].Repository.FullName, err,
+			))
+		}
+	}
+
+	return failures
 }
 
 func filterClosedPROrphans(

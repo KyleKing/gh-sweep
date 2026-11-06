@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"os"
@@ -278,4 +279,20 @@ func TestOutputResult(t *testing.T) {
 	testOutputRoundTrip(t, func(outputPath, format string) {
 		outputResult(result, outputPath, format)
 	}, "# Orphaned Branches Report", "orphans.json")
+}
+
+var errRateLimited = errors.New("rate limit")
+
+func TestScanFailuresNamesEachFailedRepo(t *testing.T) {
+	t.Parallel()
+
+	result := &orphans.NamespaceScanResult{Results: []orphans.ScanResult{
+		{Repository: github.Repository{FullName: "acme/ok"}},
+		{Repository: github.Repository{FullName: "acme/limited"}, Error: errRateLimited},
+	}}
+
+	got := scanFailures(result)
+	if len(got) != 1 || !strings.Contains(got[0], "acme/limited") || !strings.Contains(got[0], "rate limit") {
+		t.Errorf("scanFailures() = %v, want one entry naming acme/limited and the cause", got)
+	}
 }
