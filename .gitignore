@@ -1,55 +1,66 @@
-# Binaries for programs and plugins
+# Built binary (from copier project_name)
+/gh-sweep
+
+# Changelog scratch file written by the commitizen action; goreleaser's dirty
+# check must not see it as untracked
+body.md
+
+# Go binaries
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
 
-# Test binary, built with `go test -c`
+# Test binaries and coverage
 *.test
-
-# Output of the go coverage tool
 *.out
 coverage.out
 coverage.html
+*.cover
+*.coverprofile
+
+# Delve debugger
+__debug_bin*
+
+# Build artifacts
+dist/
+bin/
+build/
+
+# Go workspace files (local only)
+go.work
+go.work.sum
+
+# Scratch output of the demo tapes
+demo/.work/
 
 # Dependency directories
 vendor/
 
-# Go workspace file
-go.work
-go.work.sum
+# Air (live reload) temporary directory
+tmp/
 
-# Build artifacts
-dist/
-*.tar.gz
-*.zip
+# Environment files
+.env
+.env.local
+.env.*.local
 
-# IDE
+# IDE and editors
 .idea/
 .vscode/
 *.swp
 *.swo
+*.swn
 *~
 
-# OS
+# OS-specific
 .DS_Store
+.AppleDouble
+.LSOverride
 Thumbs.db
+ehthumbs.db
+Desktop.ini
 
-# Application
+# Local gh-sweep config
 .gh-sweep.yaml
-.env
-*.db
-*.sqlite
-*.sqlite3
-
-# Temporary files
-tmp/
-temp/
-
-# Built binary (root only; a bare pattern would also ignore cmd/gh-sweep/)
-/gh-sweep
-
-# Changelog scratch file written by the commitizen action; goreleaser's dirty
-# check must not see it as untracked
-body.md

@@ -7,12 +7,12 @@ extend-exclude = ["CHANGELOG.md"]
 # Abbreviated commit hashes. Every one of them is a word made of a-f, and
 # "f3a9ba6" is not a misspelling of anything.
 extend-ignore-identifiers-re = ["^[0-9a-f]{7,40}$"]
+# "[r]eleases"-style key hints: the suffix after the bracket is a word fragment.
+extend-ignore-re = ['\[[a-z]\][A-Za-z]+']
 
 # golangci-lint linter identifiers that typos reads as misspellings.
 [default.extend-words]
 decorder = "decorder"
 importas = "importas"
-# "[r]eleases"-style bracketed-shortcut labels: typos sees "eleases" alone and
-# corrects it to "releases", ignoring the "r]" that already supplies the r.
-eleases = "eleases"
-nalytics = "nalytics"
+# "PNGs" tokenizes as "PN" + "Gs", and PN is a typo for ON.
+pn = "pn"

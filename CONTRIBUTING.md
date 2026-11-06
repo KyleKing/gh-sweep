@@ -27,12 +27,14 @@ sorts after `template.toml` (`user.toml` works; `project.toml` does not, since
 | `mise run ci` | Full CI check (tests + golden tests + build) |
 | `mise run clean` | Clean build artifacts |
 | `mise run demo` | Generate VHS demo recordings (needs [vhs](https://github.com/charmbracelet/vhs) on `PATH`; it is not pinned in `[tools]`) |
+| `mise run demo:stills` | Render still PNGs per breakpoint from `demo/stills.tape` (`STILLS_BREAKPOINTS`, `STILLS_FONT` override the sizes and font) |
 | `mise run dev` | Run from source (`go run`, always reflects current code) |
 | `mise run format` | Auto-fix lint and formatting |
 | `mise run hooks` | Run git hooks |
 | `mise run lint` | Run linter |
 | `mise run test` | Run tests with coverage |
 | `mise run test:coverage-min` | Fail below the 70% coverage threshold |
+| `mise run test:golden-orphans` | Fail on any `.golden` file no test regenerates (`GOLDEN_TAGS=golden mise run test:golden-orphans` when the golden tests sit behind a build tag) |
 | `mise run test:golden` | Run golden snapshot tests |
 | `mise run test:golden-update` | Regenerate golden snapshots |
 | `mise run test:safety` | Check tests for un-faked GitHub client construction |

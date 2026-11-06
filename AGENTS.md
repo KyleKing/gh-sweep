@@ -51,6 +51,27 @@ When a check fails, fix the cause. Do not skip a test, widen a timeout, or disab
 linter to get to green. Three fix-and-push rounds with no new root cause means stop and
 report what you found.
 
+
+## Releases race your push
+
+`bump_version.yml` runs on every push to `main` whose head commit is not itself a
+`bump:` commit, and a release-worthy commit (`feat`, `fix`, `perf`) lands a
+`bump: version` commit and tag within minutes of your push landing. That means
+`main@origin` moves out from under work you have not pushed yet, so `jj git push`
+regularly refuses with "references unexpectedly moved". The cycle is
+`jj git fetch` → `jj rebase -b <change> -d main@origin` → `jj workspace update-stale`
+→ `jj bookmark set main -r @` → `jj git push`, and the simplest prevention is to
+fetch and rebase before pushing rather than after the refusal. Do not throttle or
+gate the workflow to avoid the cycle: the release cadence is every release-worthy
+commit, by design.
+
+Two jj-vs-git traps that recur here: `jj git push` does not run git hooks, so an
+`hk` pre-push check never fires for it; and a `blob:none` clone leaves jj's backend
+unable to read promisor objects (`Object <id> of type file not found` on checkout),
+fixed by `git config --unset remote.origin.partialclonefilter` plus a
+`git fetch --refetch`.
+
+
 ## Layout
 
 The entry point lives in `cmd/gh-sweep/` and stays thin, delegating to
@@ -99,9 +120,17 @@ commit; either rename it or add its glob to that exclude.
 ## TUI testing
 
 A subprocess pipe is not a terminal, so the program detects a non-tty and never renders.
-Exploratory checks need a real PTY: run it under `tmux new -d -x 80 -y 24 <cmd>`, drive
-it with `tmux send-keys`, and read what actually rendered with `tmux capture-pane -p`
-(`-e` keeps ANSI codes). A tab in captured output is not proof the program emitted one:
+Exploratory checks need a real PTY: run it under `tmux new -d -s tui-check -x 80 -y 24
+<cmd>`, drive it with `tmux send-keys`, and read what actually rendered with
+`tmux capture-pane -p` (`-e` keeps ANSI codes).
+
+Kill the session with `tmux kill-session -t tui-check` once the screen has been read.
+A detached session outlives the check that started it, and a TUI whose terminal goes
+away can spin rather than exit: 19 orphaned processes from one such burst held 40-49%
+CPU each for as long as 10 hours. Name the session, because an anonymous `-d` leaves
+nothing to identify a stray one by later.
+
+A tab in captured output is not proof the program emitted one:
 `tmux capture-pane` re-emits a tab wherever the cursor was advanced across cells that
 were never written. Check which column the text actually lands on before chasing it as
 a rendering bug. For scripted tests prefer
