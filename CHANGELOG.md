@@ -1,3 +1,9 @@
+## v1.1.1 (2026-11-06)
+
+### Fix
+
+- **cli**: fail the orphans scan when a repository cannot be scanned
+
 ## v1.1.0 (2026-11-06)
 
 ### Feat
