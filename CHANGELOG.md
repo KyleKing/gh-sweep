@@ -1,3 +1,9 @@
+## v1.2.0 (2026-11-14)
+
+### Feat
+
+- record key usage per view and add a keys report
+
 ## v1.1.1 (2026-11-06)
 
 ### Fix
