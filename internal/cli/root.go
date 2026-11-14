@@ -8,6 +8,7 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/kyleking/aragonite/keyusage"
 	"github.com/spf13/cobra"
 
 	"github.com/KyleKing/gh-sweep/internal/config"
@@ -47,6 +48,10 @@ Use 'gh-sweep <command> --help' for more information about a command.`,
 
 		theme.Init(theme.Detect())
 
+		rec := keyusage.Open(usageApp)
+		defer rec.Close() //nolint:errcheck // a failed close loses only the last log line
+
+		opts.Usage = rec
 		m := tui.NewMainModel(opts)
 		p := tea.NewProgram(m)
 

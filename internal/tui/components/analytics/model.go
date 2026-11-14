@@ -12,8 +12,10 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/kyleking/aragonite/keyusage"
 
 	"github.com/KyleKing/gh-sweep/internal/github"
+	"github.com/KyleKing/gh-sweep/internal/tui/keymap"
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
 
@@ -247,6 +249,18 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+// Bindings lists the keys handleKey handles.
+func Bindings() []keyusage.Binding {
+	return []keyusage.Binding{
+		keymap.Bind("quit", "q", "ctrl+c"),
+		keymap.Bind("back to menu", "esc"),
+		keymap.Bind("overview", "1"),
+		keymap.Bind("flaky", "2"),
+		keymap.Bind("errors", "3"),
+		keymap.Bind("export errors", "s"),
+	}
 }
 
 // View renders the model.

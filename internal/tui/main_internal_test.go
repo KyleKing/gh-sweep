@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/kyleking/aragonite/keyusage"
 )
 
 func configuredMainModel() MainModel {
@@ -241,5 +242,41 @@ func TestNewMainModel(t *testing.T) {
 
 	if m.mode != ViewHome {
 		t.Errorf("Expected initial mode ViewHome, got %d", m.mode)
+	}
+}
+
+func TestKeysAreLoggedUnderTheirViewAndTextIsNot(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	rec := keyusage.Open("gh-sweep", keyusage.WithDir(dir))
+	m := configuredMainModel()
+	m.usage = rec
+
+	for _, key := range []string{"w", "/", "x", "y"} {
+		m, _ = updateMain(t, m, keyPress(key))
+	}
+
+	if err := rec.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	u, err := keyusage.Load(dir, Keymap())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tc := range []struct {
+		ctx, path string
+		want      int
+	}{
+		{"home", "w", 1},
+		{"watching", "/", 1},
+		{"watching", "x", 0},
+		{"watching", "y", 0},
+	} {
+		if got := u.Stat(tc.ctx, tc.path).Count; got != tc.want {
+			t.Errorf("%s %q logged %d times, want %d", tc.ctx, tc.path, got, tc.want)
+		}
 	}
 }

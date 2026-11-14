@@ -9,6 +9,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/kyleking/aragonite/keyusage"
 
 	"github.com/KyleKing/gh-sweep/internal/config"
 	"github.com/KyleKing/gh-sweep/internal/orphans"
@@ -97,6 +98,8 @@ type MainModel struct {
 	watchingModel      watching.Model
 	webhooksModel      webhooks.Model
 
+	usage *keyusage.Recorder
+
 	// Configuration
 	repo                string
 	repos               []string
@@ -113,6 +116,8 @@ type MainModelOptions struct {
 	Baseline string
 	Org      string
 	Repo     string
+	// Usage records command keys; nil records nothing.
+	Usage *keyusage.Recorder
 	// PolicyPath is the policy file the policy view diffs against. Empty
 	// searches the default locations.
 	PolicyPath          string
@@ -135,6 +140,7 @@ func NewMainModel(opts MainModelOptions) MainModel {
 		applyOpts:           opts.ApplyOpts,
 		scanOptions:         opts.ScanOptions,
 		regressionThreshold: opts.RegressionThreshold,
+		usage:               opts.Usage,
 	}
 }
 
@@ -167,6 +173,8 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyPressMsg:
+		m.recordKey(msg.String())
+
 		if m.mode == ViewHome {
 			return m.updateHome(msg)
 		}

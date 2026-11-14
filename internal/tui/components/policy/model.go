@@ -10,10 +10,12 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/kyleking/aragonite/keyusage"
 
 	"github.com/KyleKing/gh-sweep/internal/config"
 	"github.com/KyleKing/gh-sweep/internal/github"
 	"github.com/KyleKing/gh-sweep/internal/policy"
+	"github.com/KyleKing/gh-sweep/internal/tui/keymap"
 	"github.com/KyleKing/gh-sweep/internal/tui/scroll"
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
@@ -192,6 +194,23 @@ func (m Model) handleKeys(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 
 	return m, nil
 }
+
+// Bindings lists the keys the repo list, the diff list, and the prompts handle.
+func Bindings() []keyusage.Binding {
+	return append(keymap.Common(),
+		keymap.Bind("apply", "a"),
+		keymap.Bind("refresh", "r"),
+		keymap.Bind("save", "s"),
+		keymap.Bind("focus diffs", "enter", "l"),
+		keymap.Bind("edit", "e"),
+		keymap.Bind("unfocus diffs", "h"),
+		keymap.Bind("confirm", "y", "Y"),
+		keymap.Bind("cancel", "n", "N"),
+	)
+}
+
+// Typing reports whether keys go into the edit prompt.
+func (m Model) Typing() bool { return m.editing }
 
 // handleNavKeys moves the repo-list cursor: g/G jump to the ends, up/down
 // and j/k step by one. Every other key is a no-op.

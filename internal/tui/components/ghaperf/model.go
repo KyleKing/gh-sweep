@@ -14,9 +14,11 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/kyleking/aragonite/keyusage"
 
 	"github.com/KyleKing/gh-sweep/internal/cache"
 	"github.com/KyleKing/gh-sweep/internal/github"
+	"github.com/KyleKing/gh-sweep/internal/tui/keymap"
 	"github.com/KyleKing/gh-sweep/internal/tui/scroll"
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
@@ -327,6 +329,13 @@ var tabKeyModes = map[string]viewMode{
 	"2": viewWorkflows,
 	"3": viewJobs,
 	"4": viewBranches,
+}
+
+// Bindings lists the keys updateKeyMsg handles.
+func Bindings() []keyusage.Binding {
+	return append(keymap.Common(),
+		keymap.Bind("overview", "1"), keymap.Bind("workflows", "2"), keymap.Bind("jobs", "3"),
+		keymap.Bind("branches", "4"), keymap.Bind("refresh", "r"))
 }
 
 func (m Model) updateKeyMsg(msg tea.KeyPressMsg) (Model, tea.Cmd) {

@@ -11,9 +11,11 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/kyleking/aragonite/keyusage"
 
 	"github.com/KyleKing/gh-sweep/internal/github"
 	"github.com/KyleKing/gh-sweep/internal/orphans"
+	"github.com/KyleKing/gh-sweep/internal/tui/keymap"
 	"github.com/KyleKing/gh-sweep/internal/tui/scroll"
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
@@ -224,6 +226,26 @@ func (m Model) updateKeyMsg(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 
 	return m, nil
 }
+
+// Bindings lists the keys updateKeyMsg handles.
+func Bindings() []keyusage.Binding {
+	return append(keymap.Common(),
+		keymap.Bind("search", "/"),
+		keymap.Bind("reverse sort", "R"),
+		keymap.Bind("select", keySpace),
+		keymap.Bind("select all", "a"),
+		keymap.Bind("select none", "n"),
+		keymap.Bind("invert selection", "I"),
+		keymap.Bind("delete", "d"),
+		keymap.Bind("filter 1", "1"), keymap.Bind("filter 2", "2"),
+		keymap.Bind("filter 3", "3"), keymap.Bind("filter 4", "4"),
+		keymap.Bind("cycle view", "v"),
+		keymap.Bind("rescan", "r"),
+	)
+}
+
+// Typing reports whether keys go into the search box.
+func (m Model) Typing() bool { return m.searching }
 
 func (m *Model) updateCursor(key string) {
 	filtered := m.getFilteredOrphans()

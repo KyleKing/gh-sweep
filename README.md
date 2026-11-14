@@ -30,6 +30,11 @@ gh sweep orphans --org my-org --cleanup --dry-run
 Run `gh sweep` with no arguments for the home menu, which reaches all thirteen
 views. Each view prints its keys along the bottom of the screen.
 
+The home menu logs which keys you press in each view (never typed text) to
+`$GH_SWEEP_USAGE_DIR`, else `~/Sync/.gh-sweep/usage` when `~/Sync` exists. Run
+`gh sweep keys` to list the keys you never press, the ones gone stale for 30 days,
+and keys pressed where nothing is bound.
+
 ## What it does not do
 
 - Update dependencies. Use Renovate or Dependabot

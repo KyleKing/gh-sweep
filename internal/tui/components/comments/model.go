@@ -11,8 +11,10 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/kyleking/aragonite/keyusage"
 
 	"github.com/KyleKing/gh-sweep/internal/github"
+	"github.com/KyleKing/gh-sweep/internal/tui/keymap"
 	"github.com/KyleKing/gh-sweep/internal/tui/scroll"
 	"github.com/KyleKing/gh-sweep/internal/tui/theme"
 )
@@ -181,6 +183,11 @@ func (m Model) updateKeyMsg(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+// Bindings lists the keys updateKeyMsg handles.
+func Bindings() []keyusage.Binding {
+	return append(keymap.Common(), keymap.Bind("toggle resolved", "r"))
 }
 
 func (m Model) visibleThreads() []github.ReviewThread {
