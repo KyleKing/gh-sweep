@@ -21,7 +21,7 @@ import (
 )
 
 // StaleAfter is how long a key may go unpressed before `gh-sweep keys` lists it as neglected.
-const StaleAfter = 30 * 24 * time.Hour
+const StaleAfter = 28 * 24 * time.Hour
 
 var viewContexts = map[ViewMode]string{
 	ViewHome:          "home",
