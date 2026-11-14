@@ -33,7 +33,7 @@ views. Each view prints its keys along the bottom of the screen.
 The home menu logs which keys you press in each view (never typed text) to
 `$GH_SWEEP_USAGE_DIR`, else `~/Sync/.gh-sweep/usage` when `~/Sync` exists. Run
 `gh sweep keys` to list the keys you never press, the ones gone stale for 30 days,
-and keys pressed where nothing is bound.
+and keys pressed where nothing is bound. Every run also logs the subcommand and flag names it used (never their values), so the report covers unused subcommands and flags too.
 
 ## What it does not do
 

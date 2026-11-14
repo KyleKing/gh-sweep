@@ -10,6 +10,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/kyleking/aragonite/keyusage"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/KyleKing/gh-sweep/internal/config"
 	"github.com/KyleKing/gh-sweep/internal/github"
@@ -48,15 +49,13 @@ Use 'gh-sweep <command> --help' for more information about a command.`,
 
 		theme.Init(theme.Detect())
 
-		rec := keyusage.Open(usageApp)
-		defer rec.Close() //nolint:errcheck // a failed close loses only the last log line
-
-		opts.Usage = rec
+		opts.Usage = usageRecorder
 		m := tui.NewMainModel(opts)
 		p := tea.NewProgram(m)
 
 		if _, err := p.Run(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error running TUI: %v\n", err)
+			usageRecorder.Close() //nolint:errcheck,gosec // a failed close loses only the last log line
 			os.Exit(1)
 		}
 	},
@@ -113,13 +112,56 @@ func resolveMainOptions(cfg *config.Config, repo, org string, repos []string) tu
 	}
 }
 
+//nolint:gochecknoglobals // opened once per process in Execute and read by the root command
+var usageRecorder *keyusage.Recorder
+
 // Execute runs the root command with the given build version string.
 func Execute(version string) {
 	rootCmd.Version = version
-	if err := rootCmd.Execute(); err != nil {
+
+	usageRecorder = keyusage.Open(usageApp)
+	usageRecorder.Invoke(CommandTree(), os.Args[1:])
+
+	err := rootCmd.Execute()
+
+	usageRecorder.Close() //nolint:errcheck,gosec // a failed close loses only the last log line
+
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+// CommandTree is the cobra command tree as a keyusage root.
+func CommandTree() keyusage.Command { return commandOf(rootCmd) }
+
+func commandOf(cmd *cobra.Command) keyusage.Command {
+	cmd.InitDefaultHelpFlag()
+	cmd.InitDefaultVersionFlag()
+
+	out := keyusage.Command{Name: cmd.Name(), What: cmd.Short}
+
+	for _, set := range []*pflag.FlagSet{cmd.LocalFlags(), cmd.InheritedFlags()} {
+		set.VisitAll(func(f *pflag.Flag) {
+			if f.Hidden {
+				return
+			}
+
+			out.Flags = append(out.Flags, "--"+f.Name)
+
+			if f.Shorthand != "" {
+				out.Flags = append(out.Flags, "-"+f.Shorthand)
+			}
+		})
+	}
+
+	for _, sub := range cmd.Commands() {
+		if !sub.Hidden {
+			out.Subs = append(out.Subs, commandOf(sub))
+		}
+	}
+
+	return out
 }
 
 //nolint:gochecknoglobals // bound to a persistent flag, read by loadConfig for every subcommand

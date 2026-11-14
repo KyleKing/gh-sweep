@@ -20,7 +20,8 @@ var keysCmd = &cobra.Command{
 	Short: "Report which TUI keys you press, never press, or press where nothing is bound",
 	Long: `Read the key usage log back against the TUI's key bindings.
 
-Keys are logged only from the home menu and the views opened from it, into
+Keys are logged from the home menu and the views opened from it, and every run logs
+its subcommand and flag names (never values), into
 $GH_SWEEP_USAGE_DIR, else ~/Sync/.gh-sweep/usage when ~/Sync exists. Text typed
 into a search or edit box is never logged. With neither location, nothing is
 recorded and this command has nothing to report.`,
@@ -32,6 +33,7 @@ recorded and this command has nothing to report.`,
 		}
 
 		km := tui.Keymap()
+		km[keyusage.CLI] = keyusage.Commands(CommandTree())
 
 		u, err := keyusage.Load(dir, km)
 		if err != nil {

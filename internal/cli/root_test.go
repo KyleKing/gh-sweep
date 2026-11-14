@@ -1,7 +1,12 @@
 package cli
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/kyleking/aragonite/keyusage"
 
 	"github.com/KyleKing/gh-sweep/internal/config"
 )
@@ -76,5 +81,42 @@ func TestResolveMainOptionsFlagsOverrideConfig(t *testing.T) {
 
 	if opts.Repo != "flag-org/flag-repo" {
 		t.Errorf("Expected flag repo to win, got '%s'", opts.Repo)
+	}
+}
+
+func TestInvocationLogsFlagNamesNotValues(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	rec := keyusage.Open(usageApp, keyusage.WithDir(dir))
+	rec.Invoke(CommandTree(), []string{"protection", "--org", "secret-org", "-h"})
+
+	if err := rec.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	u, err := keyusage.Load(dir, keyusage.Keymap{keyusage.CLI: keyusage.Commands(CommandTree())})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, key := range []string{"gh-sweep protection", "gh-sweep protection --org", "gh-sweep protection -h"} {
+		if got := u.Stat(keyusage.CLI, key).Count; got != 1 {
+			t.Errorf("%q logged %d times, want 1", key, got)
+		}
+	}
+
+	logs, err := filepath.Glob(filepath.Join(dir, "*.jsonl"))
+	if err != nil || len(logs) != 1 {
+		t.Fatalf("log files = %v, err = %v", logs, err)
+	}
+
+	raw, err := os.ReadFile(logs[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if strings.Contains(string(raw), "secret-org") {
+		t.Errorf("flag value was logged: %s", raw)
 	}
 }

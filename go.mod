@@ -10,8 +10,9 @@ require (
 	github.com/charmbracelet/x/exp/teatest/v2 v2.0.0-20260629091435-9c70f75e26a4
 	github.com/cli/browser v1.3.0
 	github.com/cli/go-gh/v2 v2.13.0
-	github.com/kyleking/aragonite v1.15.0
+	github.com/kyleking/aragonite v1.16.0
 	github.com/spf13/cobra v1.10.2
+	github.com/spf13/pflag v1.0.9
 	gopkg.in/dnaeon/go-vcr.v4 v4.0.7
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -37,7 +38,6 @@ require (
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/spf13/pflag v1.0.9 // indirect
 	github.com/thlib/go-timezone-local v0.0.0-20210907160436-ef149e42d28e // indirect
 	github.com/xo/terminfo v1.0.0 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.6 // indirect
